@@ -1,4 +1,4 @@
-# BO1 GobbleGum MOD
+﻿# BO1 GobbleGum MOD
 
 ---
 
@@ -9,19 +9,47 @@
   - Selection & round watcher
   - Gum activation & consumption model
   - Effect implementations
+  - Included via `#include maps\gobblegum\gumballs;` in `_zombiemode.gsc`
+  - Bootstrapped after helpers/HUD with `level thread maps\gobblegum\gumballs::init();`
 - **`gb_hud.gsc` (HUD & UX)**
   - Precache shaders/fonts
+  - Included via `#include maps\gobblegum\gb_hud;`; precache runs before any player HUD builds
   - Top-Center HUD (icon, name, uses, description)
   - Bottom-Right HUD (icon, progress bar, hint text, label)
   - Fade, animation, delayed show/hide
 - **`gb_helpers.gsc` (Utilities)**
   - Map-specific helpers (death machine maps, cosmodrome VO trigger)
+  - Included via `#include maps\gobblegum\gb_helpers;`; init before HUD/core so shared helpers are ready
   - Perk/weapon/wonder-weapon helpers
   - Power-up spawn helpers
   - Safe `set_if_changed` wrappers
   - Math, pluralization, clamp
   - Thread safety wrappers
   - Legacy no-op stubs (compatibility)
+
+### `_zombiemode.gsc` entry points
+
+```c
+#include maps\gobblegum\gumballs;   // core logic (registry, selection, effects)
+#include maps\gobblegum\gb_hud;     // HUD + precache
+#include maps\gobblegum\gb_helpers; // map checks, powerup helpers, safe setters
+
+maps\_zombiemode_powerups::init();
+maps\_zombiemode_perks::init();
+
+// GobbleGum bootstrap (helpers -> HUD -> core)
+maps\gobblegum\gb_helpers::init();     // one-time map-level helpers
+maps\gobblegum\gb_hud::precache();     // shader/font/material precache
+level thread maps\gobblegum\gumballs::init(); // registry, player hooks, round watcher
+```
+
+**Why this order**
+
+- Helpers expose common functions early.
+- HUD assets must be precached before any player HUD is built.
+- Core threads last so they can call both helpers and HUD safely.
+
+All wiring stays inside the existing `_zombiemode.gsc` lifecycle—no changes to the base round or perk systems.
 
 ---
 
@@ -98,6 +126,12 @@
 - `hud.br_set_total_rounds(player, n)` / `hud.br_consume_round(player)`  
 - `hud.br_start_timer(player, secs)` / `hud.br_stop_timer(player)`  
 
+Usage from `gumballs.gsc`:
+
+- On selection: call `hud.show_tc` and `hud.show_br` (optionally `hud.show_br_after_delay`) then schedule `hud.hide_tc_after(7.5s)`.
+- On consume/end: call `hud.hide_br()` to clear the bottom-right panel.
+- Timers, uses, and rounds update the progress bar through `hud.br_start_timer`, `hud.br_consume_use`, and related helpers.
+
 ---
 
 ### Visual Rules
@@ -124,6 +158,9 @@
   - Auto-gums: activate immediately
   - Remove gum from `pool_remaining` (no repeats until reset)
   - Schedule TC auto-hide (7.5s)
+
+- Map-level watcher in `gumballs::init` polls `level.round_number` about every 0.25s and calls `selection.on_round_start(player)` for each alive player without altering round flow.
+- Each player registers `notifyOnPlayerCommand("gg_activate", "+actionslot 4")` with ~200ms debounce before dispatching to the gum effect dispatcher.
 
 ### Manual Override
 - `gg_set_selected_gum_name()` + `gg_apply_selected_gum()`  
@@ -195,12 +232,13 @@
 ---
 
 ## 7. Thread & Safety Model
-- Always `endon("disconnect")`  
-- Gum effect threads also `endon("gg_gum_cleared")`  
-- Fade tokens prevent overlapping fades  
-- Armed gums use **3s grace window** to avoid false triggers  
-- Wonderbar ends via both `gg_wonderbar_end` notify and cleanup path  
-- Round watcher: 0.25s polling  
+- `gumballs::init` hooks the existing `_zombiemode.gsc` lifecycle: on "connected" it runs `gb_hud.init_player(player)` then `gumballs.build_player_state(player)` (seeds defaults and binds the +actionslot 4 listener); on "spawned_player" it rebuilds the per-life HUD and reattaches monitors.
+- Player threads always `endon("disconnect")`, and effect/monitor threads also `endon("gg_gum_cleared")` to guarantee cleanup.
+- Round watcher polls `level.round_number` every ~0.25s, only observing progression before calling `selection.on_round_start(player)` for each alive player; we do not modify round flow.
+- `self notify("gg_gum_cleared")` on round change or forced clear stops timers and labels so the next selection starts cleanly.
+- Fade tokens prevent overlapping fades.
+- Armed gums use **3s grace window** to avoid false triggers.
+- Wonderbar ends via both `gg_wonderbar_end` notify and cleanup path.
 
 ---
 
@@ -235,6 +273,7 @@
 - BR delayed show (default 1.5s)  
 - Selection cadence (round-based vs. alternative)  
 - Override policy for manual gums  
+- Dev toggles (optional): `gg_enable`, `gg_debug_hud`, and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.  
 
 ---
 
