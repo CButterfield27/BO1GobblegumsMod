@@ -58,7 +58,7 @@ level thread maps\gobblegum\gumballs::init(); // registry, player hooks, round w
 * HUD assets must be precached before any player HUD is built.
 * Core threads last so they can call both helpers and HUD safely.
 
-All wiring stays inside the existing `_zombiemode.gsc` lifecycle—no changes to the base round or perk systems.
+All wiring stays inside the existing `_zombiemode.gsc` lifecycle?no changes to the base round or perk systems.
 
 ---
 
@@ -66,19 +66,19 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle—no changes to
 
 ### Gum Definition
 
-* `id` — internal identifier
-* `name` — display/loc string
-* `shader` — HUD icon material
-* `description` — display/loc string
-* `activation_type` — AUTO or USER
-* `consumption_type` — timed / rounds / uses
-* `activate_func` — string key → dispatcher
+* `id` ? internal identifier
+* `name` ? display/loc string
+* `shader` ? HUD icon material
+* `description` ? display/loc string
+* `activation_type` ? AUTO or USER
+* `consumption_type` ? timed / rounds / uses
+* `activate_func` ? string key ? dispatcher
 * **Metadata**
 
-  * `tags` — categories (powerup, perk, economy, weapon)
-  * `map_whitelist`/`blacklist` — enforce availability (e.g., Fatal Contraption on Ascension/Coast/Moon only)
-  * `exclusion_groups` — gums that cannot overlap
-  * `rarity_weight` — pool weighting
+  * `tags` ? categories (powerup, perk, economy, weapon)
+  * `map_whitelist`/`blacklist` ? enforce availability (e.g., Fatal Contraption on Ascension/Coast/Moon only)
+  * `exclusion_groups` ? gums that cannot overlap
+  * `rarity_weight` ? pool weighting
 
 ### Player State
 
@@ -103,7 +103,7 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle—no changes to
 
 #### Top Center (TC)
 
-* Icon (56×56)
+* Icon (56?56)
 * Gum Name (scale 1.5)
 * Uses/Activation line (scale 1.15)
 * Description (scale 1.15)
@@ -119,7 +119,7 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle—no changes to
 #### Bottom Right (BR)
 
 * Hint text (scale 1.15)
-* Icon (48×48)
+* Icon (48?48)
 * Progress Bar (shader `"white"`, width 75, height 5)
 
   * Modes: uses / rounds / timer
@@ -170,7 +170,7 @@ Usage from `gumballs.gsc`:
 
 ## 4. Gum Selection Logic
 
-* Build pool (`pool_full` → `pool_remaining`)
+* Build pool (`pool_full` ? `pool_remaining`)
 
 * Watch `round_number` (0.25s cadence)
 
@@ -221,7 +221,7 @@ Usage from `gumballs.gsc`:
 
 ### Dispatcher
 
-* Function map: string → int code (fast path)
+* Function map: string ? int code (fast path)
 * Fallback: string compare (exhaustive list)
 
 ---
@@ -234,10 +234,10 @@ Usage from `gumballs.gsc`:
 * Dead of Nuclear Winter (Nuke)
 * Kill Joy (Insta Kill)
 * Licensed Contractor (Carpenter)
-* Immolation Liquidation (Fire Sale) — suppress Wonderbar label for 35s
-* Who’s Keeping Score (Double Points)
+* Immolation Liquidation (Fire Sale) ? suppress Wonderbar label for 35s
+* Who?s Keeping Score (Double Points)
 * On the House (Free Perk)
-* Fatal Contraption (Death Machine) — only on maps that allow
+* Fatal Contraption (Death Machine) ? only on maps that allow
 * Extra Credit (Bonus Points)
 * Reign Drops (all power-ups at once)
 
@@ -288,11 +288,11 @@ Usage from `gumballs.gsc`:
 
 ## 8. API Surfaces
 
-### Core → HUD
+### Core ? HUD
 
 * All HUD functions above (show/hide/update, bar, hint, delay)
 
-### Core → Helpers
+### Core ? Helpers
 
 * `helpers.map_allows("death_machine")`
 * `helpers.is_cosmodrome()`
@@ -328,7 +328,7 @@ Usage from `gumballs.gsc`:
 ## 10. Build Order
 
 1. Skeleton registry + HUD stubs
-2. Round watcher + gum selection → dummy HUD updates
+2. Round watcher + gum selection ? dummy HUD updates
 3. Dispatcher + dummy effect stubs
 4. Consumption logic (uses/rounds/timer)
 5. Implement core power-up gums
@@ -372,8 +372,8 @@ stateDiagram-v2
     Armed --> Selected: trigger satisfied\nconsume 1 use
     Instant --> Selected: after effect
 
-    Selected --> NoGum: uses == 0 → hide BR
-    Active --> NoGum: uses == 0 → hide BR
+    Selected --> NoGum: uses == 0 ? hide BR
+    Active --> NoGum: uses == 0 ? hide BR
 
     %% Global interrupts
     Selected --> NoGum: gg_gum_cleared / death / disconnect
@@ -395,3 +395,5 @@ stateDiagram-v2
       - Suppress during Fire Sale
     end note
 ```
+
+---

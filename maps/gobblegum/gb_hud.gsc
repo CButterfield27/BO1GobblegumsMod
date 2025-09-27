@@ -101,13 +101,27 @@ show_tc(player, gum)
 
 hide_tc_after(player, secs, expected_name)
 {
-    if (!isdefined(player) || !isdefined(player.gg) || !isdefined(player.gg.hud))
+    if (!isdefined(player))
         return;
-    // Step 1: hide immediately (ignore delay and expected_name)
-    player.gg.hud.tc_icon.alpha = 0;
-    player.gg.hud.tc_name.alpha = 0;
-    player.gg.hud.tc_uses.alpha = 0;
-    player.gg.hud.tc_desc.alpha = 0;
+    // Run a small per-player thread to delay-hide TC elements
+    player thread __gg_tc_hide_after(secs);
+}
+
+__gg_tc_hide_after(secs)
+{
+    self endon("disconnect");
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+    if (!isdefined(secs))
+        secs = 0;
+    if (secs > 0)
+        wait(secs);
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+    self.gg.hud.tc_icon.alpha = 0;
+    self.gg.hud.tc_name.alpha = 0;
+    self.gg.hud.tc_uses.alpha = 0;
+    self.gg.hud.tc_desc.alpha = 0;
 }
 
 update_tc(player, gum)
