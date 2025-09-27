@@ -95,4 +95,14 @@ helpers_init()
     level.gb_helpers.upgrade_weapon = ::upgrade_weapon;
     level.gb_helpers.drop_powerup = ::drop_powerup;
     level.gb_helpers.player_has_all_map_perks = ::player_has_all_map_perks;
+
+    level.gb_helpers.ACT_AUTO = ::ACT_AUTO;
+    level.gb_helpers.ACT_USER = ::ACT_USER;
+    level.gb_helpers.CONS_TIMED = ::CONS_TIMED;
+    level.gb_helpers.CONS_ROUNDS = ::CONS_ROUNDS;
+    level.gb_helpers.CONS_USES = ::CONS_USES;
+    level.gb_helpers.GG_TC_AUTOHIDE_SECS = ::GG_TC_AUTOHIDE_SECS;
+    level.gb_helpers.GG_FADE_SECS = ::GG_FADE_SECS;
+    level.gb_helpers.GG_BR_DELAYED_SHOW_SECS = ::GG_BR_DELAYED_SHOW_SECS;
+    level.gb_helpers.GG_ARMED_GRACE_SECS = ::GG_ARMED_GRACE_SECS;
 }
