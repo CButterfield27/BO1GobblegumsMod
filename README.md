@@ -3,29 +3,38 @@
 ---
 
 ## 1. Module Structure
-- **`gumballs.gsc` (Core logic)**
-  - Gum registry & activation dispatcher
-  - Player lifecycle hooks (spawn, death, disconnect)
-  - Selection & round watcher
-  - Gum activation & consumption model
-  - Effect implementations
-  - Included via `#include maps\gobblegum\gumballs;` in `_zombiemode.gsc`
-  - Bootstrapped after helpers/HUD with `level thread maps\gobblegum\gumballs::init();`
-- **`gb_hud.gsc` (HUD & UX)**
-  - Precache shaders/fonts
-  - Included via `#include maps\gobblegum\gb_hud;`; precache runs before any player HUD builds
-  - Top-Center HUD (icon, name, uses, description)
-  - Bottom-Right HUD (icon, progress bar, hint text, label)
-  - Fade, animation, delayed show/hide
-- **`gb_helpers.gsc` (Utilities)**
-  - Map-specific helpers (death machine maps, cosmodrome VO trigger)
-  - Included via `#include maps\gobblegum\gb_helpers;`; init before HUD/core so shared helpers are ready
-  - Perk/weapon/wonder-weapon helpers
-  - Power-up spawn helpers
-  - Safe `set_if_changed` wrappers
-  - Math, pluralization, clamp
-  - Thread safety wrappers
-  - Legacy no-op stubs (compatibility)
+
+* **`gumballs.gsc` (Core logic)**
+
+  * Gum registry & activation dispatcher
+  * Player lifecycle hooks (spawn, death, disconnect)
+  * Selection & round watcher
+  * Gum activation & consumption model
+  * Effect implementations
+  * Reads dev DVARs (`gg_enable`, `gg_debug`) at init to allow fast toggling in-game
+  * Provides registry helpers: `gg_register_gum`, `gg_find_gum_by_id`
+  * Player state builder: `build_player_state`, `gg_set_selected_gum_name`, `gg_apply_selected_gum`
+  * Included via `#include maps\gobblegum\gumballs;` in `_zombiemode.gsc`
+  * Bootstrapped after helpers/HUD with `level thread maps\gobblegum\gumballs::init();`
+* **`gb_hud.gsc` (HUD & UX)**
+
+  * Precache shaders/fonts (`white`, `specialty_perk`, `specialty_ammo`)
+  * Included via `#include maps\gobblegum\gb_hud;`; precache runs before any player HUD builds
+  * Top-Center HUD (icon, name, uses, description)
+  * Bottom-Right HUD (icon, progress bar, hint text, label)
+  * Fade, animation, delayed show/hide (stubs initially immediate)
+  * HUD API stubs in Step 1: no fades/timers yet, all helpers idempotent
+* **`gb_helpers.gsc` (Utilities)**
+
+  * Map-specific helpers (death machine maps, cosmodrome VO trigger)
+  * Included via `#include maps\gobblegum\gb_helpers;`; init before HUD/core so shared helpers are ready
+  * Constant getters for enums and knobs (`ACT_AUTO`, `CONS_TIMED`, `GG_TC_AUTOHIDE_SECS`, etc.)
+  * Perk/weapon/wonder-weapon helpers (initial stubs)
+  * Power-up spawn helpers (stub)
+  * Safe `set_if_changed` wrappers
+  * Math, pluralization, clamp
+  * Thread safety wrappers
+  * Legacy no-op stubs (compatibility)
 
 ### `_zombiemode.gsc` entry points
 
@@ -45,9 +54,9 @@ level thread maps\gobblegum\gumballs::init(); // registry, player hooks, round w
 
 **Why this order**
 
-- Helpers expose common functions early.
-- HUD assets must be precached before any player HUD is built.
-- Core threads last so they can call both helpers and HUD safely.
+* Helpers expose common functions early.
+* HUD assets must be precached before any player HUD is built.
+* Core threads last so they can call both helpers and HUD safely.
 
 All wiring stays inside the existing `_zombiemode.gsc` lifecycle—no changes to the base round or perk systems.
 
@@ -56,28 +65,35 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle—no changes to
 ## 2. Data Model
 
 ### Gum Definition
-- `id` — internal identifier
-- `name` — display/loc string
-- `shader` — HUD icon material
-- `description` — display/loc string
-- `activation_type` — AUTO or USER
-- `consumption_type` — timed / rounds / uses
-- `activate_func` — string key → dispatcher
-- **Metadata**
-  - `tags` — categories (powerup, perk, economy, weapon)
-  - `map_whitelist`/`blacklist` — enforce availability (e.g., Fatal Contraption on Ascension/Coast/Moon only)
-  - `exclusion_groups` — gums that cannot overlap
-  - `rarity_weight` — pool weighting
+
+* `id` — internal identifier
+* `name` — display/loc string
+* `shader` — HUD icon material
+* `description` — display/loc string
+* `activation_type` — AUTO or USER
+* `consumption_type` — timed / rounds / uses
+* `activate_func` — string key → dispatcher
+* **Metadata**
+
+  * `tags` — categories (powerup, perk, economy, weapon)
+  * `map_whitelist`/`blacklist` — enforce availability (e.g., Fatal Contraption on Ascension/Coast/Moon only)
+  * `exclusion_groups` — gums that cannot overlap
+  * `rarity_weight` — pool weighting
 
 ### Player State
-- Current gum snapshot
-- Uses/rounds/duration remaining
-- Armed gum flags (wall_power_active, crate_power_active, wonderbar_active)
-- Wonderbar choice cache
-- HUD fade tokens, defer-hide timestamps
-- Selection pools (full vs. remaining)
-- Activation debounce
-- Effect end timers (e.g., Stock Option, Shopping Free)
+
+* Current gum snapshot
+* Uses/rounds/duration remaining
+* Armed gum flags (wall_power_active, crate_power_active, wonderbar_active)
+* Wonderbar choice cache
+* HUD fade tokens, defer-hide timestamps
+* Selection pools (full vs. remaining)
+* Activation debounce
+* Effect end timers (e.g., Stock Option, Shopping Free)
+* `player.gg.selected_id` stores current gum id
+* `player.gg.uses_remaining`, `player.gg.rounds_remaining`, `player.gg.timer_endtime` reserved for consumption models
+* `player.gg.armed_flags` default false
+* `player.gg.hud` assigned by `gb_hud::init_player`
 
 ---
 
@@ -86,208 +102,241 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle—no changes to
 ### Layout
 
 #### Top Center (TC)
-- Icon (56×56)  
-- Gum Name (scale 1.5)  
-- Uses/Activation line (scale 1.15)  
-- Description (scale 1.15)  
+
+* Icon (56×56)
+* Gum Name (scale 1.5)
+* Uses/Activation line (scale 1.15)
+* Description (scale 1.15)
 
 **Behavior**
-- Fade in on selection
-- Auto-hide after 7.5s
-- Refresh on state change
+
+* Fade in on selection
+* Auto-hide after 7.5s
+* Refresh on state change
 
 ---
 
 #### Bottom Right (BR)
-- Hint text (scale 1.15)  
-- Icon (48×48)  
-- Progress Bar (shader `"white"`, width 75, height 5)  
-  - Modes: uses / rounds / timer
-- Optional label (e.g., Wonderbar preview)
+
+* Hint text (scale 1.15)
+* Icon (48×48)
+* Progress Bar (shader `"white"`, width 75, height 5)
+
+  * Modes: uses / rounds / timer
+* Optional label (e.g., Wonderbar preview)
 
 **Behavior**
-- Fade in on selection
-- Auto-hide when consumed/cleared
-- Supports **delayed show** (smooth UX after selection/activation)
-- Hint text set/cleared dynamically
-- Label can be **suppressed and reasserted** (e.g., during Fire Sale suppression loop)
+
+* Fade in on selection
+* Auto-hide when consumed/cleared
+* Supports **delayed show** (smooth UX after selection/activation)
+* Hint text set/cleared dynamically
+* Label can be **suppressed and reasserted** (e.g., during Fire Sale suppression loop)
 
 ---
 
 ### HUD API
-- `hud.init_player(player)`  
-- `hud.show_tc(player, gum)` / `hud.hide_tc_after(player, secs, expected_name)`  
-- `hud.update_tc(player, gum)`  
-- `hud.show_br(player, gum)` / `hud.hide_br(player)`  
-- `hud.show_br_after_delay(player, secs, expected_name)` *(added for smooth transitions)*  
-- `hud.set_hint(player, text)` / `hud.clear_hint(player)`  
-- `hud.br_set_mode(player, mode)`  
-- `hud.br_set_total_uses(player, n)` / `hud.br_consume_use(player)`  
-- `hud.br_set_total_rounds(player, n)` / `hud.br_consume_round(player)`  
-- `hud.br_start_timer(player, secs)` / `hud.br_stop_timer(player)`  
+
+* `hud.init_player(player)`
+* `hud.show_tc(player, gum)` / `hud.hide_tc_after(player, secs, expected_name)`
+* `hud.update_tc(player, gum)`
+* `hud.show_br(player, gum)` / `hud.hide_br(player)`
+* `hud.show_br_after_delay(player, secs, expected_name)` *(stubbed initially)*
+* `hud.set_hint(player, text)` / `hud.clear_hint(player)`
+* `hud.br_set_mode(player, mode)`
+* `hud.br_set_total_uses(player, n)` / `hud.br_consume_use(player)`
+* `hud.br_set_total_rounds(player, n)` / `hud.br_consume_round(player)`
+* `hud.br_start_timer(player, secs)` / `hud.br_stop_timer(player)`
 
 Usage from `gumballs.gsc`:
 
-- On selection: call `hud.show_tc` and `hud.show_br` (optionally `hud.show_br_after_delay`) then schedule `hud.hide_tc_after(7.5s)`.
-- On consume/end: call `hud.hide_br()` to clear the bottom-right panel.
-- Timers, uses, and rounds update the progress bar through `hud.br_start_timer`, `hud.br_consume_use`, and related helpers.
+* On selection: call `hud.show_tc` and `hud.show_br` (optionally `hud.show_br_after_delay`) then schedule `hud.hide_tc_after(7.5s)`.
+* On consume/end: call `hud.hide_br()` to clear the bottom-right panel.
+* Timers, uses, and rounds update the progress bar through `hud.br_start_timer`, `hud.br_consume_use`, and related helpers.
 
 ---
 
 ### Visual Rules
-- Fade: 0.25s (token-based, prevents overlaps)
-- TC auto-hide: 7.5s
-- BR auto-hide: when gum ends
-- **Grace window**: short defer-hide for Wonderbar, etc.
-- **Delayed show**: fade in BR after ~1.5s if needed
-- Anchors respect safe area
-- Accessibility: text is primary, colors secondary
+
+* Fade: 0.25s (token-based, prevents overlaps)
+* TC auto-hide: 7.5s
+* BR auto-hide: when gum ends
+* **Grace window**: short defer-hide for Wonderbar, etc.
+* **Delayed show**: fade in BR after ~1.5s if needed
+* Anchors respect safe area
+* Accessibility: text is primary, colors secondary
 
 ---
 
 ## 4. Gum Selection Logic
 
-- Build pool (`pool_full` → `pool_remaining`)
-- Watch `round_number` (0.25s cadence)
-- On round start:
-  - Cancel active effects (`gg_gum_cleared`)
-  - Round 1 delay: 10s before first gum
-  - Pick gum: skip invalid (e.g., Perkaholic with full perks), reset cycle if empty
-  - Apply gum: set player vars, init HUD BR bar
-  - Show HUD: fade in TC + BR
-  - Auto-gums: activate immediately
-  - Remove gum from `pool_remaining` (no repeats until reset)
-  - Schedule TC auto-hide (7.5s)
+* Build pool (`pool_full` → `pool_remaining`)
 
-- Map-level watcher in `gumballs::init` polls `level.round_number` about every 0.25s and calls `selection.on_round_start(player)` for each alive player without altering round flow.
-- Each player registers `notifyOnPlayerCommand("gg_activate", "+actionslot 4")` with ~200ms debounce before dispatching to the gum effect dispatcher.
+* Watch `round_number` (0.25s cadence)
+
+* On round start:
+
+  * Cancel active effects (`gg_gum_cleared`)
+  * Round 1 delay: 10s before first gum
+  * Pick gum: skip invalid (e.g., Perkaholic with full perks), reset cycle if empty
+  * Apply gum: set player vars, init HUD BR bar
+  * Show HUD: fade in TC + BR
+  * Auto-gums: activate immediately
+  * Remove gum from `pool_remaining` (no repeats until reset)
+  * Schedule TC auto-hide (7.5s)
+
+* Map-level watcher in `gumballs::init` polls `level.round_number` about every 0.25s and calls `selection.on_round_start(player)` for each alive player without altering round flow.
+
+* Each player registers `notifyOnPlayerCommand("gg_activate", "+actionslot 4")` with ~200ms debounce before dispatching to the gum effect dispatcher.
 
 ### Manual Override
-- `gg_set_selected_gum_name()` + `gg_apply_selected_gum()`  
-- Applies gum immediately, HUD updates  
-- Policy toggle: whether overrides affect pool uniqueness  
+
+* `gg_set_selected_gum_name()` + `gg_apply_selected_gum()`
+* Applies gum immediately, HUD updates
+* Policy toggle: whether overrides affect pool uniqueness
 
 ### Special Case
-- **Ascension/Perkaholic**: also trigger `perk_bought_func` VO hooks for free perks.  
+
+* **Ascension/Perkaholic**: also trigger `perk_bought_func` VO hooks for free perks.
 
 ---
 
 ## 5. Activation & Consumption
 
 ### User Activation
-- Input: `+actionslot 4`  
-- 200ms debounce  
-- If gum is user type and has uses:  
-  - Timed: start timer, dispatch effect, consume  
-  - Rounds: dispatch effect, decrement rounds  
-  - Uses: dispatch effect, consume use  
+
+* Input: `+actionslot 4`
+* 200ms debounce
+* If gum is user type and has uses:
+
+  * Timed: start timer, dispatch effect, consume
+  * Rounds: dispatch effect, decrement rounds
+  * Uses: dispatch effect, consume use
 
 ### Auto Activation
-- Immediate on selection if AUTO  
-- Mirrors user path, but without input  
-- Armed gums (Wall/Crate/Wonderbar) consume only when triggered (weapon acquired)  
+
+* Immediate on selection if AUTO
+* Mirrors user path, but without input
+* Armed gums (Wall/Crate/Wonderbar) consume only when triggered (weapon acquired)
 
 ### Dispatcher
-- Function map: string → int code (fast path)  
-- Fallback: string compare (exhaustive list)  
+
+* Function map: string → int code (fast path)
+* Fallback: string compare (exhaustive list)
 
 ---
 
 ## 6. Effect Catalog (with Notes)
 
 ### Power-Ups
-- Cache Back (Max Ammo)  
-- Dead of Nuclear Winter (Nuke)  
-- Kill Joy (Insta Kill)  
-- Licensed Contractor (Carpenter)  
-- Immolation Liquidation (Fire Sale) — suppress Wonderbar label for 35s  
-- Who’s Keeping Score (Double Points)  
-- On the House (Free Perk)  
-- Fatal Contraption (Death Machine) — only on maps that allow  
-- Extra Credit (Bonus Points)  
-- Reign Drops (all power-ups at once)
+
+* Cache Back (Max Ammo)
+* Dead of Nuclear Winter (Nuke)
+* Kill Joy (Insta Kill)
+* Licensed Contractor (Carpenter)
+* Immolation Liquidation (Fire Sale) — suppress Wonderbar label for 35s
+* Who’s Keeping Score (Double Points)
+* On the House (Free Perk)
+* Fatal Contraption (Death Machine) — only on maps that allow
+* Extra Credit (Bonus Points)
+* Reign Drops (all power-ups at once)
 
 ### Weapons / Perks
-- Hidden Power (PaP current weapon)  
-- Wall Power (next wall buy upgraded, 3s grace)  
-- Crate Power (next box gun upgraded, 3s grace)  
-- Wonderbar (next box gun is WW)  
-  - Label shows WW name  
-  - Label reasserts visibility every 0.25s until gum ends  
-  - Suppressed during Fire Sale  
 
-- Perkaholic (all map perks; Ascension triggers perk VO)  
+* Hidden Power (PaP current weapon)
+
+* Wall Power (next wall buy upgraded, 3s grace)
+
+* Crate Power (next box gun upgraded, 3s grace)
+
+* Wonderbar (next box gun is WW)
+
+  * Label shows WW name
+  * Label reasserts visibility every 0.25s until gum ends
+  * Suppressed during Fire Sale
+
+* Perkaholic (all map perks; Ascension triggers perk VO)
 
 ### Economy / Round Control
-- Round Robbin (end round, +1600 pts each player)  
-- Shopping Free (all purchases free for 60s)  
-  - **Implementation**: adds +50k points baseline, refunds purchases, removes unused at end  
-- Stock Option (ammo taken from stockpile for 60s)  
-  - Fire monitor + expiry monitor  
+
+* Round Robbin (end round, +1600 pts each player)
+* Shopping Free (all purchases free for 60s)
+
+  * **Implementation**: adds +50k points baseline, refunds purchases, removes unused at end
+* Stock Option (ammo taken from stockpile for 60s)
+
+  * Fire monitor + expiry monitor
 
 ### Future / Placeholders
-- Near Death Experience (stub)  
-- Respin Cycle (stub)  
+
+* Near Death Experience (stub)
+* Respin Cycle (stub)
 
 ---
 
 ## 7. Thread & Safety Model
-- `gumballs::init` hooks the existing `_zombiemode.gsc` lifecycle: on "connected" it runs `gb_hud.init_player(player)` then `gumballs.build_player_state(player)` (seeds defaults and binds the +actionslot 4 listener); on "spawned_player" it rebuilds the per-life HUD and reattaches monitors.
-- Player threads always `endon("disconnect")`, and effect/monitor threads also `endon("gg_gum_cleared")` to guarantee cleanup.
-- Round watcher polls `level.round_number` every ~0.25s, only observing progression before calling `selection.on_round_start(player)` for each alive player; we do not modify round flow.
-- `self notify("gg_gum_cleared")` on round change or forced clear stops timers and labels so the next selection starts cleanly.
-- Fade tokens prevent overlapping fades.
-- Armed gums use **3s grace window** to avoid false triggers.
-- Wonderbar ends via both `gg_wonderbar_end` notify and cleanup path.
+
+* `gumballs::init` hooks the existing `_zombiemode.gsc` lifecycle: on "connected" it runs `gb_hud.init_player(player)` then `gumballs.build_player_state(player)` (seeds defaults and binds the +actionslot 4 listener); on "spawned_player" it rebuilds the per-life HUD and reattaches monitors.
+* Player threads always `endon("disconnect")`, and effect/monitor threads also `endon("gg_gum_cleared")` to guarantee cleanup.
+* Round watcher polls `level.round_number` every ~0.25s, only observing progression before calling `selection.on_round_start(player)` for each alive player; we do not modify round flow.
+* `self notify("gg_gum_cleared")` on round change or forced clear stops timers and labels so the next selection starts cleanly.
+* Fade tokens prevent overlapping fades.
+* Armed gums use **3s grace window** to avoid false triggers.
+* Wonderbar ends via both `gg_wonderbar_end` notify and cleanup path.
 
 ---
 
 ## 8. API Surfaces
 
 ### Core → HUD
-- All HUD functions above (show/hide/update, bar, hint, delay)  
+
+* All HUD functions above (show/hide/update, bar, hint, delay)
 
 ### Core → Helpers
-- `helpers.map_allows("death_machine")`  
-- `helpers.is_cosmodrome()`  
-- `helpers.get_wonder_pool(map)`  
-- `helpers.upgrade_weapon(player, base)`  
-- `helpers.drop_powerup(player, code, pos|dist)`  
-- `helpers.player_has_all_map_perks(player)`  
+
+* `helpers.map_allows("death_machine")`
+* `helpers.is_cosmodrome()`
+* `helpers.get_wonder_pool(map)`
+* `helpers.upgrade_weapon(player, base)`
+* `helpers.drop_powerup(player, code, pos|dist)`
+* `helpers.player_has_all_map_perks(player)`
 
 ### Legacy Stubs (no-op, for compatibility)
-- `gg_on_gum_used`  
-- `gg_round_monitor`  
-- `gg_assign_gum_for_new_round`  
-- `gg_on_round_flow`  
-- `gg_on_match_end`  
+
+* `gg_on_gum_used`
+* `gg_round_monitor`
+* `gg_assign_gum_for_new_round`
+* `gg_on_round_flow`
+* `gg_on_match_end`
 
 ---
 
 ## 9. Configurable Knobs
-- Round-1 delay (default 10s)  
-- TC auto-hide (default 7.5s)  
-- HUD fade duration (default 0.25s)  
-- Armed gum grace window (default 3s)  
-- Wonderbar label suppression (default 35s during Fire Sale)  
-- BR delayed show (default 1.5s)  
-- Selection cadence (round-based vs. alternative)  
-- Override policy for manual gums  
-- Dev toggles (optional): `gg_enable`, `gg_debug_hud`, and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.  
+
+* Round-1 delay (default 10s)
+* TC auto-hide (default 7.5s)
+* HUD fade duration (default 0.25s)
+* Armed gum grace window (default 3s)
+* Wonderbar label suppression (default 35s during Fire Sale)
+* BR delayed show (default 1.5s)
+* Selection cadence (round-based vs. alternative)
+* Override policy for manual gums
+* Dev toggles: `gg_enable`, `gg_debug_hud`, and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.
 
 ---
 
 ## 10. Build Order
-1. Skeleton registry + HUD stubs  
-2. Round watcher + gum selection → dummy HUD updates  
-3. Dispatcher + dummy effect stubs  
-4. Consumption logic (uses/rounds/timer)  
-5. Implement core power-up gums  
-6. Add armed gums (Wall, Crate, Wonderbar)  
-7. Add economy/round gums (Shopping Free, Stock Option, Round Robbin)  
-8. Harden map/perk checks + Ascension VO hooks  
-9. Refine HUD polish (hint text, delayed show, suppression)  
-10. Add placeholders, rarity weights, and debug commands  
+
+1. Skeleton registry + HUD stubs
+2. Round watcher + gum selection → dummy HUD updates
+3. Dispatcher + dummy effect stubs
+4. Consumption logic (uses/rounds/timer)
+5. Implement core power-up gums
+6. Add armed gums (Wall, Crate, Wonderbar)
+7. Add economy/round gums (Shopping Free, Stock Option, Round Robbin)
+8. Harden map/perk checks + Ascension VO hooks
+9. Refine HUD polish (hint text, delayed show, suppression)
+10. Add placeholders, rarity weights, and debug commands
 
 ---
 
@@ -345,3 +394,4 @@ stateDiagram-v2
       - Reassert every 0.25s
       - Suppress during Fire Sale
     end note
+```
