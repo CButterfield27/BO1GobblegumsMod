@@ -5,6 +5,11 @@
 #include maps\_zombiemode_utility; 
 #include maps\_busing;
 
+// GobbleGum modules (helpers -> HUD -> core)
+#include maps\gobblegum\gb_helpers;
+#include maps\gobblegum\gb_hud;
+#include maps\gobblegum\gumballs;
+
 #using_animtree( "generic_human" ); 
 
 main()
@@ -104,6 +109,11 @@ main()
 	maps\_zombiemode_spawner::init();
 	maps\_zombiemode_powerups::init();
 	maps\_zombiemode_perks::init();
+
+	// GobbleGum bootstrap (helpers -> HUD -> core)
+	maps\gobblegum\gb_helpers::helpers_init(); // helpers first (idempotent)
+	maps\gobblegum\gb_hud::gg_hud_precache(); // HUD precache second (idempotent)
+	level thread maps\gobblegum\gumballs::gumballs_init(); // core last, on level thread
 	maps\_zombiemode_user::init();
 	maps\_zombiemode_weap_cymbal_monkey::init();
 	maps\_zombiemode_weap_freezegun::init();
