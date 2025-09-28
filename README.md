@@ -21,8 +21,10 @@
   * Precache shaders/fonts (`white`, `specialty_perk`, `specialty_ammo`)
   * Included via `#include maps\gobblegum\gb_hud;`; precache runs before any player HUD builds
   * Top-Center HUD (icon, name, uses, description)
-  * Bottom-Right HUD (icon, progress bar, hint text, label)
-  * Fade, animation, delayed show/hide (stubs initially immediate)
+* Bottom-Right HUD (icon, usage bar [bg+fg], hint text)
+  * Positioning uses `setPoint` with safe-area anchors (TC: `CENTER`/`TOP`, BR: `RIGHT`/`BOTTOMRIGHT`)
+  * Layout driven by small config: base top offset, icon size, and vertical gaps; BR offsets and bar size
+  * Fade/animation/timers not implemented in Step 1 (immediate show/hide only)
   * HUD API stubs in Step 1: no fades/timers yet, all helpers idempotent
 * **`gb_helpers.gsc` (Utilities)**
 
@@ -55,7 +57,7 @@ level thread maps\gobblegum\gumballs::gumballs_init();
 * HUD assets must be precached before any player HUD is built.
 * Core threads last so they can call both helpers and HUD safely.
 
-All wiring stays inside the existing `_zombiemode.gsc` lifecycle — no changes to the base round or perk systems.
+All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to the base round or perk systems.
 
 ---
 
@@ -105,6 +107,14 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle — no changes 
 * Uses/Activation line (scale 1.15)
 * Description (scale 1.15)
 
+Positioning
+
+- Anchor: `setPoint("CENTER", "TOP", 0, y)`
+- Derived offsets: `block_top = base_y + icon_h + icon_gap`, then stack
+  - Name at `block_top`
+  - Uses at `block_top + gap_name_to_uses`
+  - Desc at `block_top + gap_name_to_uses + gap_uses_to_desc`
+
 **Behavior**
 
 * Fade in on selection
@@ -117,15 +127,27 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle — no changes 
 
 * Hint text (scale 1.15)
 * Icon (48?48)
-* Progress Bar (shader `"white"`, width 75, height 5)
+* Usage Bar (shader `"white"`, width 75, height 5)
 
   * Modes: uses / rounds / timer
-* Optional label (e.g., Wonderbar preview)
+* Optional label (e.g., Wonderbar preview) ? disabled in Step 1
+
+Positioning
+
+- Anchor: `setPoint("RIGHT", "BOTTOMRIGHT", x_off, y_off)` for icon, bars, hint
+- Bar consists of two layers at the same point:
+  - Background bar (light gray) full width
+  - Foreground bar (yellow) full width initially; drains left?right in later steps
+  - Title/label is disabled in Step 1 (hint text only)
 
 **Behavior**
 
-* Fade in on selection
-* Auto-hide when consumed/cleared
+* Show on selection (no fades)
+* Hint text initially blank until set by core
+* Hide when consumed/cleared in later steps
+
+---
+
 * Supports **delayed show** (smooth UX after selection/activation)
 * Hint text set/cleared dynamically
 * Label can be **suppressed and reasserted** (e.g., during Fire Sale suppression loop)
@@ -327,13 +349,14 @@ Usage from `gumballs.gsc`:
 1. Skeleton registry + HUD stubs
 2. Round watcher + gum selection ? dummy HUD updates
 3. Dispatcher + input + dummy effect stubs
-4. Consumption logic (uses/rounds/timer)
-5. Implement core power-up gums
-6. Add armed gums (Wall, Crate, Wonderbar)
-7. Add economy/round gums (Shopping Free, Stock Option, Round Robbin)
-8. Harden map/perk checks + Ascension VO hooks
-9. Refine HUD polish (hint text, delayed show, suppression)
-10. Add placeholders, rarity weights, and debug commands
+4. Position Hud Elements
+5. Consumption logic (uses/rounds/timer)
+6. Implement core power-up gums
+7. Add armed gums (Wall, Crate, Wonderbar)
+8. Add economy/round gums (Shopping Free, Stock Option, Round Robbin)
+9. Harden map/perk checks + Ascension VO hooks
+10. Refine HUD polish (hint text, delayed show, suppression)
+11. Add placeholders, rarity weights, and debug commands
 
 ---
 
