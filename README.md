@@ -36,20 +36,17 @@
   * Thread safety wrappers
   * Legacy no-op stubs (compatibility)
 
-### `_zombiemode.gsc` entry points
+### `_zombiemode.gsc` entry points (boot order)
 
 ```c
-#include maps\gobblegum\gumballs;   // core logic (registry, selection, effects)
-#include maps\gobblegum\gb_hud;     // HUD + precache
-#include maps\gobblegum\gb_helpers; // map checks, powerup helpers, safe setters
+#include maps\gobblegum\gumballs;   // Core
+#include maps\gobblegum\gb_hud;     // HUD
+#include maps\gobblegum\gb_helpers; // Helpers
 
-maps\_zombiemode_powerups::init();
-maps\_zombiemode_perks::init();
-
-// GobbleGum bootstrap (helpers -> HUD -> core)
-maps\gobblegum\gb_helpers::init();     // one-time map-level helpers
-maps\gobblegum\gb_hud::precache();     // shader/font/material precache
-level thread maps\gobblegum\gumballs::init(); // registry, player hooks, round watcher
+// GobbleGum bootstrap (helpers -> HUD precache -> core on level thread)
+maps\gobblegum\gb_helpers::helpers_init();
+maps\gobblegum\gb_hud::gg_hud_precache();
+level thread maps\gobblegum\gumballs::gumballs_init();
 ```
 
 **Why this order**
@@ -58,7 +55,7 @@ level thread maps\gobblegum\gumballs::init(); // registry, player hooks, round w
 * HUD assets must be precached before any player HUD is built.
 * Core threads last so they can call both helpers and HUD safely.
 
-All wiring stays inside the existing `_zombiemode.gsc` lifecycle?no changes to the base round or perk systems.
+All wiring stays inside the existing `_zombiemode.gsc` lifecycle — no changes to the base round or perk systems.
 
 ---
 
@@ -329,7 +326,7 @@ Usage from `gumballs.gsc`:
 
 1. Skeleton registry + HUD stubs
 2. Round watcher + gum selection ? dummy HUD updates
-3. Dispatcher + dummy effect stubs
+3. Dispatcher + input + dummy effect stubs
 4. Consumption logic (uses/rounds/timer)
 5. Implement core power-up gums
 6. Add armed gums (Wall, Crate, Wonderbar)

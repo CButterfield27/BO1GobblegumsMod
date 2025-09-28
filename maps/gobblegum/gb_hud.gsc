@@ -179,6 +179,7 @@ set_hint(player, text)
     if (!isdefined(text))
         text = "";
     player.gg.hud.br_hint SetText(text);
+    player.gg.hud.br_hint.alpha = 1;
 }
 
 clear_hint(player)
