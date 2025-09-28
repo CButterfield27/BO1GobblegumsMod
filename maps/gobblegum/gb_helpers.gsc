@@ -1,5 +1,3 @@
-// GobbleGum Helpers (Step 1: safe, idempotent)
-
 // Literal-return helpers (constants)
 ACT_AUTO() { return 1; }
 ACT_USER() { return 2; }

@@ -3,8 +3,6 @@
 #include maps\_zombiemode_utility;
 #include maps\_hud_util;
 
-// GobbleGum Core (Step 3: dispatcher + input + dummy effects)
-
 gumballs_init()
 {
     gg_init_dvars();
@@ -46,7 +44,7 @@ gg_registry_init()
     gum = spawnstruct();
     gum.id = "perkaholic";
     gum.name = "Perkaholic";
-    gum.shader = "specialty_perk";
+    gum.shader = "bo6_perkaholic";
     gum.desc = "All map perks";
     gum.activation = 1; // ACT_AUTO
     gum.consumption = 3; // CONS_USES
@@ -62,7 +60,7 @@ gg_registry_init()
     gum = spawnstruct();
     gum.id = "wall_power";
     gum.name = "Wall Power";
-    gum.shader = "specialty_ammo";
+    gum.shader = "bo6_wall_power";
     gum.desc = "Next wall-buy is PaP";
     gum.activation = 2; // ACT_USER
     gum.consumption = 3; // CONS_USES
@@ -1391,5 +1389,3 @@ gg_round_monitor() {}
 gg_assign_gum_for_new_round() {}
 gg_on_round_flow() {}
 gg_on_match_end() {}
-
-

@@ -1,4 +1,111 @@
-// GobbleGum HUD (Step 1: precache + API stubs)
+#include maps\_hud_util;
+
+// Tiny, centralized layout config to avoid magic numbers
+__gg_get_layout()
+{
+    if (!isdefined(level.gg_hud_layout))
+    {
+        l = spawnstruct();
+
+        // Top-Center (TC) block tunables (spec reference values)
+        l.tc_base_y = 56;        // icon anchor y
+        l.tc_icon_w = 56;        // icon size
+        l.tc_icon_h = 56;
+        l.tc_icon_gap = -15;     // gap icon->name
+        l.tc_gap_name_to_uses = 17.5;  // name->uses
+        l.tc_gap_uses_to_desc = 17.5;  // uses->desc
+        l.tc_name_scale = 1.5;
+        l.tc_meta_scale = 1.15; // uses/desc
+
+        // Bottom-Right (BR) block
+        l.br_icon_size = 48;
+        l.br_bar_w = 75;  l.br_bar_h = 5;
+
+        // Safe-area anchored offsets (relative to bottom-right corner)
+        l.br_icon_x = -20;  l.br_icon_y = -150;
+        l.br_bar_x  = -10;  l.br_bar_y  = -120;
+        l.br_hint_x = -10;  l.br_hint_y = -135; // near bar
+        l.br_label_x = -30; l.br_label_y = -185; // reserved for future label
+
+        level.gg_hud_layout = l;
+    }
+
+    return level.gg_hud_layout;
+}
+
+// Cached set helpers to avoid redundant work
+__gg_cache_get(player, key)
+{
+    if (!isdefined(player.gg) || !isdefined(player.gg.hud) || !isdefined(player.gg.hud.__cache))
+        return undefined;
+    return player.gg.hud.__cache[key];
+}
+
+__gg_cache_set(player, key, val)
+{
+    if (!isdefined(player.gg) || !isdefined(player.gg.hud))
+        return;
+    if (!isdefined(player.gg.hud.__cache))
+        player.gg.hud.__cache = spawnstruct();
+    player.gg.hud.__cache[key] = val;
+}
+
+__gg_set_text_if_changed(player, elem, cache_key, text)
+{
+    last = __gg_cache_get(player, cache_key);
+    if (!isdefined(text))
+        text = "";
+    if (!isdefined(last) || last != text)
+    {
+        elem SetText(text);
+        __gg_cache_set(player, cache_key, text);
+    }
+}
+
+__gg_set_shader_if_changed(player, elem, cache_key, shader, w, h)
+{
+    last = __gg_cache_get(player, cache_key);
+    // Compose a simple cache signature
+    sig = shader + "|" + w + "x" + h;
+    if (!isdefined(last) || last != sig)
+    {
+        if (isdefined(shader))
+        {
+            elem SetShader(shader, w, h);
+        }
+        __gg_cache_set(player, cache_key, sig);
+    }
+}
+
+__gg_apply_layout(hud)
+{
+    l = __gg_get_layout();
+
+    // Top-Center via setPoint using gap-based layout
+    block_top = l.tc_base_y + l.tc_icon_h + l.tc_icon_gap;
+    hud.tc_icon setPoint("CENTER", "TOP", 0, l.tc_base_y);
+
+    hud.tc_name.fontScale = l.tc_name_scale;
+    hud.tc_name setPoint("CENTER", "TOP", 0, block_top);
+
+    hud.tc_uses.fontScale = l.tc_meta_scale;
+    hud.tc_uses setPoint("CENTER", "TOP", 0, block_top + l.tc_gap_name_to_uses);
+
+    hud.tc_desc.fontScale = l.tc_meta_scale;
+    hud.tc_desc setPoint("CENTER", "TOP", 0, block_top + l.tc_gap_name_to_uses + l.tc_gap_uses_to_desc);
+
+    // Bottom-Right via setPoint (relative to BOTTOMRIGHT safe area point)
+    hud.br_icon setPoint("RIGHT", "BOTTOMRIGHT", l.br_icon_x, l.br_icon_y);
+
+    // Usage bar: background (light gray) + foreground (yellow)
+    if (isdefined(hud.br_bar_bg))
+        hud.br_bar_bg setPoint("RIGHT", "BOTTOMRIGHT", l.br_bar_x, l.br_bar_y);
+    if (isdefined(hud.br_bar_fg))
+        hud.br_bar_fg setPoint("RIGHT", "BOTTOMRIGHT", l.br_bar_x, l.br_bar_y);
+
+    hud.br_hint.fontScale = 1.15;
+    hud.br_hint setPoint("RIGHT", "BOTTOMRIGHT", l.br_hint_x, l.br_hint_y);
+}
 
 ensure_api()
 {
@@ -30,9 +137,13 @@ ensure_api()
 gg_hud_precache()
 {
     ensure_api();
+    // Core materials (kept tiny per constraints)
     PrecacheShader("white");
     PrecacheShader("specialty_perk");
     PrecacheShader("specialty_ammo");
+    // A couple of example gum icons used in Step-1
+    PrecacheShader("bo6_perkaholic");
+    PrecacheShader("bo6_wall_power");
 }
 
 init_player(player)
@@ -42,61 +153,125 @@ init_player(player)
     {
         player.gg = spawnstruct();
     }
+    // Run in player context so self.* is consistent
+    player thread __gg_init_player_impl();
+}
+
+__gg_init_player_impl()
+{
+    self endon("disconnect");
+
+    // Idempotent: reuse if already built
+    if (isdefined(self.gg) && isdefined(self.gg.hud) && isdefined(self.gg.hud.tc_icon))
+    {
+        self.gg.hud thread __gg_apply_layout_thread();
+        return;
+    }
+
+    if (!isdefined(self.gg))
+    {
+        self.gg = spawnstruct();
+    }
 
     hud = spawnstruct();
+    self.gg.hud = hud;
 
-    // Top-Center elements
-    hud.tc_icon = NewHudElem();
-    hud.tc_icon.hidewheninmenu = true;
-    hud.tc_icon.alpha = 0;
+    // Top-Center elements (createIcon/createFontString so setPoint works)
+    l = __gg_get_layout();
+    self.gg.hud.tc_icon = createIcon("white", l.tc_icon_w, l.tc_icon_h);
+    self.gg.hud.tc_icon.foreground = true;
+    self.gg.hud.tc_icon.hidewheninmenu = true;
+    self.gg.hud.tc_icon.alpha = 0;
+    self.gg.hud.tc_icon.sort = 20;
 
-    hud.tc_name = NewHudElem();
-    hud.tc_name.hidewheninmenu = true;
-    hud.tc_name.alpha = 0;
+    self.gg.hud.tc_name = createFontString("objective", 1.0);
+    self.gg.hud.tc_name.foreground = true;
+    self.gg.hud.tc_name.hidewheninmenu = true;
+    self.gg.hud.tc_name.alpha = 0;
+    self.gg.hud.tc_name.color = (1, 1, 1);
+    self.gg.hud.tc_name.sort = 21;
 
-    hud.tc_uses = NewHudElem();
-    hud.tc_uses.hidewheninmenu = true;
-    hud.tc_uses.alpha = 0;
+    self.gg.hud.tc_uses = createFontString("objective", 1.0);
+    self.gg.hud.tc_uses.foreground = true;
+    self.gg.hud.tc_uses.hidewheninmenu = true;
+    self.gg.hud.tc_uses.alpha = 0;
+    self.gg.hud.tc_uses.color = (1, 1, 0.4);
+    self.gg.hud.tc_uses.sort = 21;
 
-    hud.tc_desc = NewHudElem();
-    hud.tc_desc.hidewheninmenu = true;
-    hud.tc_desc.alpha = 0;
+    self.gg.hud.tc_desc = createFontString("objective", 1.0);
+    self.gg.hud.tc_desc.foreground = true;
+    self.gg.hud.tc_desc.hidewheninmenu = true;
+    self.gg.hud.tc_desc.alpha = 0;
+    self.gg.hud.tc_desc.color = (1, 1, 1);
+    self.gg.hud.tc_desc.sort = 21;
 
     // Bottom-Right elements
-    hud.br_icon = NewHudElem();
-    hud.br_icon.hidewheninmenu = true;
-    hud.br_icon.alpha = 0;
+    self.gg.hud.br_icon = createIcon("white", l.br_icon_size, l.br_icon_size);
+    self.gg.hud.br_icon.foreground = true;
+    self.gg.hud.br_icon.hidewheninmenu = true;
+    self.gg.hud.br_icon.alpha = 0;
+    self.gg.hud.br_icon.sort = 20;
 
-    hud.br_bar = NewHudElem();
-    hud.br_bar.hidewheninmenu = true;
-    hud.br_bar.alpha = 0;
-    hud.br_bar SetShader("white", 75, 5);
+    // Usage bar: background and foreground layers
+    self.gg.hud.br_bar_bg = createIcon("white", l.br_bar_w, l.br_bar_h);
+    self.gg.hud.br_bar_bg.foreground = true;
+    self.gg.hud.br_bar_bg.hidewheninmenu = true;
+    self.gg.hud.br_bar_bg.alpha = 0;
+    self.gg.hud.br_bar_bg.color = (0.85, 0.85, 0.85);
+    self.gg.hud.br_bar_bg.sort = 20;
 
-    hud.br_hint = NewHudElem();
-    hud.br_hint.hidewheninmenu = true;
-    hud.br_hint.alpha = 0;
+    self.gg.hud.br_bar_fg = createIcon("white", l.br_bar_w, l.br_bar_h);
+    self.gg.hud.br_bar_fg.foreground = true;
+    self.gg.hud.br_bar_fg.hidewheninmenu = true;
+    self.gg.hud.br_bar_fg.alpha = 0;
+    self.gg.hud.br_bar_fg.color = (1, 1, 0.2);
+    self.gg.hud.br_bar_fg.sort = 21;
 
-    hud.br_label = NewHudElem();
-    hud.br_label.hidewheninmenu = true;
-    hud.br_label.alpha = 0;
+    self.gg.hud.br_hint = createFontString("objective", 1.0);
+    self.gg.hud.br_hint.foreground = true;
+    self.gg.hud.br_hint.hidewheninmenu = true;
+    self.gg.hud.br_hint.alpha = 0;
+    self.gg.hud.br_hint.sort = 22;
+
+    // BR title/label not used in Step-1; omit creation to avoid clutter
 
     // Tokens
-    hud.tokens = spawnstruct();
-    hud.tokens.fade = 0;
+    self.gg.hud.tokens = spawnstruct();
+    self.gg.hud.tokens.fade = 0;
 
-    player.gg.hud = hud;
+    // Apply initial layout and defaults
+    self thread __gg_apply_layout_thread();
+
+    // Bars are already initialized to full width by createIcon
+}
+
+// Apply layout using self.gg.hud consistently
+__gg_apply_layout_thread()
+{
+    self endon("disconnect");
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+    __gg_apply_layout(self.gg.hud);
 }
 
 // Step-1 behavior: immediate show/hide, no fades or timers
 show_tc(player, gum)
 {
-    if (!isdefined(player) || !isdefined(player.gg) || !isdefined(player.gg.hud))
+    if (!isdefined(player))
         return;
-    update_tc(player, gum);
-    player.gg.hud.tc_icon.alpha = 1;
-    player.gg.hud.tc_name.alpha = 1;
-    player.gg.hud.tc_uses.alpha = 1;
-    player.gg.hud.tc_desc.alpha = 1;
+    player thread __gg_show_tc_impl(gum);
+}
+
+__gg_show_tc_impl(gum)
+{
+    self endon("disconnect");
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+    __gg_update_tc_impl(gum);
+    self.gg.hud.tc_icon.alpha = 1;
+    self.gg.hud.tc_name.alpha = 1;
+    self.gg.hud.tc_uses.alpha = 1;
+    self.gg.hud.tc_desc.alpha = 1;
 }
 
 hide_tc_after(player, secs, expected_name)
@@ -126,45 +301,71 @@ __gg_tc_hide_after(secs)
 
 update_tc(player, gum)
 {
-    if (!isdefined(player) || !isdefined(player.gg) || !isdefined(player.gg.hud))
+    if (!isdefined(player))
+        return;
+    player thread __gg_update_tc_impl(gum);
+}
+
+__gg_update_tc_impl(gum)
+{
+    self endon("disconnect");
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
         return;
     if (!isdefined(gum))
         return;
 
+    l = __gg_get_layout();
+
     if (isdefined(gum.shader))
-        player.gg.hud.tc_icon SetShader(gum.shader, 56, 56);
+        __gg_set_shader_if_changed(self, self.gg.hud.tc_icon, "tc_icon", gum.shader, l.tc_icon_w, l.tc_icon_h);
     if (isdefined(gum.name))
-        player.gg.hud.tc_name SetText(gum.name);
+        __gg_set_text_if_changed(self, self.gg.hud.tc_name, "tc_name", gum.name);
     if (isdefined(gum.desc))
-        player.gg.hud.tc_desc SetText(gum.desc);
+        __gg_set_text_if_changed(self, self.gg.hud.tc_desc, "tc_desc", gum.desc);
     // uses line can be filled later
 }
 
-show_br(player, gum)
-{
-    if (!isdefined(player) || !isdefined(player.gg) || !isdefined(player.gg.hud))
-        return;
+ show_br(player, gum)
+ {
+     if (!isdefined(player))
+         return;
+     player thread __gg_show_br_impl(gum);
+ }
 
-    if (isdefined(gum) && isdefined(gum.shader))
-        player.gg.hud.br_icon SetShader(gum.shader, 48, 48);
-    if (isdefined(gum) && isdefined(gum.name))
-        player.gg.hud.br_label SetText(gum.name);
+ __gg_show_br_impl(gum)
+ {
+     self endon("disconnect");
+     if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+         return;
+     l = __gg_get_layout();
+     if (isdefined(gum) && isdefined(gum.shader))
+         __gg_set_shader_if_changed(self, self.gg.hud.br_icon, "br_icon", gum.shader, l.br_icon_size, l.br_icon_size);
+    // No BR title for Step-1 (leave hint blank until set)
+    __gg_set_text_if_changed(self, self.gg.hud.br_hint, "br_hint", "");
 
-    player.gg.hud.br_icon.alpha = 1;
-    player.gg.hud.br_bar.alpha = 1;
-    player.gg.hud.br_hint.alpha = 1;
-    player.gg.hud.br_label.alpha = 1;
-}
+     self.gg.hud.br_icon.alpha = 1;
+     self.gg.hud.br_bar_bg.alpha = 1;
+     self.gg.hud.br_bar_fg.alpha = 1;
+     self.gg.hud.br_hint.alpha = 1;
+ }
 
-hide_br(player)
-{
-    if (!isdefined(player) || !isdefined(player.gg) || !isdefined(player.gg.hud))
-        return;
-    player.gg.hud.br_icon.alpha = 0;
-    player.gg.hud.br_bar.alpha = 0;
-    player.gg.hud.br_hint.alpha = 0;
-    player.gg.hud.br_label.alpha = 0;
-}
+ hide_br(player)
+ {
+     if (!isdefined(player))
+         return;
+     player thread __gg_hide_br_impl();
+ }
+
+ __gg_hide_br_impl()
+ {
+     self endon("disconnect");
+     if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+         return;
+     self.gg.hud.br_icon.alpha = 0;
+     self.gg.hud.br_bar_bg.alpha = 0;
+     self.gg.hud.br_bar_fg.alpha = 0;
+     self.gg.hud.br_hint.alpha = 0;
+ }
 
 show_br_after_delay(player, secs, expected_name)
 {
@@ -174,17 +375,25 @@ show_br_after_delay(player, secs, expected_name)
 
 set_hint(player, text)
 {
-    if (!isdefined(player) || !isdefined(player.gg) || !isdefined(player.gg.hud))
+    if (!isdefined(player))
         return;
     if (!isdefined(text))
         text = "";
-    player.gg.hud.br_hint SetText(text);
-    player.gg.hud.br_hint.alpha = 1;
+    player thread __gg_set_hint_impl(text);
 }
 
 clear_hint(player)
 {
     set_hint(player, "");
+}
+
+__gg_set_hint_impl(text)
+{
+    self endon("disconnect");
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+    __gg_set_text_if_changed(self, self.gg.hud.br_hint, "br_hint", text);
+    self.gg.hud.br_hint.alpha = 1;
 }
 
 // No-ops for Step 1 progress/timer APIs
