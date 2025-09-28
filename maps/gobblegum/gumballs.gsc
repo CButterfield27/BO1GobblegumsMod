@@ -3,11 +3,12 @@
 #include maps\_zombiemode_utility;
 #include maps\_hud_util;
 
-// GobbleGum Core (Step 2: round watcher + selection + dummy HUD)
+// GobbleGum Core (Step 3: dispatcher + input + dummy effects)
 
 gumballs_init()
 {
     gg_init_dvars();
+    gg_init_dispatcher();
 
     if (!gg_is_enabled())
         return;
@@ -49,7 +50,8 @@ gg_registry_init()
     gum.desc = "All map perks";
     gum.activation = 1; // ACT_AUTO
     gum.consumption = 3; // CONS_USES
-    gum.activate_key = "gg_fx_perkaholic";
+    gum.activate_func = "gg_fx_perkaholic";
+    gum.activate_key = gum.activate_func;
     gum.tags = [];
     gum.whitelist = [];
     gum.blacklist = [];
@@ -64,7 +66,8 @@ gg_registry_init()
     gum.desc = "Next wall-buy is PaP";
     gum.activation = 2; // ACT_USER
     gum.consumption = 3; // CONS_USES
-    gum.activate_key = "gg_fx_wall_power";
+    gum.activate_func = "gg_fx_wall_power";
+    gum.activate_key = gum.activate_func;
     gum.tags = [];
     gum.whitelist = [];
     gum.blacklist = [];
@@ -136,6 +139,15 @@ build_player_state(player)
     player.gg.uses_remaining = 0;
     player.gg.rounds_remaining = 0;
     player.gg.timer_endtime = 0;
+
+    if (!isdefined(player.gg.input_block_until))
+        player.gg.input_block_until = 0;
+
+    if (!isdefined(player.gg.input_listener_bound))
+        player.gg.input_listener_bound = false;
+
+    if (!isdefined(player.gg.input_thread_started))
+        player.gg.input_thread_started = false;
 
     if (!isdefined(player.gg.armed_flags))
     {
@@ -225,6 +237,8 @@ gg_show_gum_selection(player, gum, round_number)
 
     if (isdefined(level.gb_hud.show_br))
         [[ level.gb_hud.show_br ]](player, gum);
+
+    gg_on_selected(player, gum);
 }
 
 gg_init_dvars()
@@ -235,6 +249,11 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_select_cadence_ms", 250);
     gg_ensure_dvar_string("gg_force_gum", "");
     gg_ensure_dvar_int("gg_debug_select", 0);
+    gg_ensure_dvar_int("gg_input_enable", 1);
+    gg_ensure_dvar_int("gg_debounce_ms", 200);
+    gg_ensure_dvar_int("gg_log_dispatch", 1);
+    gg_ensure_dvar_int("gg_auto_on_select", 1);
+    gg_ensure_dvar_int("gg_simulate_effects", 0);
 }
 
 gg_init_level_state()
@@ -384,7 +403,7 @@ gg_initialize_player(player)
     player notify("gg_gum_cleared");
     gg_init_player_hud(player);
     build_player_state(player);
-
+    gg_bind_input_listener(player);
     // Ensure late joiners get a selection for the current round
     if (gg_is_enabled() && isdefined(level.round_number) && level.round_number > 0)
     {
@@ -781,6 +800,590 @@ gg_log_registry_state(tag)
     }
 }
 
+
+gg_input_enabled()
+{
+    gg_ensure_dvar_int("gg_input_enable", 1);
+    return (GetDvarInt("gg_input_enable") != 0);
+}
+
+gg_get_debounce_ms()
+{
+    gg_ensure_dvar_int("gg_debounce_ms", 200);
+    ms = GetDvarInt("gg_debounce_ms");
+    if (ms < 0)
+        ms = 0;
+    return ms;
+}
+
+gg_log_dispatch_enabled()
+{
+    gg_ensure_dvar_int("gg_log_dispatch", 1);
+    return (GetDvarInt("gg_log_dispatch") == 1);
+}
+
+gg_auto_on_select_enabled()
+{
+    gg_ensure_dvar_int("gg_auto_on_select", 1);
+    return (GetDvarInt("gg_auto_on_select") != 0);
+}
+
+gg_simulate_effects_enabled()
+{
+    gg_ensure_dvar_int("gg_simulate_effects", 0);
+    return (GetDvarInt("gg_simulate_effects") == 1);
+}
+
+gg_should_log_dispatch()
+{
+    return (gg_debug_enabled() || gg_log_dispatch_enabled());
+}
+
+gg_act_auto()
+{
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.ACT_AUTO))
+        return [[ level.gb_helpers.ACT_AUTO ]]();
+    return 1;
+}
+
+gg_act_user()
+{
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.ACT_USER))
+        return [[ level.gb_helpers.ACT_USER ]]();
+    return 2;
+}
+
+gg_is_auto_activation(gum)
+{
+    return (isdefined(gum) && isdefined(gum.activation) && gum.activation == gg_act_auto());
+}
+
+gg_is_user_activation(gum)
+{
+    return (isdefined(gum) && isdefined(gum.activation) && gum.activation == gg_act_user());
+}
+
+gg_get_selected_gum(player)
+{
+    if (!isdefined(player) || !isdefined(player.gg) || !isdefined(player.gg.selected_id))
+        return undefined;
+
+    return gg_find_gum_by_id(player.gg.selected_id);
+}
+
+gg_get_gum_activate_func(gum)
+{
+    if (!isdefined(gum))
+        return "";
+
+    if (isdefined(gum.activate_func) && gum.activate_func != "")
+        return gum.activate_func;
+
+    if (isdefined(gum.activate_key) && gum.activate_key != "")
+        return gum.activate_key;
+
+    return "";
+}
+
+gg_clear_activation_debounce(player)
+{
+    if (!isdefined(player) || !isdefined(player.gg))
+        return;
+
+    player.gg.input_block_until = 0;
+}
+
+gg_apply_activation_debounce(player)
+{
+    if (!isdefined(player) || !isdefined(player.gg))
+        return;
+
+    ms = gg_get_debounce_ms();
+    player.gg.input_block_until = gettime() + ms;
+}
+
+gg_bind_input_listener(player)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg))
+    {
+        build_player_state(player);
+    }
+
+    if (!isdefined(player.gg.input_listener_bound) || !player.gg.input_listener_bound)
+    {
+        player notifyOnPlayerCommand("gg_activate_gum", "+actionslot 4");
+        player.gg.input_listener_bound = true;
+    }
+
+    if (!isdefined(player.gg.input_thread_started) || !player.gg.input_thread_started)
+    {
+        player.gg.input_thread_started = true;
+        player thread gg_input_command_watcher();
+    }
+}
+
+gg_input_command_watcher()
+{
+    self endon("disconnect");
+
+    while (true)
+    {
+        self waittill("gg_activate_gum");
+
+        if (!gg_input_enabled())
+            continue;
+
+        gum = gg_get_selected_gum(self);
+        if (!isdefined(gum))
+            continue;
+
+        if (gg_is_user_activation(gum))
+        {
+            gg_try_activate(self, "USER");
+        }
+    }
+}
+
+gg_on_selected(player, gum)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg))
+    {
+        build_player_state(player);
+    }
+
+    gg_clear_activation_debounce(player);
+
+    if (!isdefined(gum))
+        return;
+
+    if (gg_is_auto_activation(gum))
+    {
+        if (!gg_auto_on_select_enabled())
+            return;
+
+        gg_try_activate(player, "AUTO");
+    }
+}
+
+gg_can_activate_now(player)
+{
+    if (!gg_is_enabled())
+        return false;
+
+    if (!isdefined(player) || !isdefined(player.gg))
+        return false;
+
+    if (!isdefined(player.gg.selected_id) || player.gg.selected_id == undefined || player.gg.selected_id == "")
+        return false;
+
+    gum = gg_get_selected_gum(player);
+    if (!isdefined(gum))
+        return false;
+
+    if (isdefined(player.gg.input_block_until) && player.gg.input_block_until > gettime())
+        return false;
+
+    return true;
+}
+
+gg_try_activate(player, source)
+{
+    if (!isdefined(source))
+        source = "USER";
+
+    if (!gg_can_activate_now(player))
+        return false;
+
+    gum = gg_get_selected_gum(player);
+    if (!isdefined(gum))
+        return false;
+
+    if (source == "USER" && gg_is_auto_activation(gum))
+        return false;
+    if (source == "AUTO" && !gg_is_auto_activation(gum))
+        return false;
+
+    func_name = gg_get_gum_activate_func(gum);
+    if (func_name == "")
+        return false;
+
+    path = gg_dispatch_effect(player, gum, func_name);
+    if (path == "")
+    {
+        if (gg_should_log_dispatch())
+        {
+            iprintln("Gumballs: dispatch failed for " + func_name);
+        }
+        return false;
+    }
+
+    if (gg_should_log_dispatch())
+    {
+        msg = "Gumballs: activated " + gum.id + " via " + gg_dispatch_source_label(source) + " (" + path + ")";
+        iprintln(msg);
+    }
+
+    gg_apply_activation_debounce(player);
+    return true;
+}
+
+gg_dispatch_source_label(source)
+{
+    if (!isdefined(source) || source == "")
+        return "USER";
+
+    return source;
+}
+
+gg_init_dispatcher()
+{
+    if (!isdefined(level.gg_dispatcher))
+    {
+        level.gg_dispatcher = spawnstruct();
+        level.gg_dispatcher.map = spawnstruct();
+        level.gg_dispatcher.handlers = [];
+        level.gg_dispatcher.names = [];
+    }
+
+    gg_register_dispatcher_entry("gg_fx_perkaholic", ::gg_fx_perkaholic);
+    gg_register_dispatcher_entry("gg_fx_wall_power", ::gg_fx_wall_power);
+    gg_register_dispatcher_entry("gg_fx_cache_back", ::gg_fx_cache_back);
+    gg_register_dispatcher_entry("gg_fx_kill_joy", ::gg_fx_kill_joy);
+    gg_register_dispatcher_entry("gg_fx_dead_of_nuclear_winter", ::gg_fx_dead_of_nuclear_winter);
+    gg_register_dispatcher_entry("gg_fx_immolation", ::gg_fx_immolation);
+    gg_register_dispatcher_entry("gg_fx_on_the_house", ::gg_fx_on_the_house);
+    gg_register_dispatcher_entry("gg_fx_fatal_contraption", ::gg_fx_fatal_contraption);
+    gg_register_dispatcher_entry("gg_fx_extra_credit", ::gg_fx_extra_credit);
+    gg_register_dispatcher_entry("gg_fx_reign_drops", ::gg_fx_reign_drops);
+    gg_register_dispatcher_entry("gg_fx_hidden_power", ::gg_fx_hidden_power);
+    gg_register_dispatcher_entry("gg_fx_crate_power", ::gg_fx_crate_power);
+    gg_register_dispatcher_entry("gg_fx_wonderbar", ::gg_fx_wonderbar);
+    gg_register_dispatcher_entry("gg_fx_round_robbin", ::gg_fx_round_robbin);
+    gg_register_dispatcher_entry("gg_fx_shopping_free", ::gg_fx_shopping_free);
+    gg_register_dispatcher_entry("gg_fx_stock_option", ::gg_fx_stock_option);
+    gg_register_dispatcher_entry("gg_fx_near_death", ::gg_fx_near_death);
+    gg_register_dispatcher_entry("gg_fx_respin_cycle", ::gg_fx_respin_cycle);
+    if (gg_should_log_dispatch())
+    {
+        size = 0;
+        if (isdefined(level.gg_dispatcher.handlers))
+            size = level.gg_dispatcher.handlers.size;
+        iprintln("Gumballs: dispatcher ready (size=" + size + ")");
+    }
+}
+
+
+gg_register_dispatcher_entry(name, func)
+{
+    if (!isdefined(level.gg_dispatcher))
+        return;
+
+    if (!isdefined(name) || name == "")
+        return;
+
+    if (!isdefined(level.gg_dispatcher.map))
+        level.gg_dispatcher.map = spawnstruct();
+    if (!isdefined(level.gg_dispatcher.handlers))
+        level.gg_dispatcher.handlers = [];
+    if (!isdefined(level.gg_dispatcher.names))
+        level.gg_dispatcher.names = [];
+
+    if (isdefined(level.gg_dispatcher.map[name]))
+    {
+        code = level.gg_dispatcher.map[name];
+        level.gg_dispatcher.handlers[code] = func;
+        return;
+    }
+
+    code = level.gg_dispatcher.handlers.size;
+    level.gg_dispatcher.map[name] = code;
+    level.gg_dispatcher.handlers[code] = func;
+    level.gg_dispatcher.names[code] = name;
+}
+
+gg_lookup_dispatch_code(name)
+{
+    if (!isdefined(level.gg_dispatcher) || !isdefined(level.gg_dispatcher.map))
+        return -1;
+
+    if (!isdefined(name) || name == "")
+        return -1;
+
+    if (isdefined(level.gg_dispatcher.map[name]))
+        return level.gg_dispatcher.map[name];
+
+    return -1;
+}
+
+gg_get_dispatch_handler(code)
+{
+    if (!isdefined(level.gg_dispatcher) || !isdefined(level.gg_dispatcher.handlers))
+        return undefined;
+
+    if (!isdefined(code))
+        return undefined;
+
+    if (code < 0 || code >= level.gg_dispatcher.handlers.size)
+        return undefined;
+
+    return level.gg_dispatcher.handlers[code];
+}
+
+gg_is_callable(handler)
+{
+    return (isdefined(handler) || handler != undefined);
+}
+
+gg_dispatch_effect(player, gum, func_name)
+{
+    if (!isdefined(func_name) || func_name == "")
+        return "";
+
+    code = gg_lookup_dispatch_code(func_name);
+    if (code != -1)
+    {
+        handler = gg_get_dispatch_handler(code);
+        if (gg_is_callable(handler))
+        {
+            if (gg_should_log_dispatch())
+            {
+                iprintln("Gumballs: dispatch -> " + func_name + " (map)");
+            }
+            [[ handler ]](player, gum);
+            return "map";
+        }
+
+        if (gg_debug_enabled())
+        {
+            iprintln("Gumballs: dispatch map entry missing handler for '" + func_name + "'");
+        }
+    }
+    else
+    {
+        // Try a linear search over registered names as a robustness fallback
+        if (isdefined(level.gg_dispatcher) && isdefined(level.gg_dispatcher.names))
+        {
+            for (i = 0; i < level.gg_dispatcher.names.size; i++)
+            {
+                if (level.gg_dispatcher.names[i] == func_name)
+                {
+                    handler = gg_get_dispatch_handler(i);
+                    if (gg_is_callable(handler))
+                    {
+                        if (gg_should_log_dispatch())
+                        {
+                            iprintln("Gumballs: dispatch -> " + func_name + " (map)");
+                        }
+                        [[ handler ]](player, gum);
+                        return "map";
+                    }
+                }
+            }
+        }
+
+        if (gg_should_log_dispatch())
+        {
+            size = 0;
+            if (isdefined(level.gg_dispatcher.handlers))
+                size = level.gg_dispatcher.handlers.size;
+            iprintln("Gumballs: dispatcher lookup miss for " + func_name + ", registered=" + size);
+        }
+    }
+
+    handler = gg_dispatch_string_fallback(func_name);
+    if (gg_is_callable(handler))
+    {
+        if (gg_should_log_dispatch())
+        {
+            iprintln("Gumballs: dispatch -> " + func_name + " (fallback)");
+        }
+        [[ handler ]](player, gum);
+        return "fallback";
+    }
+
+    if (gg_should_log_dispatch())
+    {
+        iprintln("Gumballs: missing dispatch handler for '" + func_name + "'");
+    }
+
+    return "";
+}
+
+gg_dispatch_string_fallback(func_name)
+{
+    if (!isdefined(func_name) || func_name == "")
+        return undefined;
+
+    if (func_name == "gg_fx_perkaholic")
+        return ::gg_fx_perkaholic;
+    if (func_name == "gg_fx_wall_power")
+        return ::gg_fx_wall_power;
+    if (func_name == "gg_fx_cache_back")
+        return ::gg_fx_cache_back;
+    if (func_name == "gg_fx_kill_joy")
+        return ::gg_fx_kill_joy;
+    if (func_name == "gg_fx_dead_of_nuclear_winter")
+        return ::gg_fx_dead_of_nuclear_winter;
+    if (func_name == "gg_fx_immolation")
+        return ::gg_fx_immolation;
+    if (func_name == "gg_fx_on_the_house")
+        return ::gg_fx_on_the_house;
+    if (func_name == "gg_fx_fatal_contraption")
+        return ::gg_fx_fatal_contraption;
+    if (func_name == "gg_fx_extra_credit")
+        return ::gg_fx_extra_credit;
+    if (func_name == "gg_fx_reign_drops")
+        return ::gg_fx_reign_drops;
+    if (func_name == "gg_fx_hidden_power")
+        return ::gg_fx_hidden_power;
+    if (func_name == "gg_fx_crate_power")
+        return ::gg_fx_crate_power;
+    if (func_name == "gg_fx_wonderbar")
+        return ::gg_fx_wonderbar;
+    if (func_name == "gg_fx_round_robbin")
+        return ::gg_fx_round_robbin;
+    if (func_name == "gg_fx_shopping_free")
+        return ::gg_fx_shopping_free;
+    if (func_name == "gg_fx_stock_option")
+        return ::gg_fx_stock_option;
+    if (func_name == "gg_fx_near_death")
+        return ::gg_fx_near_death;
+    if (func_name == "gg_fx_respin_cycle")
+        return ::gg_fx_respin_cycle;
+
+    return undefined;
+}
+
+gg_effect_stub_common(player, gum, category)
+{
+    if (!isdefined(player) || !isdefined(gum))
+        return;
+
+    gum_id = "<unknown>";
+    if (isdefined(gum.id))
+        gum_id = gum.id;
+
+    gum_name = gum_id;
+    if (isdefined(gum.name) && gum.name != "")
+        gum_name = gum.name;
+
+    if (gg_log_dispatch_enabled())
+    {
+        iprintln("Gumballs: effect stub [" + category + "] -> " + gum_id);
+    }
+
+    if (!gg_simulate_effects_enabled())
+        return;
+
+    if (!isdefined(level.gb_hud) || !isdefined(level.gb_hud.set_hint))
+        return;
+
+    [[ level.gb_hud.set_hint ]](player, "Activated: " + gum_name);
+}
+
+// Power-Ups
+
+gg_fx_cache_back(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Power-Up");
+}
+
+gg_fx_kill_joy(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Power-Up");
+}
+
+gg_fx_dead_of_nuclear_winter(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Power-Up");
+}
+
+gg_fx_immolation(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Power-Up");
+}
+
+gg_fx_fatal_contraption(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Power-Up");
+}
+
+gg_fx_reign_drops(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Power-Up");
+}
+
+// Weapons & Perks
+
+gg_fx_perkaholic(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Weapons/Perks");
+}
+
+gg_fx_wall_power(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Weapons/Perks");
+}
+
+gg_fx_on_the_house(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Weapons/Perks");
+}
+
+gg_fx_hidden_power(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Weapons/Perks");
+}
+
+gg_fx_crate_power(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Weapons/Perks");
+}
+
+gg_fx_wonderbar(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Weapons/Perks");
+}
+
+// Economy & Round
+
+gg_fx_extra_credit(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Economy/Round");
+}
+
+gg_fx_round_robbin(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Economy/Round");
+}
+
+gg_fx_shopping_free(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Economy/Round");
+}
+
+gg_fx_stock_option(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Economy/Round");
+}
+
+// Placeholders
+
+gg_fx_near_death(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Placeholder");
+}
+
+gg_fx_respin_cycle(player, gum)
+{
+    gg_effect_stub_common(player, gum, "Placeholder");
+}
 // Compatibility stubs (no-op placeholders)
 
 gg_on_gum_used() {}
@@ -788,3 +1391,5 @@ gg_round_monitor() {}
 gg_assign_gum_for_new_round() {}
 gg_on_round_flow() {}
 gg_on_match_end() {}
+
+
