@@ -47,7 +47,8 @@ gg_registry_init()
     gum.shader = "bo6_perkaholic";
     gum.desc = "All map perks";
     gum.activation = 1; // ACT_AUTO
-    gum.consumption = 3; // CONS_USES
+    gum.consumption = 3; // CONS_USES (uses-based)
+    gum.base_uses = 1;
     gum.activate_func = "gg_fx_perkaholic";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -63,7 +64,8 @@ gg_registry_init()
     gum.shader = "bo6_wall_power";
     gum.desc = "Next wall-buy is PaP";
     gum.activation = 2; // ACT_USER
-    gum.consumption = 3; // CONS_USES
+    gum.consumption = 2; // CONS_ROUNDS (Build 5 test: rounds-based)
+    gum.base_rounds = 3;
     gum.activate_func = "gg_fx_wall_power";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -72,6 +74,296 @@ gg_registry_init()
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
     gg_register_gum(gum.id, gum);
+
+    // Additional gums from catalog (commented registrations for focused testing)
+
+    // Cache Back (Max Ammo) - Uses
+    gum = spawnstruct();
+    gum.id = "cache_back";
+    gum.name = "Cache Back";
+    gum.shader = "bo6_cache_back";
+    gum.desc = "Spawns a Max Ammo Power-Up";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
+    gum.activate_func = "gg_fx_cache_back";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
+
+    // Crate Power - Uses (AUTO per prior list)
+    gum = spawnstruct();
+    gum.id = "crate_power";
+    gum.name = "Crate Power";
+    gum.shader = "bo6_crate_power";
+    gum.desc = "Next Mystery Box gun is PaP";
+    gum.activation = 1; // AUTO
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
+    gum.activate_func = "gg_fx_crate_power";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
+
+    // Dead of Nuclear Winter (Nuke) - Uses
+    gum = spawnstruct();
+    gum.id = "dead_of_nuclear_winter";
+    gum.name = "Dead of Nuclear Winter";
+    gum.shader = "t7_hud_zm_bgb_dead_of_nuclear_winter";
+    gum.desc = "Spawns a Nuke Power-Up";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 2;
+    gum.activate_func = "gg_fx_dead_of_nuclear_winter";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
+
+    // Extra Credit (Bonus Points) - Uses
+    gum = spawnstruct();
+    gum.id = "extra_credit";
+    gum.name = "Extra Credit";
+    gum.shader = "t7_hud_zm_bgb_extra_credit";
+    gum.desc = "Spawns a Bonus Points Power-Up";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 4;
+    gum.activate_func = "gg_fx_extra_credit";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
+
+    // Fatal Contraption (Death Machine) - Uses (map-allowed)
+    gum = spawnstruct();
+    gum.id = "fatal_contraption";
+    gum.name = "Fatal Contraption";
+    gum.shader = "t7_hud_zm_bgb_fatal_contraption";
+    gum.desc = "Spawns a Death Machine Power-Up";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 2;
+    gum.activate_func = "gg_fx_fatal_contraption";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.map_allows) && [[ level.gb_helpers.map_allows ]]("death_machine")) gg_register_gum(gum.id, gum);
+
+    // Hidden Power - Uses
+    gum = spawnstruct();
+    gum.id = "hidden_power";
+    gum.name = "Hidden Power";
+    gum.shader = "bo6_hidden_power";
+    gum.desc = "PaP current weapon";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
+    gum.activate_func = "gg_fx_hidden_power";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
+
+    // Immolation Liquidation (Fire Sale) - Uses
+    gum = spawnstruct();
+    gum.id = "immolation";
+    gum.name = "Immolation Liquidation";
+    gum.shader = "bo6_immolation_liquidation";
+    gum.desc = "Spawns a Fire Sale Power-Up";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 3;
+    gum.activate_func = "gg_fx_immolation";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
+
+    // Kill Joy (Insta Kill) - Uses
+    gum = spawnstruct();
+    gum.id = "kill_joy";
+    gum.name = "Kill Joy";
+    gum.shader = "bo6_kill_joy";
+    gum.desc = "Spawns an Insta-Kill Power-Up";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 2;
+    gum.activate_func = "gg_fx_kill_joy";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
+
+    // Licensed Contractor (Carpenter) - Uses [handler not implemented yet]
+    gum = spawnstruct();
+    gum.id = "licensed_contractor";
+    gum.name = "Licensed Contractor";
+    gum.shader = "t7_hud_zm_bgb_licensed_contractor";
+    gum.desc = "Spawns a Carpenter Power-Up";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 3;
+    gum.activate_func = "gg_fx_licensed_contractor"; // not implemented yet
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
+
+    // On the House (Free Perk) - Uses
+    gum = spawnstruct();
+    gum.id = "on_the_house";
+    gum.name = "On the House";
+    gum.shader = "bo6_on_the_house";
+    gum.desc = "Spawns a free perk Power-Up";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
+    gum.activate_func = "gg_fx_on_the_house";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
+
+    // Reign Drops - Uses
+    gum = spawnstruct();
+    gum.id = "reign_drops";
+    gum.name = "Reign Drops";
+    gum.shader = "bo6_reign_drops";
+    gum.desc = "Spawns all core Power-Ups at once";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 2;
+    gum.activate_func = "gg_fx_reign_drops";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
+
+    // Round Robbin - Uses (instant)
+    gum = spawnstruct();
+    gum.id = "round_robbin";
+    gum.name = "Round Robbin";
+    gum.shader = "t7_hud_zm_bgb_round_robbin";
+    gum.desc = "Ends the current round. All players gain 1600 points";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
+    gum.activate_func = "gg_fx_round_robbin";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
+
+    // Shopping Free - Timed (TEST: timed-based)
+    gum = spawnstruct();
+    gum.id = "shopping_free";
+    gum.name = "Shopping Free";
+    gum.shader = "t7_hud_zm_bgb_shopping_free";
+    gum.desc = "All purchases are free";
+    gum.activation = 1; // AUTO
+    gum.consumption = 1; // TIMED
+    gum.base_duration_secs = 60;
+    gum.activate_func = "gg_fx_shopping_free";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    gg_register_gum(gum.id, gum);
+
+    // Stock Option - Timed
+    gum = spawnstruct();
+    gum.id = "stock_option";
+    gum.name = "Stock Option";
+    gum.shader = "bo6_stock_option";
+    gum.desc = "Ammo is taken from the player's stockpile";
+    gum.activation = 2; // USER
+    gum.consumption = 1; // TIMED
+    gum.base_duration_secs = 60;
+    gum.activate_func = "gg_fx_stock_option";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
+
+    // Who's Keeping Score (Double Points) - Uses [handler not implemented yet]
+    gum = spawnstruct();
+    gum.id = "whos_keeping_score";
+    gum.name = "Who's Keeping Score";
+    gum.shader = "bo6_who_keeping_score";
+    gum.desc = "Spawns a Double Points Power-Up";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 2;
+    gum.activate_func = "gg_fx_whos_keeping_score"; // not implemented yet
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
+
+    // Wonderbar - Uses (armed)
+    gum = spawnstruct();
+    gum.id = "wonderbar";
+    gum.name = "Wonderbar";
+    gum.shader = "bo6_wonderbar";
+    gum.desc = "Next box gun is Wonder Weapon";
+    gum.activation = 1; // AUTO
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
+    gum.activate_func = "gg_fx_wonderbar";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    // gg_register_gum(gum.id, gum);
 
     level.gg_registry_built = true;
 
@@ -134,9 +426,22 @@ build_player_state(player)
     if (!isdefined(player.gg.selected_id))
         player.gg.selected_id = undefined;
 
+    // Consumption model runtime state (Build 5)
+    if (!isdefined(player.gg.consumption_type))
+        player.gg.consumption_type = undefined;
+
     player.gg.uses_remaining = 0;
     player.gg.rounds_remaining = 0;
     player.gg.timer_endtime = 0;
+
+    if (!isdefined(player.gg.active_token))
+        player.gg.active_token = 0;
+
+    if (!isdefined(player.gg.is_active))
+        player.gg.is_active = false;
+
+    if (!isdefined(player.gg.last_round_ticked))
+        player.gg.last_round_ticked = 0;
 
     if (!isdefined(player.gg.input_block_until))
         player.gg.input_block_until = 0;
@@ -236,6 +541,9 @@ gg_show_gum_selection(player, gum, round_number)
     if (isdefined(level.gb_hud.show_br))
         [[ level.gb_hud.show_br ]](player, gum);
 
+    // Seed consumption state for the selected gum and configure BR bar
+    gg_seed_consumption_state(player, gum);
+
     gg_on_selected(player, gum);
 }
 
@@ -252,6 +560,42 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_log_dispatch", 1);
     gg_ensure_dvar_int("gg_auto_on_select", 1);
     gg_ensure_dvar_int("gg_simulate_effects", 0);
+
+    // Build 5 consumption defaults
+    gg_ensure_dvar_int("gg_default_uses", 3);
+    gg_ensure_dvar_int("gg_default_rounds", 3);
+    gg_ensure_dvar_float("gg_default_timer_secs", 60.0);
+    gg_ensure_dvar_int("gg_timer_tick_ms", 100);
+    gg_ensure_dvar_int("gg_consume_logs", 1);
+
+    // Cache commonly used defaults for quick access
+    gg_cache_config();
+}
+
+gg_cache_config()
+{
+    if (!isdefined(level.gg_config))
+    {
+        level.gg_config = spawnstruct();
+    }
+
+    level.gg_config.default_uses = GetDvarInt("gg_default_uses");
+    if (level.gg_config.default_uses <= 0)
+        level.gg_config.default_uses = 1;
+
+    level.gg_config.default_rounds = GetDvarInt("gg_default_rounds");
+    if (level.gg_config.default_rounds <= 0)
+        level.gg_config.default_rounds = 1;
+
+    level.gg_config.default_timer_secs = GetDvarFloat("gg_default_timer_secs");
+    if (level.gg_config.default_timer_secs <= 0)
+        level.gg_config.default_timer_secs = 1.0;
+
+    level.gg_config.timer_tick_ms = GetDvarInt("gg_timer_tick_ms");
+    if (level.gg_config.timer_tick_ms < 10)
+        level.gg_config.timer_tick_ms = 10;
+
+    level.gg_config.consume_logs = (GetDvarInt("gg_consume_logs") != 0);
 }
 
 gg_init_level_state()
@@ -473,17 +817,25 @@ gg_handle_round_start(round_number)
         if (!gg_is_player_selectable(player))
             continue;
 
-        player notify("gg_gum_cleared");
+        // ROUNDS model: decrement exactly once per new round while active
+        gg_round_tick(player, round_number);
 
-        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.hide_br))
+        // Assign a new gum only if none is currently selected
+        needs_selection = true;
+        if (isdefined(player.gg))
         {
-            [[ level.gb_hud.hide_br ]](player);
+            if (isdefined(player.gg.selected_id) && player.gg.selected_id != undefined && player.gg.selected_id != "")
+            {
+                needs_selection = false;
+            }
         }
 
-        if (isdefined(player.gg) && isdefined(player.gg.last_selected_round) && player.gg.last_selected_round == round_number)
-            continue;
-
-        player thread gg_assign_gum_for_round_thread(round_number);
+        if (needs_selection)
+        {
+            if (isdefined(player.gg) && isdefined(player.gg.last_selected_round) && player.gg.last_selected_round == round_number)
+                continue;
+            player thread gg_assign_gum_for_round_thread(round_number);
+        }
     }
 }
 
@@ -1007,6 +1359,10 @@ gg_try_activate(player, source)
     if (source == "AUTO" && !gg_is_auto_activation(gum))
         return false;
 
+    // Model-aware activation guard
+    if (!gg_model_can_activate(player, gum))
+        return false;
+
     func_name = gg_get_gum_activate_func(gum);
     if (func_name == "")
         return false;
@@ -1026,6 +1382,9 @@ gg_try_activate(player, source)
         msg = "Gumballs: activated " + gum.id + " via " + gg_dispatch_source_label(source) + " (" + path + ")";
         iprintln(msg);
     }
+
+    // After successful dispatch, apply consumption model hooks
+    gg_on_activation(player, gum);
 
     gg_apply_activation_debounce(player);
     return true;
@@ -1283,6 +1642,295 @@ gg_effect_stub_common(player, gum, category)
         return;
 
     [[ level.gb_hud.set_hint ]](player, "Activated: " + gum_name);
+}
+
+// Build 5: Consumption seeding and helpers
+gg_seed_consumption_state(player, gum)
+{
+    if (!isdefined(player) || !isdefined(gum))
+        return;
+
+    if (!isdefined(player.gg))
+    {
+        build_player_state(player);
+    }
+
+    type = gg_get_consumption_type(gum);
+    player.gg.consumption_type = type;
+    player.gg.is_active = false;
+    player.gg.timer_endtime = 0;
+
+    if (type == gg_cons_uses())
+    {
+        total = gg_get_base_uses(gum);
+        player.gg.uses_remaining = total;
+        player.gg.rounds_remaining = 0;
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_set_mode))
+            [[ level.gb_hud.br_set_mode ]](player, "uses");
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_set_total_uses))
+            [[ level.gb_hud.br_set_total_uses ]](player, total);
+    }
+    else if (type == gg_cons_rounds())
+    {
+        total = gg_get_base_rounds(gum);
+        player.gg.rounds_remaining = total;
+        player.gg.uses_remaining = 0;
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_set_mode))
+            [[ level.gb_hud.br_set_mode ]](player, "rounds");
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_set_total_rounds))
+            [[ level.gb_hud.br_set_total_rounds ]](player, total);
+    }
+    else
+    {
+        player.gg.uses_remaining = 0;
+        player.gg.rounds_remaining = 0;
+        player.gg.timer_endtime = 0;
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_set_mode))
+            [[ level.gb_hud.br_set_mode ]](player, "timer");
+    }
+}
+
+gg_cons_timed()
+{
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.CONS_TIMED))
+        return [[ level.gb_helpers.CONS_TIMED ]]();
+    return 1;
+}
+
+gg_cons_rounds()
+{
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.CONS_ROUNDS))
+        return [[ level.gb_helpers.CONS_ROUNDS ]]();
+    return 2;
+}
+
+gg_cons_uses()
+{
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.CONS_USES))
+        return [[ level.gb_helpers.CONS_USES ]]();
+    return 3;
+}
+
+gg_get_consumption_type(gum)
+{
+    if (isdefined(gum) && isdefined(gum.consumption))
+        return gum.consumption;
+    return gg_cons_uses();
+}
+
+gg_get_base_uses(gum)
+{
+    if (isdefined(gum) && isdefined(gum.base_uses))
+        return int(gum.base_uses);
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.default_uses))
+        return level.gg_config.default_uses;
+    return 3;
+}
+
+gg_get_base_rounds(gum)
+{
+    if (isdefined(gum) && isdefined(gum.base_rounds))
+        return int(gum.base_rounds);
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.default_rounds))
+        return level.gg_config.default_rounds;
+    return 3;
+}
+
+gg_get_base_timer_secs(gum)
+{
+    if (isdefined(gum) && isdefined(gum.base_duration_secs))
+        return float(gum.base_duration_secs);
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.default_timer_secs))
+        return level.gg_config.default_timer_secs;
+    return 60.0;
+}
+
+gg_get_timer_tick_ms()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.timer_tick_ms))
+        return level.gg_config.timer_tick_ms;
+    return 100;
+}
+
+gg_consume_logs_enabled()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.consume_logs))
+        return level.gg_config.consume_logs;
+    return true;
+}
+
+// Determine if activation is allowed for the current model/state
+gg_model_can_activate(player, gum)
+{
+    if (!isdefined(player) || !isdefined(player.gg))
+        return false;
+
+    type = gg_get_consumption_type(gum);
+    if (type == gg_cons_uses())
+    {
+        if (isdefined(player.gg.uses_remaining) && player.gg.uses_remaining <= 0)
+        {
+            if (gg_debug_enabled())
+                iprintln("Gumballs: cannot activate, no uses left");
+            return false;
+        }
+    }
+    else if (type == gg_cons_rounds())
+    {
+        if (isdefined(player.gg.rounds_remaining) && player.gg.rounds_remaining <= 0)
+        {
+            if (gg_debug_enabled())
+                iprintln("Gumballs: cannot activate, no rounds left");
+            return false;
+        }
+    }
+    else // TIMED
+    {
+        if (isdefined(player.gg.is_active) && player.gg.is_active && isdefined(player.gg.timer_endtime) && player.gg.timer_endtime > gettime())
+        {
+            if (gg_debug_enabled())
+                iprintln("Gumballs: timer already active; activation ignored");
+            return false;
+        }
+    }
+    return true;
+}
+
+// Apply consumption effects for this activation
+gg_on_activation(player, gum)
+{
+    if (!isdefined(player) || !isdefined(player.gg))
+        return;
+
+    type = gg_get_consumption_type(gum);
+    if (type == gg_cons_uses())
+    {
+        if (!isdefined(player.gg.uses_remaining))
+            player.gg.uses_remaining = gg_get_base_uses(gum);
+        if (player.gg.uses_remaining > 0)
+        {
+            player.gg.uses_remaining -= 1;
+            if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_consume_use))
+                [[ level.gb_hud.br_consume_use ]](player);
+            if (gg_consume_logs_enabled())
+                iprintln("Gumballs: use consumed -> remaining=" + player.gg.uses_remaining);
+        }
+        if (player.gg.uses_remaining <= 0)
+        {
+            gg_end_current_gum(player, "uses_empty");
+        }
+    }
+    else if (type == gg_cons_rounds())
+    {
+        if (!isdefined(player.gg.is_active) || !player.gg.is_active)
+        {
+            player.gg.is_active = true;
+            player.gg.active_token += 1;
+            if (gg_consume_logs_enabled())
+                iprintln("Gumballs: rounds model activated");
+        }
+    }
+    else // TIMED
+    {
+        dur = gg_get_base_timer_secs(gum);
+        player.gg.timer_endtime = gettime() + int(dur * 1000);
+        player.gg.is_active = true;
+        player.gg.active_token += 1;
+
+        token = player.gg.active_token;
+
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_start_timer))
+            [[ level.gb_hud.br_start_timer ]](player, dur);
+
+        player thread gg_timer_monitor_thread(token);
+        if (gg_consume_logs_enabled())
+            iprintln("Gumballs: timer started for " + dur + "s");
+    }
+}
+
+gg_timer_monitor_thread(expected_token)
+{
+    self endon("disconnect");
+    self endon("gg_gum_cleared");
+
+    if (!isdefined(self.gg) || !isdefined(self.gg.timer_endtime))
+        return;
+
+    while (isdefined(self.gg) && isdefined(self.gg.timer_endtime))
+    {
+        if (!isdefined(self.gg.active_token) || self.gg.active_token != expected_token)
+            return;
+
+        now = gettime();
+        if (now >= self.gg.timer_endtime)
+            break;
+
+        wait(gg_get_timer_tick_ms() / 1000.0);
+    }
+
+    if (isdefined(self.gg) && isdefined(self.gg.active_token) && self.gg.active_token == expected_token)
+    {
+        if (gg_consume_logs_enabled())
+            iprintln("Gumballs: timer expired");
+        gg_end_current_gum(self, "timer_expired");
+    }
+}
+
+// Called on round start to decrement rounds model
+gg_round_tick(player, round_number)
+{
+    if (!isdefined(player) || !isdefined(player.gg))
+        return;
+
+    if (isdefined(player.gg.last_round_ticked) && player.gg.last_round_ticked == round_number)
+        return;
+
+    player.gg.last_round_ticked = round_number;
+
+    if (!isdefined(player.gg.consumption_type) || player.gg.consumption_type != gg_cons_rounds())
+        return;
+    if (!isdefined(player.gg.is_active) || !player.gg.is_active)
+        return;
+    if (!isdefined(player.gg.rounds_remaining) || player.gg.rounds_remaining <= 0)
+        return;
+
+    player.gg.rounds_remaining -= 1;
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_consume_round))
+        [[ level.gb_hud.br_consume_round ]](player);
+    if (gg_consume_logs_enabled())
+        iprintln("Gumballs: round consumed -> remaining=" + player.gg.rounds_remaining);
+
+    if (player.gg.rounds_remaining <= 0)
+    {
+        gg_end_current_gum(player, "rounds_empty");
+    }
+}
+
+// Centralized gum termination
+gg_end_current_gum(player, reason)
+{
+    if (!isdefined(player) || !isdefined(player.gg))
+        return;
+
+    if (gg_consume_logs_enabled() && isdefined(reason))
+        iprintln("Gumballs: ending gum (" + reason + ")");
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_stop_timer))
+        [[ level.gb_hud.br_stop_timer ]](player);
+
+    player.gg.is_active = false;
+    player.gg.uses_remaining = 0;
+    player.gg.rounds_remaining = 0;
+    player.gg.timer_endtime = 0;
+    player.gg.active_token += 1;
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.hide_br))
+        [[ level.gb_hud.hide_br ]](player);
+
+    player notify("gg_gum_cleared");
+    player notify("gg_wonderbar_end");
+
+    player.gg.selected_id = undefined;
 }
 
 // Power-Ups
