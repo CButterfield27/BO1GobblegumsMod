@@ -141,11 +141,10 @@ gg_hud_precache()
     PrecacheShader("white");
     PrecacheShader("specialty_perk");
     PrecacheShader("specialty_ammo");
-    // A couple of example gum icons used in Step-1
     PrecacheShader("bo6_perkaholic");
     PrecacheShader("bo6_wall_power");
-    // Add timed test gum icon
     PrecacheShader("t7_hud_zm_bgb_shopping_free");
+    PrecacheShader("bo6_reign_drops");
 }
 
 init_player(player)

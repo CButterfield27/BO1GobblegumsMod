@@ -63,8 +63,8 @@ gg_registry_init()
     gum.name = "Wall Power";
     gum.shader = "bo6_wall_power";
     gum.desc = "Next wall-buy is PaP";
-    gum.activation = 2; // ACT_USER
-    gum.consumption = 2; // CONS_ROUNDS (Build 5 test: rounds-based)
+    gum.activation = 2; // ACT_USER (armed gum in future builds)
+    gum.consumption = 2; // CONS_ROUNDS (placeholder; armed logic later)
     gum.base_rounds = 3;
     gum.activate_func = "gg_fx_wall_power";
     gum.activate_key = gum.activate_func;
@@ -73,10 +73,8 @@ gg_registry_init()
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Additional gums from catalog (commented registrations for focused testing)
-
+    // gg_register_gum(gum.id, gum);
+    
     // Cache Back (Max Ammo) - Uses
     gum = spawnstruct();
     gum.id = "cache_back";
@@ -257,7 +255,7 @@ gg_registry_init()
     gum.rarity_weight = 1;
     // gg_register_gum(gum.id, gum);
 
-    // Reign Drops - Uses
+    // Reign Drops - Uses (Build 5 test: two activations)
     gum = spawnstruct();
     gum.id = "reign_drops";
     gum.name = "Reign Drops";
@@ -273,7 +271,7 @@ gg_registry_init()
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     // Round Robbin - Uses (instant)
     gum = spawnstruct();
@@ -442,6 +440,9 @@ build_player_state(player)
 
     if (!isdefined(player.gg.last_round_ticked))
         player.gg.last_round_ticked = 0;
+
+    if (!isdefined(player.gg.used_this_round))
+        player.gg.used_this_round = false;
 
     if (!isdefined(player.gg.input_block_until))
         player.gg.input_block_until = 0;
@@ -667,7 +668,20 @@ gg_get_force_gum_id()
     gg_ensure_dvar_string("gg_force_gum", "");
     value = GetDvar("gg_force_gum");
     if (!isdefined(value))
-        return "";
+        value = "";
+    if (value == "")
+    {
+        // Fallback aliases for convenience
+        alt = GetDvar("gg_force");
+        if (isdefined(alt) && alt != "")
+            value = alt;
+        else
+        {
+            alt2 = GetDvar("force_gum");
+            if (isdefined(alt2) && alt2 != "")
+                value = alt2;
+        }
+    }
     return value;
 }
 
@@ -816,6 +830,15 @@ gg_handle_round_start(round_number)
 
         if (!gg_is_player_selectable(player))
             continue;
+
+        // USes model: if used at least once in the last round, cycle to a new gum
+        if (isdefined(player.gg) && isdefined(player.gg.consumption_type) && player.gg.consumption_type == gg_cons_uses())
+        {
+            if (isdefined(player.gg.used_this_round) && player.gg.used_this_round)
+            {
+                gg_end_current_gum(player, "round_change_after_use");
+            }
+        }
 
         // ROUNDS model: decrement exactly once per new round while active
         gg_round_tick(player, round_number);
@@ -1810,6 +1833,7 @@ gg_on_activation(player, gum)
         if (player.gg.uses_remaining > 0)
         {
             player.gg.uses_remaining -= 1;
+            player.gg.used_this_round = true;
             if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_consume_use))
                 [[ level.gb_hud.br_consume_use ]](player);
             if (gg_consume_logs_enabled())
@@ -1922,6 +1946,7 @@ gg_end_current_gum(player, reason)
     player.gg.uses_remaining = 0;
     player.gg.rounds_remaining = 0;
     player.gg.timer_endtime = 0;
+    player.gg.used_this_round = false;
     player.gg.active_token += 1;
 
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.hide_br))

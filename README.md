@@ -424,3 +424,28 @@ stateDiagram-v2
 ```
 
 ---
+
+### Dev Console Tips
+
+- To force a specific gum, set the DVAR in console:
+  - `set gg_force_gum <id>` (e.g., `set gg_force_gum shopping_free`)
+- Aliases also accepted: `set gg_force <id>` or `set force_gum <id>`.
+- Using `gg_force_gum <id>` without `set` is a console command and will error.
+
+---
+
+## Bugfix Snapshot
+
+- Round-change cycling for USES gums
+  - If a uses-based gum was used during the prior round, it now ends on round start and a new gum is randomly selected.
+  - Implemented via a per-player `used_this_round` flag that sets on use and resets on end-of-life.
+
+- Force gum console usage clarified and made more forgiving
+  - Use `set gg_force_gum <id>` in console (example: `set gg_force_gum shopping_free`).
+  - Aliases `gg_force` and `force_gum` are also accepted as DVAR names.
+  - Entering `gg_force_gum <id>` without `set` is a command and will error.
+
+- BR bar testing gum updated
+  - `wall_power` is an armed gum and not suitable for simple drain testing in Build 5.
+  - Switched to `reign_drops` (USES, 2 activations) for uses-bar testing; precached its icon and enabled its registry entry for the test set.
+  - Timed testing remains with `shopping_free`; `perkaholic` still auto-uses correctly.
