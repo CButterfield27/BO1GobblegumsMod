@@ -24,8 +24,8 @@
 * Bottom-Right HUD (icon, usage bar [bg+fg], hint text)
   * Positioning uses `setPoint` with safe-area anchors (TC: `CENTER`/`TOP`, BR: `RIGHT`/`BOTTOMRIGHT`)
   * Layout driven by small config: base top offset, icon size, and vertical gaps; BR offsets and bar size
-  * Fade/animation/timers not implemented in Step 1 (immediate show/hide only)
-  * HUD API stubs in Step 1: no fades/timers yet, all helpers idempotent
+  * Fade/animation polish deferred; Build 5 wires BR bar logic
+  * HUD API now live for BR uses/rounds/timer; helpers remain idempotent
 * **`gb_helpers.gsc` (Utilities)**
 
   * Map-specific helpers (death machine maps, cosmodrome VO trigger)
@@ -195,12 +195,13 @@ Usage from `gumballs.gsc`:
 
 * On round start:
 
-  * Cancel active effects (`gg_gum_cleared`)
+  * Apply ROUNDS tick (if a rounds-based gum is active): decrement 1, update BR, end at 0
+  * If no gum is currently selected/active this round: select and apply a new gum
   * Round 1 delay: 10s before first gum
   * Pick gum: skip invalid (e.g., Perkaholic with full perks), reset cycle if empty
-  * Apply gum: set player vars, init HUD BR bar
-  * Show HUD: fade in TC + BR
-  * Auto-gums: activate immediately
+  * Apply gum: set player vars, init BR bar mode and totals
+  * Show HUD: show TC + BR (no fades yet)
+  * Auto-gums: may activate immediately
   * Remove gum from `pool_remaining` (no repeats until reset)
   * Schedule TC auto-hide (7.5s)
 
@@ -226,15 +227,15 @@ Usage from `gumballs.gsc`:
 
 * Input: `+actionslot 4`
 * 200ms debounce
-* If gum is user type and has uses:
+* If gum is user type and allowed by the model guard:
 
-  * Timed: start timer, dispatch effect, consume
-  * Rounds: dispatch effect, decrement rounds
-  * Uses: dispatch effect, consume use
+  * Timed: start timer, dispatch effect; end when timer expires
+  * Rounds: dispatch effect; ROUNDS decrement on round start while active
+  * Uses: dispatch effect; consume 1 use per activation
 
 ### Auto Activation
 
-* Immediate on selection if AUTO
+* Immediate on selection if AUTO and model allows (e.g., Timed not already running)
 * Mirrors user path, but without input
 * Armed gums (Wall/Crate/Wonderbar) consume only when triggered (weapon acquired)
 
@@ -298,7 +299,7 @@ Usage from `gumballs.gsc`:
 * `gumballs::init` hooks the existing `_zombiemode.gsc` lifecycle: on "connected" it runs `gb_hud.init_player(player)` then `gumballs.build_player_state(player)` (seeds defaults and binds the +actionslot 4 listener); on "spawned_player" it rebuilds the per-life HUD and reattaches monitors.
 * Player threads always `endon("disconnect")`, and effect/monitor threads also `endon("gg_gum_cleared")` to guarantee cleanup.
 * Round watcher polls `level.round_number` every ~0.25s, only observing progression before calling `selection.on_round_start(player)` for each alive player; we do not modify round flow.
-* `self notify("gg_gum_cleared")` on round change or forced clear stops timers and labels so the next selection starts cleanly.
+* `self notify("gg_gum_cleared")` on forced clear or end-of-life stops timers and labels; round change alone no longer force-clears in Build 5.
 * Fade tokens prevent overlapping fades.
 * Armed gums use **3s grace window** to avoid false triggers.
 * Wonderbar ends via both `gg_wonderbar_end` notify and cleanup path.
@@ -341,6 +342,12 @@ Usage from `gumballs.gsc`:
 * Selection cadence (round-based vs. alternative)
 * Override policy for manual gums
 * Dev toggles: `gg_enable`, `gg_debug_hud`, and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.
+* Build 5 consumption DVARs (safe fallbacks):
+  - `gg_default_uses` (int, default 3)
+  - `gg_default_rounds` (int, default 3)
+  - `gg_default_timer_secs` (float, default 60.0)
+  - `gg_timer_tick_ms` (int, default 100)
+  - `gg_consume_logs` (0/1, default 1)
 
 ---
 
@@ -378,7 +385,7 @@ stateDiagram-v2
     state "Instant/Uses Drain" as Instant
 
     NoGum --> RoundStart: round change / spawn
-    RoundStart --> Selected: assign gum\n(init BR mode)
+    RoundStart --> Selected: if no active gum, assign gum\n(init BR mode)
     Selected --> Activated: AUTO gum (immediate)
     Selected --> Activated: USER gum\n(+actionslot 4, debounce)
 
@@ -417,3 +424,28 @@ stateDiagram-v2
 ```
 
 ---
+
+### Dev Console Tips
+
+- To force a specific gum, set the DVAR in console:
+  - `set gg_force_gum <id>` (e.g., `set gg_force_gum shopping_free`)
+- Aliases also accepted: `set gg_force <id>` or `set force_gum <id>`.
+- Using `gg_force_gum <id>` without `set` is a console command and will error.
+
+---
+
+## Bugfix Snapshot
+
+- Round-change cycling for USES gums
+  - If a uses-based gum was used during the prior round, it now ends on round start and a new gum is randomly selected.
+  - Implemented via a per-player `used_this_round` flag that sets on use and resets on end-of-life.
+
+- Force gum console usage clarified and made more forgiving
+  - Use `set gg_force_gum <id>` in console (example: `set gg_force_gum shopping_free`).
+  - Aliases `gg_force` and `force_gum` are also accepted as DVAR names.
+  - Entering `gg_force_gum <id>` without `set` is a command and will error.
+
+- BR bar testing gum updated
+  - `wall_power` is an armed gum and not suitable for simple drain testing in Build 5.
+  - Switched to `reign_drops` (USES, 2 activations) for uses-bar testing; precached its icon and enabled its registry entry for the test set.
+  - Timed testing remains with `shopping_free`; `perkaholic` still auto-uses correctly.

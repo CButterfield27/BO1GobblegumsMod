@@ -141,9 +141,10 @@ gg_hud_precache()
     PrecacheShader("white");
     PrecacheShader("specialty_perk");
     PrecacheShader("specialty_ammo");
-    // A couple of example gum icons used in Step-1
     PrecacheShader("bo6_perkaholic");
     PrecacheShader("bo6_wall_power");
+    PrecacheShader("t7_hud_zm_bgb_shopping_free");
+    PrecacheShader("bo6_reign_drops");
 }
 
 init_player(player)
@@ -396,25 +397,187 @@ __gg_set_hint_impl(text)
     self.gg.hud.br_hint.alpha = 1;
 }
 
-// No-ops for Step 1 progress/timer APIs
+// Build 5: BR bar model (uses/rounds/timer). Idempotent, minimal visuals.
 br_set_mode(player, mode)
 {
+    if (!isdefined(player))
+        return;
+    player thread __gg_br_set_mode_impl(mode);
 }
+
+__gg_br_get_state()
+{
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return undefined;
+    if (!isdefined(self.gg.hud.__br))
+        self.gg.hud.__br = spawnstruct();
+    if (!isdefined(self.gg.hud.__br.token))
+        self.gg.hud.__br.token = 0;
+    return self.gg.hud.__br;
+}
+
+__gg_br_base_width()
+{
+    l = __gg_get_layout();
+    return l.br_bar_w;
+}
+
+__gg_br_set_mode_impl(mode)
+{
+    self endon("disconnect");
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+    st = __gg_br_get_state();
+    if (!isdefined(mode))
+        mode = "uses";
+    st.mode = mode;
+    // Reset bar to full
+    w = __gg_br_base_width();
+    if (isdefined(self.gg.hud.br_bar_fg))
+        self.gg.hud.br_bar_fg SetShader("white", w, self.gg.hud.br_bar_fg.height);
+}
+
 br_set_total_uses(player, n)
 {
+    if (!isdefined(player))
+        return;
+    player thread __gg_br_set_total_impl("uses", n);
 }
+
 br_consume_use(player)
 {
+    if (!isdefined(player))
+        return;
+    player thread __gg_br_consume_impl("uses");
 }
+
 br_set_total_rounds(player, n)
 {
+    if (!isdefined(player))
+        return;
+    player thread __gg_br_set_total_impl("rounds", n);
 }
+
 br_consume_round(player)
 {
+    if (!isdefined(player))
+        return;
+    player thread __gg_br_consume_impl("rounds");
 }
+
+__gg_br_set_total_impl(kind, n)
+{
+    self endon("disconnect");
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+    st = __gg_br_get_state();
+    if (!isdefined(n) || n <= 0)
+        n = 1;
+    st.mode = kind;
+    st.total = n;
+    st.remaining = n;
+    __gg_br_update_width_from_state();
+}
+
+__gg_br_consume_impl(kind)
+{
+    self endon("disconnect");
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+    st = __gg_br_get_state();
+    st.mode = kind;
+    if (!isdefined(st.total) || st.total <= 0)
+        st.total = 1;
+    if (!isdefined(st.remaining))
+        st.remaining = st.total;
+    if (st.remaining > 0)
+        st.remaining -= 1;
+    __gg_br_update_width_from_state();
+}
+
+__gg_br_update_width_from_state()
+{
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+    st = __gg_br_get_state();
+    total = 1;
+    if (isdefined(st.total) && st.total > 0)
+        total = st.total;
+    remaining = 0;
+    if (isdefined(st.remaining) && st.remaining >= 0)
+        remaining = st.remaining;
+    frac = remaining * 1.0 / total;
+    if (frac < 0)
+        frac = 0;
+    if (frac > 1)
+        frac = 1;
+    w = int(__gg_br_base_width() * frac);
+    if (isdefined(self.gg.hud.br_bar_fg))
+        self.gg.hud.br_bar_fg SetShader("white", w, self.gg.hud.br_bar_fg.height);
+}
+
 br_start_timer(player, secs)
 {
+    if (!isdefined(player))
+        return;
+    player thread __gg_br_start_timer_impl(secs);
 }
-br_stop_timer(player, secs)
+
+br_stop_timer(player)
 {
+    if (!isdefined(player))
+        return;
+    player thread __gg_br_stop_timer_impl();
+}
+
+__gg_br_start_timer_impl(secs)
+{
+    self endon("disconnect");
+    self endon("gg_gum_cleared");
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+    st = __gg_br_get_state();
+    st.mode = "timer";
+    if (!isdefined(secs) || secs <= 0)
+        secs = 0.1;
+    st.token += 1;
+    tok = st.token;
+    start = gettime();
+    duration_ms = int(secs * 1000);
+    base_w = __gg_br_base_width();
+    // simple polling loop; idempotent via token
+    while (true)
+    {
+        if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+            return;
+        if (!isdefined(self.gg.hud.__br) || self.gg.hud.__br.token != tok)
+            return;
+        now = gettime();
+        elapsed = now - start;
+        if (elapsed >= duration_ms)
+        {
+            // force 0 width on completion
+            if (isdefined(self.gg.hud.br_bar_fg))
+                self.gg.hud.br_bar_fg SetShader("white", 0, self.gg.hud.br_bar_fg.height);
+            return;
+        }
+        frac = 1.0 - (elapsed * 1.0 / duration_ms);
+        if (frac < 0) frac = 0;
+        if (frac > 1) frac = 1;
+        w = int(base_w * frac);
+        if (isdefined(self.gg.hud.br_bar_fg))
+            self.gg.hud.br_bar_fg SetShader("white", w, self.gg.hud.br_bar_fg.height);
+        wait(0.1);
+    }
+}
+
+__gg_br_stop_timer_impl()
+{
+    self endon("disconnect");
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud) || !isdefined(self.gg.hud.__br))
+        return;
+    // invalidate any running timer thread
+    self.gg.hud.__br.token += 1;
+    if (isdefined(self.gg.hud.br_bar_fg))
+        self.gg.hud.br_bar_fg SetShader("white", 0, self.gg.hud.br_bar_fg.height);
 }
