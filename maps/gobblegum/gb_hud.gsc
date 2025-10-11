@@ -141,10 +141,26 @@ gg_hud_precache()
     PrecacheShader("white");
     PrecacheShader("specialty_perk");
     PrecacheShader("specialty_ammo");
+    PrecacheShader("bo6_cache_back");
+    PrecacheShader("bo6_crate_power");
+    PrecacheShader("t7_hud_zm_bgb_dead_of_nuclear_winter");
+    PrecacheShader("t7_hud_zm_bgb_extra_credit");
+    PrecacheShader("t7_hud_zm_bgb_fatal_contraption");
+    PrecacheShader("bo6_hidden_power");
+    PrecacheShader("bo6_immolation_liquidation");
+    PrecacheShader("bo6_kill_joy");
+    PrecacheShader("t7_hud_zm_bgb_licensed_contractor");
+    PrecacheShader("bo6_near_death_experience");
+    PrecacheShader("bo6_on_the_house");
     PrecacheShader("bo6_perkaholic");
-    PrecacheShader("bo6_wall_power");
-    PrecacheShader("t7_hud_zm_bgb_shopping_free");
     PrecacheShader("bo6_reign_drops");
+    PrecacheShader("bo6_respin_cycle");
+    PrecacheShader("t7_hud_zm_bgb_round_robbin");
+    PrecacheShader("t7_hud_zm_bgb_shopping_free");
+    PrecacheShader("bo6_stock_option");
+    PrecacheShader("bo6_wall_power");
+    PrecacheShader("bo6_who_keeping_score");
+    PrecacheShader("bo6_wonderbar");
 }
 
 init_player(player)
