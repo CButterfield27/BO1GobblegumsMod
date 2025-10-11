@@ -7,6 +7,7 @@ gumballs_init()
 {
     gg_init_dvars();
     gg_init_dispatcher();
+    gg_init_powerup_tables();
 
     if (!gg_is_enabled())
         return;
@@ -91,7 +92,7 @@ gg_registry_init()
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     // Crate Power - Uses (AUTO per prior list)
     gum = spawnstruct();
@@ -127,7 +128,7 @@ gg_registry_init()
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     // Extra Credit (Bonus Points) - Uses
     gum = spawnstruct();
@@ -163,7 +164,7 @@ gg_registry_init()
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.map_allows) && [[ level.gb_helpers.map_allows ]]("death_machine")) gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     // Hidden Power - Uses
     gum = spawnstruct();
@@ -199,7 +200,7 @@ gg_registry_init()
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     // Kill Joy (Insta Kill) - Uses
     gum = spawnstruct();
@@ -217,9 +218,9 @@ gg_registry_init()
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
-    // Licensed Contractor (Carpenter) - Uses [handler not implemented yet]
+    // Licensed Contractor (Carpenter) - Uses
     gum = spawnstruct();
     gum.id = "licensed_contractor";
     gum.name = "Licensed Contractor";
@@ -228,14 +229,14 @@ gg_registry_init()
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 3;
-    gum.activate_func = "gg_fx_licensed_contractor"; // not implemented yet
+    gum.activate_func = "gg_fx_licensed_contractor";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
     gum.whitelist = [];
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     // On the House (Free Perk) - Uses
     gum = spawnstruct();
@@ -253,7 +254,7 @@ gg_registry_init()
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     // Reign Drops - Uses (Build 5 test: two activations)
     gum = spawnstruct();
@@ -307,7 +308,7 @@ gg_registry_init()
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
+    // gg_register_gum(gum.id, gum);
 
     // Stock Option - Timed
     gum = spawnstruct();
@@ -327,7 +328,7 @@ gg_registry_init()
     gum.rarity_weight = 1;
     // gg_register_gum(gum.id, gum);
 
-    // Who's Keeping Score (Double Points) - Uses [handler not implemented yet]
+    // Who's Keeping Score (Double Points) - Uses
     gum = spawnstruct();
     gum.id = "whos_keeping_score";
     gum.name = "Who's Keeping Score";
@@ -336,14 +337,14 @@ gg_registry_init()
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 2;
-    gum.activate_func = "gg_fx_whos_keeping_score"; // not implemented yet
+    gum.activate_func = "gg_fx_whos_keeping_score";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
     gum.whitelist = [];
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     // Wonderbar - Uses (armed)
     gum = spawnstruct();
@@ -569,6 +570,12 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_timer_tick_ms", 100);
     gg_ensure_dvar_int("gg_consume_logs", 1);
 
+    // Build 6 power-up knobs
+    gg_ensure_dvar_float("gg_drop_forward_units", 70.0);
+    gg_ensure_dvar_int("gg_reigndrops_spacing_ms", 150);
+    gg_ensure_dvar_int("gg_reigndrops_include_firesale", 1);
+    gg_ensure_dvar_int("gg_powerup_hints", 1);
+
     // Cache commonly used defaults for quick access
     gg_cache_config();
 }
@@ -597,6 +604,396 @@ gg_cache_config()
         level.gg_config.timer_tick_ms = 10;
 
     level.gg_config.consume_logs = (GetDvarInt("gg_consume_logs") != 0);
+
+    level.gg_config.drop_forward_units = GetDvarFloat("gg_drop_forward_units");
+    if (level.gg_config.drop_forward_units <= 0)
+        level.gg_config.drop_forward_units = 70.0;
+
+    level.gg_config.reigndrops_spacing_ms = GetDvarInt("gg_reigndrops_spacing_ms");
+    if (level.gg_config.reigndrops_spacing_ms < 0)
+        level.gg_config.reigndrops_spacing_ms = 0;
+
+    level.gg_config.reigndrops_include_firesale = (GetDvarInt("gg_reigndrops_include_firesale") != 0);
+    level.gg_config.powerup_hints = (GetDvarInt("gg_powerup_hints") != 0);
+}
+
+gg_init_powerup_tables()
+{
+    if (!isdefined(level.gg_powerup_alias))
+    {
+        alias = spawnstruct();
+        alias["dead_of_nuclear_winter"] = "nuke";
+        alias["kill_joy"] = "insta_kill";
+        alias["whos_keeping_score"] = "double_points";
+        alias["licensed_contractor"] = "carpenter";
+        alias["cache_back"] = "full_ammo";
+        alias["immolation"] = "fire_sale";
+        alias["on_the_house"] = "free_perk";
+        alias["fatal_contraption"] = "minigun";
+        level.gg_powerup_alias = alias;
+    }
+
+    if (!isdefined(level.gg_powerup_labels))
+    {
+        labels = spawnstruct();
+        labels["nuke"] = "Nuke";
+        labels["insta_kill"] = "Insta-Kill";
+        labels["double_points"] = "Double Points";
+        labels["carpenter"] = "Carpenter";
+        labels["full_ammo"] = "Max Ammo";
+        labels["fire_sale"] = "Fire Sale";
+        labels["free_perk"] = "Free Perk";
+        labels["minigun"] = "Death Machine";
+        level.gg_powerup_labels = labels;
+    }
+}
+
+gg_powerup_code_for_gum(gum)
+{
+    id = undefined;
+    if (isdefined(gum))
+    {
+        if (isstring(gum))
+        {
+            id = gum;
+        }
+        else if (isdefined(gum.id))
+        {
+            id = gum.id;
+        }
+    }
+    return gg_powerup_code_for_id(id);
+}
+
+gg_powerup_code_for_id(id)
+{
+    gg_init_powerup_tables();
+    if (!isdefined(id) || id == "")
+        return undefined;
+
+    // Try alias table first
+    if (isdefined(level.gg_powerup_alias) && isdefined(level.gg_powerup_alias[id]))
+        return level.gg_powerup_alias[id];
+
+    // Fallback: known id -> code mapping, and populate alias for future calls
+    code = undefined;
+    switch (id)
+    {
+    case "dead_of_nuclear_winter": code = "nuke"; break;
+    case "kill_joy": code = "insta_kill"; break;
+    case "whos_keeping_score": code = "double_points"; break;
+    case "licensed_contractor": code = "carpenter"; break;
+    case "cache_back": code = "full_ammo"; break;
+    case "immolation": code = "fire_sale"; break;
+    case "on_the_house": code = "free_perk"; break;
+    case "fatal_contraption": code = "minigun"; break;
+    }
+
+    if (isdefined(code) && code != "")
+    {
+        if (!isdefined(level.gg_powerup_alias))
+            level.gg_powerup_alias = spawnstruct();
+        level.gg_powerup_alias[id] = code;
+        return code;
+    }
+
+    return undefined;
+}
+gg_powerup_label_for_code(code)
+{
+    gg_init_powerup_tables();
+    if (!isdefined(code) || code == "")
+        return "Power-Up";
+    if (isdefined(level.gg_powerup_labels) && isdefined(level.gg_powerup_labels[code]))
+        return level.gg_powerup_labels[code];
+    return code;
+}
+
+gg_get_drop_forward_units()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.drop_forward_units))
+        return level.gg_config.drop_forward_units;
+    return 70.0;
+}
+
+gg_get_reigndrops_spacing_secs()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.reigndrops_spacing_ms))
+        return level.gg_config.reigndrops_spacing_ms / 1000.0;
+    return 0.15;
+}
+
+gg_reigndrops_include_firesale()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.reigndrops_include_firesale))
+        return level.gg_config.reigndrops_include_firesale;
+    return true;
+}
+
+gg_powerup_hints_enabled()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.powerup_hints))
+        return level.gg_config.powerup_hints;
+    return true;
+}
+
+gg_show_powerup_hint(player, text, raw)
+{
+    if (!gg_powerup_hints_enabled())
+        return;
+    if (!isdefined(player))
+        return;
+    if (!isdefined(level.gb_hud) || !isdefined(level.gb_hud.set_hint))
+        return;
+
+    if (!isdefined(text) || text == "")
+        text = "Power-Up";
+
+    msg = text;
+    if (!isdefined(raw) || !raw)
+        msg = "Spawned: " + text;
+
+    [[ level.gb_hud.set_hint ]](player, msg);
+}
+
+gg_log_powerup_spawn(gum_id, code)
+{
+    if (!gg_should_log_dispatch())
+        return;
+
+    id_label = gum_id;
+    if (!isdefined(id_label) || id_label == "")
+        id_label = "<unknown>";
+
+    code_label = code;
+    if (!isdefined(code_label) || code_label == "")
+        code_label = "<none>";
+
+    iprintln("Gumballs: power-up " + id_label + " -> " + code_label);
+}
+
+gg_can_spawn_death_machine()
+{
+    if (!isdefined(level.gb_helpers) || !isdefined(level.gb_helpers.map_allows))
+        return true;
+    return [[ level.gb_helpers.map_allows ]]("death_machine");
+}
+
+gg_wonderbar_suppress_label(player, duration)
+{
+    if (!isdefined(player))
+        return;
+
+    // Placeholder stub for Build 6; suppression wiring arrives with Wonderbar implementation.
+    if (gg_debug_enabled())
+    {
+        // Keep the log succinct to avoid spam.
+        iprintln("Gumballs: wonderbar suppress stub (" + duration + "s)");
+    }
+}
+
+gg_spawn_powerup_drop(player, code, fan_offset)
+{
+    if (!isdefined(player) || !isdefined(code) || code == "")
+        return false;
+
+    forward = AnglesToForward(player.angles);
+    distance = gg_get_drop_forward_units();
+    pos = player.origin + (forward * distance);
+
+    if (isdefined(fan_offset) && fan_offset != 0)
+    {
+        right = AnglesToRight(player.angles);
+        pos += (right * fan_offset);
+    }
+
+    level thread maps\_zombiemode_powerups::specific_powerup_drop(code, pos);
+    return true;
+}
+
+gg_spawn_powerup_drop_at(player, code, pos)
+{
+    if (!isdefined(player) || !isdefined(code) || code == "")
+        return false;
+
+    if (!isdefined(pos))
+        return gg_spawn_powerup_drop(player, code, 0);
+
+    level thread maps\_zombiemode_powerups::specific_powerup_drop(code, pos);
+    return true;
+}
+
+gg_spawn_and_track_powerup(player, gum_id, code, fan_offset, show_hint, pos_override)
+{
+    success = undefined;
+    if (isdefined(pos_override))
+        success = gg_spawn_powerup_drop_at(player, code, pos_override);
+    else
+        success = gg_spawn_powerup_drop(player, code, fan_offset);
+
+    if (!success)
+        return false;
+
+    gg_log_powerup_spawn(gum_id, code);
+
+    if (isdefined(show_hint) && show_hint)
+        gg_show_powerup_hint(player, gg_powerup_label_for_code(code));
+
+    return true;
+}
+
+gg_spawn_powerup_for_gum(player, gum, code)
+{
+    if (!isdefined(code) || code == "")
+        return false;
+
+    gum_id = "<unknown>";
+    if (isdefined(gum) && isdefined(gum.id))
+        gum_id = gum.id;
+
+    return gg_spawn_and_track_powerup(player, gum_id, code, 0, true);
+}
+
+gg_powerup_single_drop(player, gum)
+{
+    gum_id = "<unknown>";
+    if (isdefined(gum) && isdefined(gum.id))
+        gum_id = gum.id;
+
+    code = gg_powerup_code_for_gum(gum);
+    if (!isdefined(code) || code == "")
+    {
+        if (gg_should_log_dispatch())
+            iprintln("Gumballs: missing power-up alias for " + gum_id);
+
+        gg_mark_activation_skip(player);
+        return false;
+    }
+
+    if (!gg_spawn_powerup_for_gum(player, gum, code))
+    {
+        if (gg_should_log_dispatch())
+            iprintln("Gumballs: failed to spawn power-up for " + gum_id);
+
+        gg_mark_activation_skip(player);
+        return false;
+    }
+
+    return true;
+}
+
+gg_powerup_fan_offset(index, total)
+{
+    if (!isdefined(index) || !isdefined(total) || total <= 1)
+        return 0;
+
+    spread = 30.0;
+    mid = (total - 1) * 0.5;
+    return (index - mid) * spread;
+}
+
+gg_reign_drop_circle_positions(player, codes)
+{
+    positions = [];
+
+    if (!isdefined(player) || !isdefined(codes) || codes.size <= 0)
+        return positions;
+
+    base_angles = (0, player.angles[1], 0);
+    forward = AnglesToForward(base_angles);
+    right = AnglesToRight(base_angles);
+
+    center_offset = gg_get_drop_forward_units() + 75.0;
+    center = player.origin + (forward * center_offset);
+
+    radius = 70.0;
+    if (radius < 1.0)
+        radius = 70.0;
+
+    step = 360.0 / codes.size;
+
+    for (i = 0; i < codes.size; i++)
+    {
+        angle = i * step;
+        forward_component = cos(angle) * radius;
+        right_component = sin(angle) * radius;
+        pos = center + (forward * forward_component) + (right * right_component);
+        positions[positions.size] = pos;
+    }
+
+    return positions;
+}
+
+gg_collect_reign_drop_codes()
+{
+    codes = [];
+
+    codes[codes.size] = "nuke";
+    codes[codes.size] = "insta_kill";
+    codes[codes.size] = "double_points";
+    codes[codes.size] = "carpenter";
+    codes[codes.size] = "full_ammo";
+    codes[codes.size] = "free_perk";
+
+    if (gg_reigndrops_include_firesale())
+        codes[codes.size] = "fire_sale";
+
+    if (gg_can_spawn_death_machine())
+        codes[codes.size] = "minigun";
+
+    return codes;
+}
+
+gg_spawn_reign_drop_sequence(player, gum, codes)
+{
+    if (!isdefined(player) || !isdefined(codes) || codes.size <= 0)
+        return false;
+
+    gum_id = "<unknown>";
+    if (isdefined(gum) && isdefined(gum.id))
+        gum_id = gum.id;
+
+    spacing = gg_get_reigndrops_spacing_secs();
+    positions = gg_reign_drop_circle_positions(player, codes);
+    player thread gg_reign_drop_sequence_thread(gum_id, codes, spacing, positions);
+    return true;
+}
+
+gg_reign_drop_sequence_thread(gum_id, codes, spacing, positions)
+{
+    self endon("disconnect");
+    self endon("gg_gum_cleared");
+
+    if (!isdefined(codes))
+        return;
+
+    total = codes.size;
+    for (i = 0; i < total; i++)
+    {
+        code = codes[i];
+        fan = gg_powerup_fan_offset(i, total);
+        pos_override = undefined;
+        if (isdefined(positions) && positions.size > i)
+            pos_override = positions[i];
+
+        gg_spawn_and_track_powerup(self, gum_id, code, fan, false, pos_override);
+
+        if (spacing > 0 && i < total - 1)
+        {
+            wait(spacing);
+        }
+    }
+}
+
+gg_mark_activation_skip(player)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg))
+        build_player_state(player);
+
+    player.gg.skip_activation_consume_once = true;
 }
 
 gg_init_level_state()
@@ -1436,6 +1833,8 @@ gg_init_dispatcher()
     gg_register_dispatcher_entry("gg_fx_cache_back", ::gg_fx_cache_back);
     gg_register_dispatcher_entry("gg_fx_kill_joy", ::gg_fx_kill_joy);
     gg_register_dispatcher_entry("gg_fx_dead_of_nuclear_winter", ::gg_fx_dead_of_nuclear_winter);
+    gg_register_dispatcher_entry("gg_fx_whos_keeping_score", ::gg_fx_whos_keeping_score);
+    gg_register_dispatcher_entry("gg_fx_licensed_contractor", ::gg_fx_licensed_contractor);
     gg_register_dispatcher_entry("gg_fx_immolation", ::gg_fx_immolation);
     gg_register_dispatcher_entry("gg_fx_on_the_house", ::gg_fx_on_the_house);
     gg_register_dispatcher_entry("gg_fx_fatal_contraption", ::gg_fx_fatal_contraption);
@@ -1610,6 +2009,10 @@ gg_dispatch_string_fallback(func_name)
         return ::gg_fx_kill_joy;
     if (func_name == "gg_fx_dead_of_nuclear_winter")
         return ::gg_fx_dead_of_nuclear_winter;
+    if (func_name == "gg_fx_whos_keeping_score")
+        return ::gg_fx_whos_keeping_score;
+    if (func_name == "gg_fx_licensed_contractor")
+        return ::gg_fx_licensed_contractor;
     if (func_name == "gg_fx_immolation")
         return ::gg_fx_immolation;
     if (func_name == "gg_fx_on_the_house")
@@ -1825,6 +2228,14 @@ gg_on_activation(player, gum)
     if (!isdefined(player) || !isdefined(player.gg))
         return;
 
+    if (isdefined(player.gg.skip_activation_consume_once) && player.gg.skip_activation_consume_once)
+    {
+        player.gg.skip_activation_consume_once = false;
+        if (gg_consume_logs_enabled())
+            iprintln("Gumballs: activation consumption skipped");
+        return;
+    }
+
     type = gg_get_consumption_type(gum);
     if (type == gg_cons_uses())
     {
@@ -1962,32 +2373,69 @@ gg_end_current_gum(player, reason)
 
 gg_fx_cache_back(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Power-Up");
+    gg_powerup_single_drop(player, gum);
 }
 
 gg_fx_kill_joy(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Power-Up");
+    gg_powerup_single_drop(player, gum);
 }
 
 gg_fx_dead_of_nuclear_winter(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Power-Up");
+    gg_powerup_single_drop(player, gum);
+}
+
+gg_fx_whos_keeping_score(player, gum)
+{
+    gg_powerup_single_drop(player, gum);
+}
+
+gg_fx_licensed_contractor(player, gum)
+{
+    gg_powerup_single_drop(player, gum);
 }
 
 gg_fx_immolation(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Power-Up");
+    if (gg_powerup_single_drop(player, gum))
+    {
+        gg_wonderbar_suppress_label(player, 35);
+    }
 }
 
 gg_fx_fatal_contraption(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Power-Up");
+    if (!gg_can_spawn_death_machine())
+    {
+        if (gg_debug_enabled())
+            iprintln("Gumballs: Fatal Contraption blocked (map)");
+        gg_mark_activation_skip(player);
+        return;
+    }
+
+    gg_powerup_single_drop(player, gum);
 }
 
 gg_fx_reign_drops(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Power-Up");
+    codes = gg_collect_reign_drop_codes();
+
+    if (!isdefined(codes) || codes.size <= 0)
+    {
+        if (gg_should_log_dispatch())
+            iprintln("Gumballs: Reign Drops has no valid power-ups");
+        gg_mark_activation_skip(player);
+        return;
+    }
+
+    if (!gg_spawn_reign_drop_sequence(player, gum, codes))
+    {
+        gg_mark_activation_skip(player);
+        return;
+    }
+
+    gg_show_powerup_hint(player, "Reign Drops");
 }
 
 // Weapons & Perks
@@ -2004,7 +2452,7 @@ gg_fx_wall_power(player, gum)
 
 gg_fx_on_the_house(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Weapons/Perks");
+    gg_powerup_single_drop(player, gum);
 }
 
 gg_fx_hidden_power(player, gum)
@@ -2062,3 +2510,4 @@ gg_round_monitor() {}
 gg_assign_gum_for_new_round() {}
 gg_on_round_flow() {}
 gg_on_match_end() {}
+

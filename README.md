@@ -348,6 +348,12 @@ Usage from `gumballs.gsc`:
   - `gg_default_timer_secs` (float, default 60.0)
   - `gg_timer_tick_ms` (int, default 100)
   - `gg_consume_logs` (0/1, default 1)
+* Build 6 power-up knobs:
+  - `gg_drop_forward_units` (float, default 70.0) — base forward offset when spawning drops.
+  - `gg_reigndrops_spacing_ms` (int, default 150) — wait between Reign Drops spawns.
+  - `gg_reigndrops_include_firesale` (0/1, default 1) — include Fire Sale in the Reign Drops bundle.
+  - `gg_powerup_hints` (0/1, default 1) — allow HUD hint text after spawning a drop.
+  - `gg_log_dispatch` (0/1, default 1) — keeps the power-up gum logging consistent with Build 3.
 
 ---
 
@@ -358,7 +364,7 @@ Usage from `gumballs.gsc`:
 3. Dispatcher + input + dummy effect stubs
 4. Position Hud Elements
 5. Consumption logic (uses/rounds/timer)
-6. Implement core power-up gums
+6. Implement core power-up gums (alias map, spawn helper, Reign Drops bundle)
 7. Add armed gums (Wall, Crate, Wonderbar)
 8. Add economy/round gums (Shopping Free, Stock Option, Round Robbin)
 9. Harden map/perk checks + Ascension VO hooks
