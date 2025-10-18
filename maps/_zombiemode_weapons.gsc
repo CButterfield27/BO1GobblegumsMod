@@ -2025,17 +2025,27 @@ treasure_chest_weapon_spawn( chest, player, respin )
 	self.weapon_model = spawn( "script_model", self.origin + ( 0, 0, floatHeight)); 
 	self.weapon_model.angles = self.angles +( 0, 90, 0 );
 
-	modelname = GetWeaponModel( rand );
-	self.weapon_model setmodel( modelname ); 
-	self.weapon_model useweaponhidetags( rand );
+	display_weapon = rand;
+	if ( IsDefined( player ) && IsDefined( player.gg ) && IsDefined( player.gg.armed_flags ) && player.gg.armed_flags.wonderbar_active )
+	{
+		override = player.gg.wonderbar_choice;
+		if ( IsDefined( override ) && override != "" && IsDefined( level.zombie_weapons ) && IsDefined( level.zombie_weapons[override] ) )
+		{
+			display_weapon = override;
+		}
+	}
 
-	if ( weapon_is_dual_wield(rand))
+	modelname = GetWeaponModel( display_weapon );
+	self.weapon_model setmodel( modelname ); 
+	self.weapon_model useweaponhidetags( display_weapon );
+
+	if ( weapon_is_dual_wield(display_weapon))
 	{
 		self.weapon_model_dw = spawn( "script_model", self.weapon_model.origin - ( 3, 3, 3 ) ); // extra model for dualwield weapons
 		self.weapon_model_dw.angles = self.angles +( 0, 90, 0 );		
 
-		self.weapon_model_dw setmodel( get_left_hand_weapon_model_name( rand ) ); 
-		self.weapon_model_dw useweaponhidetags( rand );
+		self.weapon_model_dw setmodel( get_left_hand_weapon_model_name( display_weapon ) ); 
+		self.weapon_model_dw useweaponhidetags( display_weapon );
 	}
 
 	// Increase the chance of joker appearing from 0-100 based on amount of the time chest has been opened.

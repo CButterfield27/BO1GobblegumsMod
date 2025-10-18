@@ -310,7 +310,7 @@ gg_registry_init()
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     // Stock Option - Timed
     gum = spawnstruct();
@@ -429,6 +429,15 @@ build_player_state(player)
     if (!isdefined(player.gg.selected_id))
         player.gg.selected_id = undefined;
 
+    if (!isdefined(player.gg.selection_active))
+        player.gg.selection_active = false;
+
+    if (!isdefined(player.gg.effect_active))
+        player.gg.effect_active = false;
+
+    if (!isdefined(player.gg.effect_id))
+        player.gg.effect_id = undefined;
+
     // Consumption model runtime state (Build 5)
     if (!isdefined(player.gg.consumption_type))
         player.gg.consumption_type = undefined;
@@ -544,6 +553,10 @@ gg_show_gum_selection(player, gum, round_number)
     }
 
     player.gg.selected_id = gum.id;
+    player.gg.selection_active = true;
+    player.gg.effect_active = false;
+    player.gg.effect_id = undefined;
+    player.gg.used_this_round = false;
 
     msg = "Gumballs: selected " + gum.id;
     if (isdefined(round_number))
@@ -574,6 +587,77 @@ gg_show_gum_selection(player, gum, round_number)
     gg_seed_consumption_state(player, gum);
 
     gg_on_selected(player, gum);
+}
+
+gg_selection_is_active(player)
+{
+    if (!isdefined(player) || !isdefined(player.gg))
+        return false;
+
+    return (isdefined(player.gg.selection_active) && player.gg.selection_active);
+}
+
+gg_set_effect_state(player, gum, is_active)
+{
+    if (!isdefined(player) || !isdefined(player.gg))
+        return;
+
+    if (!isdefined(is_active) || !is_active)
+    {
+        player.gg.effect_active = false;
+        player.gg.effect_id = undefined;
+        return;
+    }
+
+    player.gg.effect_active = true;
+    if (isdefined(gum) && isdefined(gum.id))
+        player.gg.effect_id = gum.id;
+}
+
+gg_selection_close(player, reason, hide_ui, reset_state)
+{
+    if (!isdefined(player) || !isdefined(player.gg))
+        return;
+
+    if (!isdefined(player.gg.selection_active) || !player.gg.selection_active)
+        return;
+
+    if (!isdefined(hide_ui))
+        hide_ui = true;
+
+    if (!isdefined(reset_state))
+        reset_state = false;
+
+    player.gg.selection_active = false;
+    player.gg.selected_id = undefined;
+    if (isdefined(reason))
+        player.gg.last_selection_close_reason = reason;
+
+    if (hide_ui && isdefined(level.gb_hud))
+    {
+        if (isdefined(level.gb_hud.br_stop_timer))
+            [[ level.gb_hud.br_stop_timer ]](player);
+        if (isdefined(level.gb_hud.br_clear_label))
+            [[ level.gb_hud.br_clear_label ]](player);
+        if (isdefined(level.gb_hud.hide_br))
+            [[ level.gb_hud.hide_br ]](player);
+    }
+
+    if (reset_state)
+    {
+        player.gg.consumption_type = undefined;
+        player.gg.uses_remaining = 0;
+        player.gg.rounds_remaining = 0;
+        player.gg.timer_endtime = 0;
+        player.gg.is_active = false;
+        player.gg.used_this_round = false;
+        player.gg.last_round_ticked = 0;
+        player.gg.effect_active = false;
+        player.gg.effect_id = undefined;
+    }
+
+    if (gg_debug_select_enabled() && isdefined(reason))
+        gg_log_select("Gumballs: selection closed (" + reason + ")");
 }
 
 gg_init_dvars()
@@ -1033,54 +1117,18 @@ gg_powerup_fan_offset(index, total)
     return (index - mid) * spread;
 }
 
-gg_reign_drop_circle_positions(player, codes)
-{
-    positions = [];
-
-    if (!isdefined(player) || !isdefined(codes) || codes.size <= 0)
-        return positions;
-
-    base_angles = (0, player.angles[1], 0);
-    forward = AnglesToForward(base_angles);
-    right = AnglesToRight(base_angles);
-
-    center_offset = gg_get_drop_forward_units() + 75.0;
-    center = player.origin + (forward * center_offset);
-
-    radius = 70.0;
-    if (radius < 1.0)
-        radius = 70.0;
-
-    step = 360.0 / codes.size;
-
-    for (i = 0; i < codes.size; i++)
-    {
-        angle = i * step;
-        forward_component = cos(angle) * radius;
-        right_component = sin(angle) * radius;
-        pos = center + (forward * forward_component) + (right * right_component);
-        positions[positions.size] = pos;
-    }
-
-    return positions;
-}
-
 gg_collect_reign_drop_codes()
 {
     codes = [];
 
-    codes[codes.size] = "nuke";
-    codes[codes.size] = "insta_kill";
-    codes[codes.size] = "double_points";
+    codes[codes.size] = "maxammo";
+    codes[codes.size] = "instakill";
+    codes[codes.size] = "doublepoints";
     codes[codes.size] = "carpenter";
-    codes[codes.size] = "full_ammo";
-    codes[codes.size] = "free_perk";
+    codes[codes.size] = "nuke";
 
     if (gg_reigndrops_include_firesale())
-        codes[codes.size] = "fire_sale";
-
-    if (gg_can_spawn_death_machine())
-        codes[codes.size] = "minigun";
+        codes[codes.size] = "firesale";
 
     return codes;
 }
@@ -1095,33 +1143,57 @@ gg_spawn_reign_drop_sequence(player, gum, codes)
         gum_id = gum.id;
 
     spacing = gg_get_reigndrops_spacing_secs();
-    positions = gg_reign_drop_circle_positions(player, codes);
-    player thread gg_reign_drop_sequence_thread(gum_id, codes, spacing, positions);
+    player thread gg_reign_drop_sequence_thread(gum_id, codes, spacing);
     return true;
 }
 
-gg_reign_drop_sequence_thread(gum_id, codes, spacing, positions)
+gg_reign_drop_sequence_thread(gum_id, codes, spacing)
 {
     self endon("disconnect");
     self endon("gg_gum_cleared");
 
-    if (!isdefined(codes))
+    if (!isdefined(codes) || codes.size <= 0)
         return;
+
+    forward = AnglesToForward(self.angles);
+    right = AnglesToRight(self.angles);
+    base_offset = gg_get_drop_forward_units();
+    base_pos = self.origin + (forward * base_offset);
+
+    wait_secs = spacing;
+    if (!isdefined(wait_secs))
+        wait_secs = gg_get_reigndrops_spacing_secs();
+    if (wait_secs < 0)
+        wait_secs = 0;
 
     total = codes.size;
     for (i = 0; i < total; i++)
     {
         code = codes[i];
+        if (!isdefined(code) || code == "")
+            continue;
+
+        drop_code = code;
+        if (drop_code == "instakill")
+            drop_code = "insta_kill";
+        else if (drop_code == "maxammo")
+            drop_code = "full_ammo";
+        else if (drop_code == "doublepoints")
+            drop_code = "double_points";
+        else if (drop_code == "firesale")
+            drop_code = "fire_sale";
+
+        drop_pos = base_pos;
         fan = gg_powerup_fan_offset(i, total);
-        pos_override = undefined;
-        if (isdefined(positions) && positions.size > i)
-            pos_override = positions[i];
+        if (isdefined(fan) && fan != 0)
+            drop_pos += (right * fan);
 
-        gg_spawn_and_track_powerup(self, gum_id, code, fan, false, pos_override);
+        level thread maps\_zombiemode_powerups::specific_powerup_drop(drop_code, drop_pos);
+        gg_log_powerup_spawn(gum_id, drop_code);
 
-        if (spacing > 0 && i < total - 1)
+        if (wait_secs > 0 && i < total - 1)
         {
-            wait(spacing);
+            wait(wait_secs);
         }
     }
 }
@@ -1369,28 +1441,37 @@ gg_handle_round_start(round_number)
         if (!gg_is_player_selectable(player))
             continue;
 
-        // USes model: if used at least once in the last round, cycle to a new gum
+        selection_active = gg_selection_is_active(player);
+        consumed_last_round = false;
+        if (isdefined(player.gg) && isdefined(player.gg.used_this_round) && player.gg.used_this_round)
+            consumed_last_round = true;
+
         if (isdefined(player.gg) && isdefined(player.gg.consumption_type) && player.gg.consumption_type == gg_cons_uses())
         {
-            if (isdefined(player.gg.used_this_round) && player.gg.used_this_round)
+            if (consumed_last_round)
             {
                 gg_end_current_gum(player, "round_change_after_use");
             }
+            else if (selection_active)
+            {
+                gg_selection_close(player, "round_change_unused", true, true);
+                if (gg_debug_select_enabled())
+                    gg_log_select("Gumballs: unused gum discarded on round change");
+            }
+        }
+        else if (selection_active)
+        {
+            gg_selection_close(player, "round_change", true, false);
         }
 
         // ROUNDS model: decrement exactly once per new round while active
         gg_round_tick(player, round_number);
 
-        // Assign a new gum only if none is currently selected
-        needs_selection = true;
         if (isdefined(player.gg))
-        {
-            if (isdefined(player.gg.selected_id) && player.gg.selected_id != undefined && player.gg.selected_id != "")
-            {
-                needs_selection = false;
-            }
-        }
+            player.gg.used_this_round = false;
 
+        // Assign a new gum only if none is currently selected
+        needs_selection = !gg_selection_is_active(player);
         if (needs_selection)
         {
             if (isdefined(player.gg) && isdefined(player.gg.last_selected_round) && player.gg.last_selected_round == round_number)
@@ -1890,6 +1971,9 @@ gg_can_activate_now(player)
     if (!isdefined(player) || !isdefined(player.gg))
         return false;
 
+    if (!gg_selection_is_active(player))
+        return false;
+
     if (!isdefined(player.gg.selected_id) || player.gg.selected_id == undefined || player.gg.selected_id == "")
         return false;
 
@@ -1946,6 +2030,8 @@ gg_try_activate(player, source)
 
     // After successful dispatch, apply consumption model hooks
     gg_on_activation(player, gum);
+    gg_set_effect_state(player, gum, true);
+    gg_handle_post_activation(player, gum);
 
     gg_apply_activation_debounce(player);
     return true;
@@ -2564,6 +2650,29 @@ gg_on_activation(player, gum)
     }
 }
 
+gg_handle_post_activation(player, gum)
+{
+    if (!isdefined(player) || !isdefined(player.gg))
+        return;
+
+    type = gg_get_consumption_type(gum);
+
+    if (gg_is_auto_activation(gum))
+    {
+        gg_selection_close(player, "auto_activation", false, false);
+        return;
+    }
+
+    if (type == gg_cons_timed())
+    {
+        gg_selection_close(player, "timed_activation", true, false);
+    }
+    else if (type == gg_cons_rounds())
+    {
+        gg_selection_close(player, "rounds_activation", true, false);
+    }
+}
+
 gg_timer_monitor_thread(expected_token)
 {
     self endon("disconnect");
@@ -2631,11 +2740,17 @@ gg_end_current_gum(player, reason)
     if (gg_consume_logs_enabled() && isdefined(reason))
         iprintln("Gumballs: ending gum (" + reason + ")");
 
+    gg_selection_close(player, reason, true, true);
+    gg_set_effect_state(player, undefined, false);
+
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_stop_timer))
         [[ level.gb_hud.br_stop_timer ]](player);
 
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_clear_label))
         [[ level.gb_hud.br_clear_label ]](player);
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.hide_br))
+        [[ level.gb_hud.hide_br ]](player);
 
     player.gg.is_active = false;
     player.gg.uses_remaining = 0;
@@ -2643,9 +2758,6 @@ gg_end_current_gum(player, reason)
     player.gg.timer_endtime = 0;
     player.gg.used_this_round = false;
     player.gg.active_token += 1;
-
-    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.hide_br))
-        [[ level.gb_hud.hide_br ]](player);
 
     if (isdefined(player.gg) && isdefined(player.gg.armed_flags))
     {
@@ -2674,6 +2786,7 @@ gg_end_current_gum(player, reason)
     player notify("gg_wonderbar_end");
 
     player.gg.selected_id = undefined;
+    player.gg.selection_active = false;
 }
 
 // Power-Ups
@@ -3187,10 +3300,21 @@ gg_wonderbar_apply_choice(player, acquired_weapon)
         return false;
     }
 
+    wait(0.25);
+
+    if (isdefined(acquired_weapon) && acquired_weapon != "" && acquired_weapon != "none" && acquired_weapon != wonder)
+    {
+        if (player HasWeapon(acquired_weapon))
+            player TakeWeapon(acquired_weapon);
+    }
+
     player maps\_zombiemode_weapons::weapon_give(wonder);
 
     if (!player HasWeapon(wonder))
         return false;
+
+    player GiveStartAmmo(wonder);
+    player SwitchToWeapon(wonder);
 
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_set_label))
     {
@@ -3215,17 +3339,19 @@ gg_wonderbar_on_success(player, gum, weapon)
     if (gg_debug_enabled())
         iprintln("Gumballs: Wonderbar granted " + player.gg.wonderbar_choice);
 
+    if (isdefined(player.gg))
+        player.gg.uses_remaining = 0;
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_consume_use))
+        [[ level.gb_hud.br_consume_use ]](player);
+
     wait(0.25);
     if (isdefined(player.gg))
     {
-        player.gg.uses_remaining = 0;
         player.gg.wonderbar_choice = undefined;
         player.gg.wonderbar_label_text = "";
     }
     if (isdefined(level.gb_hud))
     {
-        if (isdefined(level.gb_hud.br_consume_use))
-            [[ level.gb_hud.br_consume_use ]](player);
         if (isdefined(level.gb_hud.br_clear_label))
             [[ level.gb_hud.br_clear_label ]](player);
     }

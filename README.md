@@ -91,6 +91,8 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to
 * Activation debounce
 * Effect end timers (e.g., Stock Option, Shopping Free)
 * `player.gg.selected_id` stores current gum id
+* `player.gg.selection_active` tracks whether the round's selection slot is occupied (cleared on activation or round rollover)
+* `player.gg.effect_active` / `player.gg.effect_id` track effects that persist after the slot is freed
 * `player.gg.uses_remaining`, `player.gg.rounds_remaining`, `player.gg.timer_endtime` reserved for consumption models
 * `player.gg.armed_flags` default false
 * `player.gg.hud` assigned by `gb_hud::init_player`
@@ -196,13 +198,14 @@ Usage from `gumballs.gsc`:
 
 * On round start:
 
+  * Close the previous selection slot if it is still occupied (unused gums are discarded; ongoing effects continue with `effect_active` while the slot is freed)
   * Apply ROUNDS tick (if a rounds-based gum is active): decrement 1, update BR, end at 0
-  * If no gum is currently selected/active this round: select and apply a new gum
+  * Always assign a fresh gum for the new round once cleanup completes
   * Round 1 delay: 10s before first gum
   * Pick gum: skip invalid (e.g., Perkaholic with full perks), reset cycle if empty
   * Apply gum: set player vars, init BR bar mode and totals
   * Show HUD: show TC + BR (no fades yet)
-  * Auto-gums: may activate immediately
+  * Auto-gums: may activate immediately and detach the selection slot; timed/armed gums free the slot while the effect continues
   * Remove gum from `pool_remaining` (no repeats until reset)
   * Schedule TC auto-hide (7.5s)
 
@@ -260,7 +263,7 @@ Usage from `gumballs.gsc`:
 * On the House (Free Perk)
 * Fatal Contraption (Death Machine) ? only on maps that allow
 * Extra Credit (Bonus Points)
-* Reign Drops (all power-ups at once)
+* Reign Drops (spawns Max Ammo, Insta-Kill, Double Points, Carpenter, and Nuke sequentially with configurable spacing; optional Fire Sale when enabled)
 
 ### Weapons / Perks
 
@@ -271,6 +274,8 @@ Usage from `gumballs.gsc`:
 * Crate Power (next box gun upgraded, 3s grace)
 
 * Wonderbar (next box gun is WW)
+  * Removes the box result before granting the cached Wonder Weapon, restores start ammo, and auto-switches to the reward
+  * Mystery Box spin temporarily displays the Wonder Weapon model for the armed player
   * Label shows WW name
   * Label reasserts visibility every 0.25s until gum ends
   * Optional Gersh/Quantum specials via `gg_wonder_include_specials` (default 0)
@@ -447,3 +452,21 @@ stateDiagram-v2
 - Using `gg_force_gum <id>` without `set` is a console command and will error.
 
 ---
+
+## What Changed (Bugfix Rollup)
+
+- Round Cycling:
+  - Fixed auto/timer gums blocking next-round selection.
+  - Added clear separation between selection slots and active effects.
+  - Unused gums at round change now discarded correctly (new gum always assigned).
+
+- Reign Drops:
+  - Each use now spawns the full multi-power-up bundle (not just Nuke on 2/2).
+  - Proper wait spacing between spawns for clean sequential drops.
+
+- Wonderbar:
+  - Fixed double-grant issue (no longer gives both the box gun and the Wonder Weapon).
+  - Added Mystery Box visual override so the Wonder Weapon is displayed during spin for the armed player.
+
+- Documentation:
+  - Updated Data Model, Selection Logic, Reign Drops, and Wonderbar sections to reflect new behavior.
