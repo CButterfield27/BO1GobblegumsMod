@@ -11,7 +11,8 @@
   * Selection & round watcher
   * Gum activation & consumption model
   * Effect implementations
-  * Reads dev DVARs (`gg_enable`, `gg_debug`) at init to allow fast toggling in-game
+  * Armed gums (Wall Power, Crate Power, Wonderbar) with weapon polling, Pack-a-Punch upgrades, Wonder Weapon replacement, and test Fire Sale hook
+  * Reads dev DVARs (`gg_enable`, `gg_debug`, `gg_test_drop_firesale_on_arm`, `gg_wonder_include_specials`, etc.) at init to allow fast iteration
   * Provides registry helpers: `gg_register_gum`, `gg_find_gum_by_id`
   * Player state builder: `build_player_state`, `gg_set_selected_gum_name`, `gg_apply_selected_gum`
   * Included via `#include maps\gobblegum\gumballs;` in `_zombiemode.gsc`
@@ -21,17 +22,17 @@
   * Precache shaders/fonts (`white`, `specialty_perk`, `specialty_ammo`)
   * Included via `#include maps\gobblegum\gb_hud;`; precache runs before any player HUD builds
   * Top-Center HUD (icon, name, uses, description)
-* Bottom-Right HUD (icon, usage bar [bg+fg], hint text)
+* Bottom-Right HUD (icon, usage bar [bg+fg], hint text, Wonderbar label preview)
   * Positioning uses `setPoint` with safe-area anchors (TC: `CENTER`/`TOP`, BR: `RIGHT`/`BOTTOMRIGHT`)
   * Layout driven by small config: base top offset, icon size, and vertical gaps; BR offsets and bar size
   * Fade/animation polish deferred; Build 5 wires BR bar logic
-  * HUD API now live for BR uses/rounds/timer; helpers remain idempotent
+  * HUD API now live for BR uses/rounds/timer/label; helpers remain idempotent
 * **`gb_helpers.gsc` (Utilities)**
 
   * Map-specific helpers (death machine maps, cosmodrome VO trigger)
   * Included via `#include maps\gobblegum\gb_helpers;`; init before HUD/core so shared helpers are ready
   * Constant getters for enums and knobs (`ACT_AUTO`, `CONS_TIMED`, `GG_TC_AUTOHIDE_SECS`, etc.)
-  * Perk/weapon/wonder-weapon helpers (initial stubs)
+  * Pack-a-Punch helper mirrors `_zombiemode_perks.gsc`; Wonder Weapon pool + display-name helpers drive Wonderbar (respects `gg_wonder_include_specials`)
   * Power-up spawn helpers (stub)
   * Safe `set_if_changed` wrappers
   * Math, pluralization, clamp
@@ -84,7 +85,7 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to
 * Current gum snapshot
 * Uses/rounds/duration remaining
 * Armed gum flags (wall_power_active, crate_power_active, wonderbar_active)
-* Wonderbar choice cache
+* Wonderbar choice cache (`wonderbar_choice`), label text, suppression timers, monitor tokens
 * HUD fade tokens, defer-hide timestamps
 * Selection pools (full vs. remaining)
 * Activation debounce
@@ -130,7 +131,7 @@ Positioning
 * Usage Bar (shader `"white"`, width 75, height 5)
 
   * Modes: uses / rounds / timer
-* Optional label (e.g., Wonderbar preview) ? disabled in Step 1
+* BR label (Wonderbar preview) driven by HUD helpers
 
 Positioning
 
@@ -254,7 +255,7 @@ Usage from `gumballs.gsc`:
 * Dead of Nuclear Winter (Nuke)
 * Kill Joy (Insta Kill)
 * Licensed Contractor (Carpenter)
-* Immolation Liquidation (Fire Sale) ? suppress Wonderbar label for 35s
+* Immolation Liquidation (Fire Sale) - triggers Wonderbar label suppression for 35s via helper
 * Who?s Keeping Score (Double Points)
 * On the House (Free Perk)
 * Fatal Contraption (Death Machine) ? only on maps that allow
@@ -270,10 +271,10 @@ Usage from `gumballs.gsc`:
 * Crate Power (next box gun upgraded, 3s grace)
 
 * Wonderbar (next box gun is WW)
-
   * Label shows WW name
   * Label reasserts visibility every 0.25s until gum ends
-  * Suppressed during Fire Sale
+  * Optional Gersh/Quantum specials via `gg_wonder_include_specials` (default 0)
+  * Suppression triggered by Wonderbar helper calls (e.g., Immolation)
 
 * Perkaholic (all map perks; Ascension triggers perk VO)
 
@@ -310,13 +311,14 @@ Usage from `gumballs.gsc`:
 
 ### Core ? HUD
 
-* All HUD functions above (show/hide/update, bar, hint, delay)
+* All HUD functions above (show/hide/update, bar, hint, delay, `br_set_label`, `br_clear_label`)
 
 ### Core ? Helpers
 
 * `helpers.map_allows("death_machine")`
-* `helpers.is_cosmodrome()`
-* `helpers.get_wonder_pool(map)`
+* `helpers.is_cosmodrome()` / `helpers.get_current_mapname()`
+* `helpers.get_wonder_pool(map)` (respects `gg_wonder_include_specials`)
+* `helpers.get_weapon_display_name(weapon)`
 * `helpers.upgrade_weapon(player, base)`
 * `helpers.drop_powerup(player, code, pos|dist)`
 * `helpers.player_has_all_map_perks(player)`
@@ -337,7 +339,7 @@ Usage from `gumballs.gsc`:
 * TC auto-hide (default 7.5s)
 * HUD fade duration (default 0.25s)
 * Armed gum grace window (default 3s)
-* Wonderbar label suppression (default 35s during Fire Sale)
+* Wonderbar label suppression (default 35s when triggered via `gg_wonderbar_suppress_label`)
 * BR delayed show (default 1.5s)
 * Selection cadence (round-based vs. alternative)
 * Override policy for manual gums
@@ -349,11 +351,17 @@ Usage from `gumballs.gsc`:
   - `gg_timer_tick_ms` (int, default 100)
   - `gg_consume_logs` (0/1, default 1)
 * Build 6 power-up knobs:
-  - `gg_drop_forward_units` (float, default 70.0) — base forward offset when spawning drops.
-  - `gg_reigndrops_spacing_ms` (int, default 150) — wait between Reign Drops spawns.
-  - `gg_reigndrops_include_firesale` (0/1, default 1) — include Fire Sale in the Reign Drops bundle.
-  - `gg_powerup_hints` (0/1, default 1) — allow HUD hint text after spawning a drop.
-  - `gg_log_dispatch` (0/1, default 1) — keeps the power-up gum logging consistent with Build 3.
+  - `gg_drop_forward_units` (float, default 70.0) - base forward offset when spawning drops.
+  - `gg_reigndrops_spacing_ms` (int, default 150) - wait between Reign Drops spawns.
+  - `gg_reigndrops_include_firesale` (0/1, default 1) - include Fire Sale in the Reign Drops bundle.
+  - `gg_powerup_hints` (0/1, default 1) - allow HUD hint text after spawning a drop.
+  - `gg_log_dispatch` (0/1, default 1) - keeps the power-up gum logging consistent with Build 3.
+* Build 7 armed-gum knobs:
+  - `gg_armed_grace_secs` (float, default 3.0) - grace window before armed gums can trigger.
+  - `gg_armed_poll_ms` (int, default 150) - polling cadence when watching weapon changes.
+  - `gg_wonder_label_reassert_ms` (int, default 250) - Wonderbar BR label reassert cadence.
+  - `gg_test_drop_firesale_on_arm` (0/1, default 1 while testing) - spawn a Fire Sale when an armed gum activates (Wall/Crate/Wonderbar); disable after validation.
+  - `gg_wonder_include_specials` (0/1, default 0) - optionally include Gersh Device (`zombie_black_hole_bomb`) and Quantum Bomb (`zombie_quantum_bomb`) in the Wonderbar weapon pool.
 
 ---
 
@@ -425,7 +433,7 @@ stateDiagram-v2
       Wonderbar label:
       - Preview name shown
       - Reassert every 0.25s
-      - Suppress during Fire Sale
+      - Suppression handled by Wonderbar helpers (e.g., Immolation)
     end note
 ```
 

@@ -105,6 +105,12 @@ __gg_apply_layout(hud)
 
     hud.br_hint.fontScale = 1.15;
     hud.br_hint setPoint("RIGHT", "BOTTOMRIGHT", l.br_hint_x, l.br_hint_y);
+
+    if (isdefined(hud.br_label))
+    {
+        hud.br_label.fontScale = 1.05;
+        hud.br_label setPoint("RIGHT", "BOTTOMRIGHT", l.br_label_x, l.br_label_y);
+    }
 }
 
 ensure_api()
@@ -131,6 +137,8 @@ ensure_api()
     level.gb_hud.br_consume_round = ::br_consume_round;
     level.gb_hud.br_start_timer = ::br_start_timer;
     level.gb_hud.br_stop_timer = ::br_stop_timer;
+    level.gb_hud.br_set_label = ::br_set_label;
+    level.gb_hud.br_clear_label = ::br_clear_label;
     level.gb_hud.precache = ::gg_hud_precache;
 }
 
@@ -245,12 +253,17 @@ __gg_init_player_impl()
     self.gg.hud.br_bar_fg.sort = 21;
 
     self.gg.hud.br_hint = createFontString("objective", 1.0);
-    self.gg.hud.br_hint.foreground = true;
-    self.gg.hud.br_hint.hidewheninmenu = true;
-    self.gg.hud.br_hint.alpha = 0;
-    self.gg.hud.br_hint.sort = 22;
+   self.gg.hud.br_hint.foreground = true;
+   self.gg.hud.br_hint.hidewheninmenu = true;
+   self.gg.hud.br_hint.alpha = 0;
+   self.gg.hud.br_hint.sort = 22;
 
-    // BR title/label not used in Step-1; omit creation to avoid clutter
+    self.gg.hud.br_label = createFontString("objective", 1.0);
+    self.gg.hud.br_label.foreground = true;
+    self.gg.hud.br_label.hidewheninmenu = true;
+    self.gg.hud.br_label.alpha = 0;
+    self.gg.hud.br_label.color = (1, 0.85, 0.3);
+    self.gg.hud.br_label.sort = 22;
 
     // Tokens
     self.gg.hud.tokens = spawnstruct();
@@ -355,16 +368,26 @@ __gg_update_tc_impl(gum)
      if (!isdefined(self.gg) || !isdefined(self.gg.hud))
          return;
      l = __gg_get_layout();
-     if (isdefined(gum) && isdefined(gum.shader))
-         __gg_set_shader_if_changed(self, self.gg.hud.br_icon, "br_icon", gum.shader, l.br_icon_size, l.br_icon_size);
-    // No BR title for Step-1 (leave hint blank until set)
-    __gg_set_text_if_changed(self, self.gg.hud.br_hint, "br_hint", "");
+    if (isdefined(gum) && isdefined(gum.shader))
+        __gg_set_shader_if_changed(self, self.gg.hud.br_icon, "br_icon", gum.shader, l.br_icon_size, l.br_icon_size);
+   // No BR title for Step-1 (leave hint blank until set)
+   __gg_set_text_if_changed(self, self.gg.hud.br_hint, "br_hint", "");
 
-     self.gg.hud.br_icon.alpha = 1;
-     self.gg.hud.br_bar_bg.alpha = 1;
-     self.gg.hud.br_bar_fg.alpha = 1;
-     self.gg.hud.br_hint.alpha = 1;
- }
+    self.gg.hud.br_icon.alpha = 1;
+    self.gg.hud.br_bar_bg.alpha = 1;
+    self.gg.hud.br_bar_fg.alpha = 1;
+    self.gg.hud.br_hint.alpha = 1;
+    if (isdefined(self.gg.hud.br_label))
+    {
+        label_text = "";
+        if (isdefined(self.gg.hud.__cache))
+            label_text = __gg_cache_get(self, "br_label");
+        if (isdefined(label_text) && label_text != "")
+            self.gg.hud.br_label.alpha = 1;
+        else
+            self.gg.hud.br_label.alpha = 0;
+    }
+}
 
  hide_br(player)
  {
@@ -378,11 +401,13 @@ __gg_update_tc_impl(gum)
      self endon("disconnect");
      if (!isdefined(self.gg) || !isdefined(self.gg.hud))
          return;
-     self.gg.hud.br_icon.alpha = 0;
-     self.gg.hud.br_bar_bg.alpha = 0;
-     self.gg.hud.br_bar_fg.alpha = 0;
-     self.gg.hud.br_hint.alpha = 0;
- }
+    self.gg.hud.br_icon.alpha = 0;
+    self.gg.hud.br_bar_bg.alpha = 0;
+    self.gg.hud.br_bar_fg.alpha = 0;
+    self.gg.hud.br_hint.alpha = 0;
+    if (isdefined(self.gg.hud.br_label))
+        self.gg.hud.br_label.alpha = 0;
+}
 
 show_br_after_delay(player, secs, expected_name)
 {
@@ -596,4 +621,32 @@ __gg_br_stop_timer_impl()
     self.gg.hud.__br.token += 1;
     if (isdefined(self.gg.hud.br_bar_fg))
         self.gg.hud.br_bar_fg SetShader("white", 0, self.gg.hud.br_bar_fg.height);
+}
+
+br_set_label(player, text)
+{
+    if (!isdefined(player))
+        return;
+    player thread __gg_br_set_label_impl(text);
+}
+
+__gg_br_set_label_impl(text)
+{
+    self endon("disconnect");
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud) || !isdefined(self.gg.hud.br_label))
+        return;
+
+    if (!isdefined(text))
+        text = "";
+
+    __gg_set_text_if_changed(self, self.gg.hud.br_label, "br_label", text);
+    if (text == "")
+        self.gg.hud.br_label.alpha = 0;
+    else
+        self.gg.hud.br_label.alpha = 1;
+}
+
+br_clear_label(player)
+{
+    br_set_label(player, "");
 }

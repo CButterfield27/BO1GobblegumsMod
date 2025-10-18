@@ -64,17 +64,18 @@ gg_registry_init()
     gum.name = "Wall Power";
     gum.shader = "bo6_wall_power";
     gum.desc = "Next wall-buy is PaP";
-    gum.activation = 2; // ACT_USER (armed gum in future builds)
-    gum.consumption = 2; // CONS_ROUNDS (placeholder; armed logic later)
-    gum.base_rounds = 3;
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
     gum.activate_func = "gg_fx_wall_power";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
+    gum.tags[0] = "weapon";
     gum.whitelist = [];
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
     
     // Cache Back (Max Ammo) - Uses
     gum = spawnstruct();
@@ -106,11 +107,12 @@ gg_registry_init()
     gum.activate_func = "gg_fx_crate_power";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
+    gum.tags[0] = "weapon";
     gum.whitelist = [];
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     // Dead of Nuclear Winter (Nuke) - Uses
     gum = spawnstruct();
@@ -146,7 +148,7 @@ gg_registry_init()
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     // Fatal Contraption (Death Machine) - Uses (map-allowed)
     gum = spawnstruct();
@@ -358,11 +360,13 @@ gg_registry_init()
     gum.activate_func = "gg_fx_wonderbar";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
+    gum.tags[0] = "weapon";
+    gum.tags[1] = "wonder";
     gum.whitelist = [];
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     level.gg_registry_built = true;
 
@@ -460,7 +464,30 @@ build_player_state(player)
     }
     player.gg.armed_flags.wall = false;
     player.gg.armed_flags.crate = false;
+    player.gg.armed_flags.crate_power_active = false;
     player.gg.armed_flags.wonder = false;
+    player.gg.armed_flags.wonderbar_active = false;
+
+    if (!isdefined(player.gg.wall_power_token))
+        player.gg.wall_power_token = 0;
+    if (!isdefined(player.gg.crate_power_token))
+        player.gg.crate_power_token = 0;
+    if (!isdefined(player.gg.armed_since))
+        player.gg.armed_since = 0;
+    if (!isdefined(player.gg.crate_power_armed_time))
+        player.gg.crate_power_armed_time = 0;
+    if (!isdefined(player.gg.wonderbar_armed_time))
+        player.gg.wonderbar_armed_time = 0;
+    if (!isdefined(player.gg.wonderbar_token))
+        player.gg.wonderbar_token = 0;
+    if (!isdefined(player.gg.wonderbar_label_token))
+        player.gg.wonderbar_label_token = 0;
+    if (!isdefined(player.gg.wonderbar_choice))
+        player.gg.wonderbar_choice = undefined;
+    if (!isdefined(player.gg.wonderbar_label_text))
+        player.gg.wonderbar_label_text = "";
+    if (!isdefined(player.gg.wonderbar_suppress_until))
+        player.gg.wonderbar_suppress_until = 0;
 
     if (!isdefined(player.gg.pool_full))
         player.gg.pool_full = [];
@@ -575,6 +602,11 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_reigndrops_spacing_ms", 150);
     gg_ensure_dvar_int("gg_reigndrops_include_firesale", 1);
     gg_ensure_dvar_int("gg_powerup_hints", 1);
+    gg_ensure_dvar_float("gg_armed_grace_secs", 3.0);
+    gg_ensure_dvar_int("gg_armed_poll_ms", 150);
+    gg_ensure_dvar_int("gg_test_drop_firesale_on_arm", 1);
+    gg_ensure_dvar_int("gg_wonder_label_reassert_ms", 250);
+    gg_ensure_dvar_int("gg_wonder_include_specials", 0);
 
     // Cache commonly used defaults for quick access
     gg_cache_config();
@@ -615,6 +647,19 @@ gg_cache_config()
 
     level.gg_config.reigndrops_include_firesale = (GetDvarInt("gg_reigndrops_include_firesale") != 0);
     level.gg_config.powerup_hints = (GetDvarInt("gg_powerup_hints") != 0);
+    level.gg_config.wonder_include_specials = (GetDvarInt("gg_wonder_include_specials") != 0);
+
+    level.gg_config.armed_grace_secs = GetDvarFloat("gg_armed_grace_secs");
+    if (level.gg_config.armed_grace_secs < 0)
+        level.gg_config.armed_grace_secs = 0;
+
+    level.gg_config.armed_poll_ms = GetDvarInt("gg_armed_poll_ms");
+    if (level.gg_config.armed_poll_ms < 10)
+        level.gg_config.armed_poll_ms = 10;
+
+    level.gg_config.wonder_label_reassert_ms = GetDvarInt("gg_wonder_label_reassert_ms");
+    if (level.gg_config.wonder_label_reassert_ms < 50)
+        level.gg_config.wonder_label_reassert_ms = 50;
 }
 
 gg_init_powerup_tables()
@@ -737,6 +782,92 @@ gg_powerup_hints_enabled()
     return true;
 }
 
+gg_get_armed_grace_secs()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.armed_grace_secs))
+        return level.gg_config.armed_grace_secs;
+    return 3.0;
+}
+
+gg_get_armed_grace_ms()
+{
+    return int(gg_get_armed_grace_secs() * 1000);
+}
+
+gg_get_armed_poll_ms()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.armed_poll_ms))
+        return level.gg_config.armed_poll_ms;
+    return 150;
+}
+
+gg_get_armed_poll_secs()
+{
+    ms = gg_get_armed_poll_ms();
+    if (ms < 10)
+        ms = 10;
+    return ms / 1000.0;
+}
+
+gg_show_hint_if_enabled(player, text)
+{
+    if (!gg_powerup_hints_enabled())
+        return;
+    if (!isdefined(player))
+        return;
+    if (!isdefined(level.gb_hud) || !isdefined(level.gb_hud.set_hint))
+        return;
+    if (!isdefined(text))
+        text = "";
+    [[ level.gb_hud.set_hint ]](player, text);
+}
+
+gg_get_wonder_label_reassert_ms()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.wonder_label_reassert_ms))
+        return level.gg_config.wonder_label_reassert_ms;
+    return 250;
+}
+
+gg_get_wonder_label_reassert_secs()
+{
+    return gg_get_wonder_label_reassert_ms() / 1000.0;
+}
+
+gg_is_firesale_active()
+{
+    if (!isdefined(level))
+        return false;
+    if (!isdefined(level.zombie_vars))
+        return false;
+    if (!isdefined(level.zombie_vars["zombie_powerup_fire_sale_on"]))
+        return false;
+    return is_true(level.zombie_vars["zombie_powerup_fire_sale_on"]);
+}
+
+gg_test_drop_firesale_enabled()
+{
+    return (GetDvarInt("gg_test_drop_firesale_on_arm") != 0);
+}
+
+gg_spawn_firesale_test_drop(player)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.origin) || !isdefined(player.angles))
+        return;
+
+    if (!gg_test_drop_firesale_enabled())
+        return;
+
+    if (gg_spawn_powerup_drop(player, "fire_sale", 0))
+    {
+        if (gg_debug_enabled())
+            iprintln("Gumballs: Test Fire Sale dropped");
+    }
+}
+
 gg_show_powerup_hint(player, text, raw)
 {
     if (!gg_powerup_hints_enabled())
@@ -784,12 +915,22 @@ gg_wonderbar_suppress_label(player, duration)
     if (!isdefined(player))
         return;
 
-    // Placeholder stub for Build 6; suppression wiring arrives with Wonderbar implementation.
+    if (!isdefined(player.gg))
+        build_player_state(player);
+
+    if (!isdefined(duration) || duration < 0)
+        duration = 0;
+
+    if (!isdefined(player.gg.wonderbar_suppress_until))
+        player.gg.wonderbar_suppress_until = 0;
+
+    player.gg.wonderbar_suppress_until = gettime() + int(duration * 1000);
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_clear_label))
+        [[ level.gb_hud.br_clear_label ]](player);
+
     if (gg_debug_enabled())
-    {
-        // Keep the log succinct to avoid spam.
-        iprintln("Gumballs: wonderbar suppress stub (" + duration + "s)");
-    }
+        iprintln("Gumballs: Wonderbar label suppressed (" + duration + "s)");
 }
 
 gg_spawn_powerup_drop(player, code, fan_offset)
@@ -2070,6 +2211,146 @@ gg_effect_stub_common(player, gum, category)
     [[ level.gb_hud.set_hint ]](player, "Activated: " + gum_name);
 }
 
+// Armed gum shared helpers
+gg_get_primary_weapons(player)
+{
+    if (!isdefined(player))
+        return [];
+
+    weapons = player GetWeaponsListPrimaries();
+    if (!isdefined(weapons))
+        weapons = [];
+    return weapons;
+}
+
+gg_clone_array(arr)
+{
+    clone = [];
+    if (!isdefined(arr))
+        return clone;
+    for (i = 0; i < arr.size; i++)
+    {
+        clone[i] = arr[i];
+    }
+    return clone;
+}
+
+gg_array_contains(arr, value)
+{
+    if (!isdefined(arr))
+        return false;
+    for (i = 0; i < arr.size; i++)
+    {
+        if (arr[i] == value)
+            return true;
+    }
+    return false;
+}
+
+gg_detect_new_weapon(prev, curr)
+{
+    if (!isdefined(curr))
+        return undefined;
+
+    for (i = 0; i < curr.size; i++)
+    {
+        weapon = curr[i];
+        if (!isdefined(weapon) || weapon == "" || weapon == "none")
+            continue;
+        if (!gg_array_contains(prev, weapon))
+            return weapon;
+    }
+
+    return undefined;
+}
+
+gg_weapon_has_upgrade(weapon)
+{
+    if (!isdefined(weapon) || weapon == "" || !isdefined(level.zombie_weapons))
+        return false;
+
+    if (!isdefined(level.zombie_weapons[weapon]))
+        return false;
+
+    if (!isdefined(level.zombie_weapons[weapon].upgrade_name))
+        return false;
+
+    upgrade = level.zombie_weapons[weapon].upgrade_name;
+    return (isdefined(upgrade) && upgrade != "");
+}
+
+gg_weapon_is_box_weapon(weapon)
+{
+    if (!isdefined(weapon) || weapon == "" || !isdefined(level.zombie_weapons))
+        return false;
+
+    if (!isdefined(level.zombie_weapons[weapon]))
+        return false;
+
+    return maps\_zombiemode_weapons::get_is_in_box(weapon);
+}
+
+gg_weapon_is_wall_buy(weapon)
+{
+    if (!isdefined(weapon) || weapon == "" || !isdefined(level.zombie_weapons))
+        return false;
+
+    if (!isdefined(level.zombie_weapons[weapon]))
+        return false;
+
+    if (maps\_zombiemode_weapons::get_is_in_box(weapon))
+        return false;
+
+    if (isdefined(maps\_zombiemode_weapons::get_weapon_toggle))
+    {
+        toggle = maps\_zombiemode_weapons::get_weapon_toggle(weapon);
+        if (isdefined(toggle))
+            return true;
+    }
+
+    return false;
+}
+
+gg_weapon_is_spawn_pistol(weapon)
+{
+    return (weapon == "m1911_zm");
+}
+
+gg_apply_upgrade_for_weapon(player, weapon)
+{
+    if (!isdefined(level.gb_helpers) || !isdefined(level.gb_helpers.upgrade_weapon))
+        return false;
+    return [[ level.gb_helpers.upgrade_weapon ]](player, weapon);
+}
+
+gg_wall_power_token_active(expected_token)
+{
+    if (!isdefined(self.gg) || !isdefined(self.gg.wall_power_token))
+        return false;
+    return (self.gg.wall_power_token == expected_token);
+}
+
+gg_crate_power_token_active(expected_token)
+{
+    if (!isdefined(self.gg) || !isdefined(self.gg.crate_power_token))
+        return false;
+    return (self.gg.crate_power_token == expected_token);
+}
+
+gg_wonderbar_token_active(expected_token)
+{
+    if (!isdefined(self.gg) || !isdefined(self.gg.wonderbar_token))
+        return false;
+    return (self.gg.wonderbar_token == expected_token);
+}
+
+gg_wonderbar_label_token_active(expected_token)
+{
+    if (!isdefined(self.gg) || !isdefined(self.gg.wonderbar_label_token))
+        return false;
+    return (self.gg.wonderbar_label_token == expected_token);
+}
+
 // Build 5: Consumption seeding and helpers
 gg_seed_consumption_state(player, gum)
 {
@@ -2353,6 +2634,9 @@ gg_end_current_gum(player, reason)
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_stop_timer))
         [[ level.gb_hud.br_stop_timer ]](player);
 
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_clear_label))
+        [[ level.gb_hud.br_clear_label ]](player);
+
     player.gg.is_active = false;
     player.gg.uses_remaining = 0;
     player.gg.rounds_remaining = 0;
@@ -2362,6 +2646,29 @@ gg_end_current_gum(player, reason)
 
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.hide_br))
         [[ level.gb_hud.hide_br ]](player);
+
+    if (isdefined(player.gg) && isdefined(player.gg.armed_flags))
+    {
+        player.gg.armed_flags.wall = false;
+        player.gg.armed_flags.crate = false;
+        player.gg.armed_flags.crate_power_active = false;
+        player.gg.armed_flags.wonder = false;
+        player.gg.armed_flags.wonderbar_active = false;
+    }
+
+    if (isdefined(player.gg))
+    {
+        player.gg.crate_power_armed_time = 0;
+        player.gg.armed_since = 0;
+        player.gg.wonderbar_armed_time = 0;
+        player.gg.wonderbar_choice = undefined;
+        player.gg.wonderbar_label_text = "";
+        player.gg.wonderbar_suppress_until = 0;
+    }
+
+    player notify("gg_wall_power_cancel");
+    player notify("gg_crate_power_cancel");
+    player notify("gg_wonderbar_cancel");
 
     player notify("gg_gum_cleared");
     player notify("gg_wonderbar_end");
@@ -2447,7 +2754,119 @@ gg_fx_perkaholic(player, gum)
 
 gg_fx_wall_power(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Weapons/Perks");
+    if (!isdefined(player))
+        return;
+
+    gg_mark_activation_skip(player);
+    gg_wall_power_arm(player, gum);
+}
+
+gg_wall_power_arm(player, gum)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg))
+        build_player_state(player);
+
+    player notify("gg_wall_power_cancel");
+
+    if (!isdefined(player.gg.wall_power_token))
+        player.gg.wall_power_token = 0;
+    player.gg.wall_power_token += 1;
+    token = player.gg.wall_power_token;
+
+    snapshot = gg_clone_array(gg_get_primary_weapons(player));
+    grace_end = gettime() + gg_get_armed_grace_ms();
+
+    player.gg.armed_flags.wall = true;
+
+    player thread gg_wall_power_monitor_thread(gum, token, grace_end, snapshot);
+
+    if (gg_debug_enabled())
+        iprintln("Gumballs: Wall Power armed");
+}
+
+gg_wall_power_monitor_thread(gum, expected_token, grace_end, snapshot)
+{
+    self endon("disconnect");
+    self endon("gg_gum_cleared");
+    self endon("gg_wall_power_cancel");
+
+    known = gg_clone_array(snapshot);
+    poll_secs = gg_get_armed_poll_secs();
+    if (poll_secs <= 0)
+        poll_secs = 0.1;
+
+    while (true)
+    {
+        wait(poll_secs);
+
+        if (!gg_wall_power_token_active(expected_token))
+            return;
+
+        current = gg_clone_array(gg_get_primary_weapons(self));
+        new_weapon = gg_detect_new_weapon(known, current);
+        known = current;
+
+        if (!isdefined(new_weapon))
+            continue;
+
+        if (!gg_wall_power_should_upgrade(self, new_weapon, grace_end))
+            continue;
+
+        if (!gg_apply_upgrade_for_weapon(self, new_weapon))
+            continue;
+
+        gg_wall_power_on_success(self, gum, new_weapon);
+        return;
+    }
+}
+
+gg_wall_power_should_upgrade(player, weapon, grace_end)
+{
+    if (!isdefined(weapon) || weapon == "" || weapon == "none")
+        return false;
+
+    if (isdefined(grace_end) && gettime() < grace_end)
+        return false;
+
+    if (gg_weapon_is_spawn_pistol(weapon))
+        return false;
+
+    if (!gg_weapon_is_wall_buy(weapon))
+        return false;
+
+    if (gg_weapon_is_box_weapon(weapon))
+        return false;
+
+    if (!gg_weapon_has_upgrade(weapon))
+        return false;
+
+    if (player maps\_zombiemode_weapons::is_weapon_upgraded(weapon))
+        return false;
+
+    return true;
+}
+
+gg_wall_power_on_success(player, gum, weapon)
+{
+    if (!isdefined(player))
+        return;
+
+    gg_show_hint_if_enabled(player, "Applied: Wall Power");
+
+    player.gg.armed_flags.wall = false;
+
+    if (gg_debug_enabled())
+        iprintln("Gumballs: Wall Power upgraded " + weapon);
+
+    wait(0.25);
+    if (isdefined(player.gg))
+        player.gg.uses_remaining = 0;
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_consume_use))
+        [[ level.gb_hud.br_consume_use ]](player);
+    gg_end_current_gum(player, "wall_power_applied");
 }
 
 gg_fx_on_the_house(player, gum)
@@ -2462,12 +2881,397 @@ gg_fx_hidden_power(player, gum)
 
 gg_fx_crate_power(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Weapons/Perks");
+    if (!isdefined(player))
+        return;
+
+    gg_mark_activation_skip(player);
+    gg_crate_power_arm(player, gum);
+}
+
+gg_crate_power_arm(player, gum)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg))
+        build_player_state(player);
+
+    player notify("gg_crate_power_cancel");
+
+    if (!isdefined(player.gg.crate_power_token))
+        player.gg.crate_power_token = 0;
+    player.gg.crate_power_token += 1;
+    token = player.gg.crate_power_token;
+
+    armed_time = gettime();
+    player.gg.crate_power_armed_time = armed_time;
+    player.gg.armed_since = armed_time;
+
+    player.gg.armed_flags.crate = true;
+    player.gg.armed_flags.crate_power_active = true;
+
+    if (isdefined(level.gb_hud))
+    {
+        if (isdefined(level.gb_hud.show_br))
+            [[ level.gb_hud.show_br ]](player, gum);
+        if (isdefined(level.gb_hud.br_set_mode))
+            [[ level.gb_hud.br_set_mode ]](player, "uses");
+        if (isdefined(level.gb_hud.br_set_total_uses))
+            [[ level.gb_hud.br_set_total_uses ]](player, 1);
+    }
+
+    gg_show_hint_if_enabled(player, "Armed: Crate Power");
+    gg_spawn_firesale_test_drop(player);
+
+    snapshot = gg_clone_array(gg_get_primary_weapons(player));
+    player thread gg_crate_power_monitor_thread(gum, token, armed_time, snapshot);
+
+    if (gg_debug_enabled())
+        iprintln("Gumballs: Crate Power armed");
+}
+
+gg_crate_power_monitor_thread(gum, expected_token, armed_time, snapshot)
+{
+    self endon("disconnect");
+    self endon("gg_gum_cleared");
+    self endon("gg_crate_power_cancel");
+
+    known = gg_clone_array(snapshot);
+    poll_secs = gg_get_armed_poll_secs();
+    if (poll_secs <= 0)
+        poll_secs = 0.1;
+
+    while (true)
+    {
+        wait(poll_secs);
+
+        if (!gg_crate_power_token_active(expected_token))
+            return;
+
+        current = gg_clone_array(gg_get_primary_weapons(self));
+        new_weapon = gg_detect_new_weapon(known, current);
+        known = current;
+
+        if (!isdefined(new_weapon))
+            continue;
+
+        if (!gg_crate_power_should_upgrade(self, new_weapon, armed_time))
+            continue;
+
+        if (!gg_apply_upgrade_for_weapon(self, new_weapon))
+            continue;
+
+        gg_crate_power_on_success(self, gum, new_weapon);
+        return;
+    }
+}
+
+gg_crate_power_should_upgrade(player, weapon, armed_time)
+{
+    if (!isdefined(weapon) || weapon == "" || weapon == "none")
+        return false;
+
+    grace_ms = gg_get_armed_grace_ms();
+    if (isdefined(armed_time) && armed_time > 0 && (gettime() - armed_time) < grace_ms)
+        return false;
+
+    if (gg_weapon_is_spawn_pistol(weapon))
+        return false;
+
+    if (!gg_weapon_is_box_weapon(weapon))
+        return false;
+
+    if (gg_weapon_is_wall_buy(weapon))
+        return false;
+
+    if (!gg_weapon_has_upgrade(weapon))
+        return false;
+
+    if (player maps\_zombiemode_weapons::is_weapon_upgraded(weapon))
+        return false;
+
+    return true;
+}
+
+gg_crate_power_on_success(player, gum, weapon)
+{
+    if (!isdefined(player))
+        return;
+
+    gg_show_hint_if_enabled(player, "Applied: Crate Power");
+
+    player.gg.armed_flags.crate = false;
+    player.gg.armed_flags.crate_power_active = false;
+
+    if (gg_debug_enabled())
+        iprintln("Gumballs: Crate Power upgraded " + weapon);
+
+    wait(0.25);
+    if (isdefined(player.gg))
+        player.gg.uses_remaining = 0;
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_consume_use))
+        [[ level.gb_hud.br_consume_use ]](player);
+    gg_end_current_gum(player, "crate_power_applied");
+}
+
+gg_wonderbar_arm(player, gum)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg))
+        build_player_state(player);
+
+    player notify("gg_wonderbar_cancel");
+
+    if (!isdefined(player.gg.wonderbar_token))
+        player.gg.wonderbar_token = 0;
+    if (!isdefined(player.gg.wonderbar_label_token))
+        player.gg.wonderbar_label_token = 0;
+
+    player.gg.wonderbar_token += 1;
+    token = player.gg.wonderbar_token;
+    player.gg.wonderbar_label_token += 1;
+    label_token = player.gg.wonderbar_label_token;
+
+    choice = gg_wonderbar_select_choice(player);
+    player.gg.wonderbar_choice = choice;
+
+    label_text = gg_wonderbar_choice_label(choice);
+    player.gg.wonderbar_label_text = label_text;
+
+    armed_time = gettime();
+    player.gg.armed_since = armed_time;
+    player.gg.wonderbar_armed_time = armed_time;
+    player.gg.wonderbar_suppress_until = 0;
+
+    player.gg.armed_flags.wonder = true;
+    player.gg.armed_flags.wonderbar_active = true;
+
+    if (isdefined(level.gb_hud))
+    {
+        if (isdefined(level.gb_hud.show_br))
+            [[ level.gb_hud.show_br ]](player, gum);
+        if (isdefined(level.gb_hud.br_set_mode))
+            [[ level.gb_hud.br_set_mode ]](player, "uses");
+        if (isdefined(level.gb_hud.br_set_total_uses))
+            [[ level.gb_hud.br_set_total_uses ]](player, 1);
+        if (isdefined(level.gb_hud.br_set_label))
+            [[ level.gb_hud.br_set_label ]](player, label_text);
+    }
+
+    gg_show_hint_if_enabled(player, "Armed: Wonderbar");
+    gg_spawn_firesale_test_drop(player);
+
+    snapshot = gg_clone_array(gg_get_primary_weapons(player));
+    player thread gg_wonderbar_monitor_thread(gum, token, armed_time, snapshot);
+    player thread gg_wonderbar_label_thread(label_token);
+
+    if (gg_debug_enabled())
+    {
+        msg = "Gumballs: Wonderbar armed";
+        if (isdefined(choice) && choice != "")
+            msg = msg + " (" + choice + ")";
+        iprintln(msg);
+    }
+}
+
+gg_wonderbar_select_choice(player)
+{
+    if (!isdefined(level.gb_helpers) || !isdefined(level.gb_helpers.get_wonder_pool))
+        return undefined;
+
+    mapname = undefined;
+    if (isdefined(level.gb_helpers.get_current_mapname))
+        mapname = [[ level.gb_helpers.get_current_mapname ]]();
+    else
+        mapname = GetDvar("mapname");
+
+    pool = [[ level.gb_helpers.get_wonder_pool ]](mapname);
+    if (!isdefined(pool) || pool.size <= 0)
+    {
+        if (gg_debug_enabled())
+            iprintln("Gumballs: Wonderbar has no wonder weapons available");
+        return undefined;
+    }
+
+    idx = RandomInt(pool.size);
+    return pool[idx];
+}
+
+gg_wonderbar_choice_label(choice)
+{
+    if (!isdefined(choice) || choice == "")
+        return "";
+
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.get_weapon_display_name))
+        return [[ level.gb_helpers.get_weapon_display_name ]](choice);
+
+    return choice;
+}
+
+gg_wonderbar_monitor_thread(gum, expected_token, armed_time, snapshot)
+{
+    self endon("disconnect");
+    self endon("gg_gum_cleared");
+    self endon("gg_wonderbar_cancel");
+
+    known = gg_clone_array(snapshot);
+    poll_secs = gg_get_armed_poll_secs();
+    if (poll_secs <= 0)
+        poll_secs = 0.1;
+
+    while (true)
+    {
+        wait(poll_secs);
+
+        if (!gg_wonderbar_token_active(expected_token))
+            return;
+
+        current = gg_clone_array(gg_get_primary_weapons(self));
+        new_weapon = gg_detect_new_weapon(known, current);
+        known = current;
+
+        if (!isdefined(new_weapon))
+            continue;
+
+        if (!gg_wonderbar_should_replace(self, new_weapon, armed_time))
+            continue;
+
+        if (!gg_wonderbar_apply_choice(self, new_weapon))
+            continue;
+
+        gg_wonderbar_on_success(self, gum, new_weapon);
+        return;
+    }
+}
+
+gg_wonderbar_should_replace(player, weapon, armed_time)
+{
+    if (!isdefined(weapon) || weapon == "" || weapon == "none")
+        return false;
+
+    grace_ms = gg_get_armed_grace_ms();
+    if (isdefined(armed_time) && armed_time > 0 && (gettime() - armed_time) < grace_ms)
+        return false;
+
+    if (!gg_weapon_is_box_weapon(weapon))
+        return false;
+
+    if (gg_weapon_is_wall_buy(weapon))
+        return false;
+
+    if (gg_weapon_is_spawn_pistol(weapon))
+        return false;
+
+    return true;
+}
+
+gg_wonderbar_apply_choice(player, acquired_weapon)
+{
+    if (!isdefined(player) || !isdefined(player.gg))
+        return false;
+
+    wonder = player.gg.wonderbar_choice;
+    if (!isdefined(wonder) || wonder == "")
+    {
+        if (gg_debug_enabled())
+            iprintln("Gumballs: Wonderbar has no cached choice");
+        return false;
+    }
+
+    if (!isdefined(level.zombie_weapons) || !isdefined(level.zombie_weapons[wonder]))
+    {
+        if (gg_debug_enabled())
+            iprintln("Gumballs: Wonderbar choice invalid (" + wonder + ")");
+        return false;
+    }
+
+    player maps\_zombiemode_weapons::weapon_give(wonder);
+
+    if (!player HasWeapon(wonder))
+        return false;
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_set_label))
+    {
+        label_text = gg_wonderbar_choice_label(wonder);
+        [[ level.gb_hud.br_set_label ]](player, label_text);
+        player.gg.wonderbar_label_text = label_text;
+    }
+
+    return true;
+}
+
+gg_wonderbar_on_success(player, gum, weapon)
+{
+    if (!isdefined(player))
+        return;
+
+    gg_show_hint_if_enabled(player, "Applied: Wonderbar");
+
+    player.gg.armed_flags.wonder = false;
+    player.gg.armed_flags.wonderbar_active = false;
+
+    if (gg_debug_enabled())
+        iprintln("Gumballs: Wonderbar granted " + player.gg.wonderbar_choice);
+
+    wait(0.25);
+    if (isdefined(player.gg))
+    {
+        player.gg.uses_remaining = 0;
+        player.gg.wonderbar_choice = undefined;
+        player.gg.wonderbar_label_text = "";
+    }
+    if (isdefined(level.gb_hud))
+    {
+        if (isdefined(level.gb_hud.br_consume_use))
+            [[ level.gb_hud.br_consume_use ]](player);
+        if (isdefined(level.gb_hud.br_clear_label))
+            [[ level.gb_hud.br_clear_label ]](player);
+    }
+    gg_end_current_gum(player, "wonderbar_applied");
+}
+
+gg_wonderbar_label_thread(expected_token)
+{
+    self endon("disconnect");
+    self endon("gg_gum_cleared");
+    self endon("gg_wonderbar_cancel");
+
+    while (true)
+    {
+        if (!gg_wonderbar_label_token_active(expected_token))
+            return;
+
+        suppress = false;
+        if (isdefined(self.gg) && isdefined(self.gg.wonderbar_suppress_until) && self.gg.wonderbar_suppress_until > gettime())
+            suppress = true;
+
+        if (suppress)
+        {
+            if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_clear_label))
+                [[ level.gb_hud.br_clear_label ]](self);
+        }
+        else
+        {
+            label_text = "";
+            if (isdefined(self.gg) && isdefined(self.gg.wonderbar_label_text))
+                label_text = self.gg.wonderbar_label_text;
+            if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_set_label))
+                [[ level.gb_hud.br_set_label ]](self, label_text);
+        }
+
+        wait(gg_get_wonder_label_reassert_secs());
+    }
 }
 
 gg_fx_wonderbar(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Weapons/Perks");
+    if (!isdefined(player))
+        return;
+
+    gg_mark_activation_skip(player);
+    gg_wonderbar_arm(player, gum);
 }
 
 // Economy & Round
