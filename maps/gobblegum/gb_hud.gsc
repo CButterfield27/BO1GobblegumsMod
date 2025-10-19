@@ -253,10 +253,11 @@ __gg_init_player_impl()
     self.gg.hud.br_bar_fg.sort = 21;
 
     self.gg.hud.br_hint = createFontString("objective", 1.0);
-   self.gg.hud.br_hint.foreground = true;
-   self.gg.hud.br_hint.hidewheninmenu = true;
-   self.gg.hud.br_hint.alpha = 0;
-   self.gg.hud.br_hint.sort = 22;
+    self.gg.hud.br_hint.foreground = true;
+    self.gg.hud.br_hint.hidewheninmenu = true;
+    self.gg.hud.br_hint.alpha = 0;
+    self.gg.hud.br_hint.color = (1, 1, 0);
+    self.gg.hud.br_hint.sort = 22;
 
     self.gg.hud.br_label = createFontString("objective", 1.0);
     self.gg.hud.br_label.foreground = true;
@@ -377,6 +378,9 @@ __gg_update_tc_impl(gum)
     self.gg.hud.br_bar_bg.alpha = 1;
     self.gg.hud.br_bar_fg.alpha = 1;
     self.gg.hud.br_hint.alpha = 1;
+    // Ensure debug hint color persists as bright yellow
+    if (isdefined(self.gg.hud.br_hint))
+        self.gg.hud.br_hint.color = (1, 1, 0);
     if (isdefined(self.gg.hud.br_label))
     {
         label_text = "";
@@ -434,8 +438,28 @@ __gg_set_hint_impl(text)
     self endon("disconnect");
     if (!isdefined(self.gg) || !isdefined(self.gg.hud))
         return;
-    __gg_set_text_if_changed(self, self.gg.hud.br_hint, "br_hint", text);
-    self.gg.hud.br_hint.alpha = 1;
+
+    if (!isdefined(text))
+        text = "";
+
+    debug_on = (GetDvarInt("gg_debug") == 1);
+
+    visible = false;
+    if (debug_on && text != "")
+        visible = true;
+
+    applied_text = "";
+    if (visible)
+        applied_text = text;
+
+    __gg_set_text_if_changed(self, self.gg.hud.br_hint, "br_hint", applied_text);
+    if (isdefined(self.gg.hud.br_hint))
+        self.gg.hud.br_hint.color = (1, 1, 0);
+
+    if (visible)
+        self.gg.hud.br_hint.alpha = 1;
+    else
+        self.gg.hud.br_hint.alpha = 0;
 }
 
 // Build 5: BR bar model (uses/rounds/timer). Idempotent, minimal visuals.
