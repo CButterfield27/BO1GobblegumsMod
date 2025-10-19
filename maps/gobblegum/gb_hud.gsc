@@ -253,10 +253,11 @@ __gg_init_player_impl()
     self.gg.hud.br_bar_fg.sort = 21;
 
     self.gg.hud.br_hint = createFontString("objective", 1.0);
-   self.gg.hud.br_hint.foreground = true;
-   self.gg.hud.br_hint.hidewheninmenu = true;
-   self.gg.hud.br_hint.alpha = 0;
-   self.gg.hud.br_hint.sort = 22;
+    self.gg.hud.br_hint.foreground = true;
+    self.gg.hud.br_hint.hidewheninmenu = true;
+    self.gg.hud.br_hint.alpha = 0;
+    self.gg.hud.br_hint.color = (1, 1, 0);
+    self.gg.hud.br_hint.sort = 22;
 
     self.gg.hud.br_label = createFontString("objective", 1.0);
     self.gg.hud.br_label.foreground = true;
@@ -449,6 +450,8 @@ __gg_set_hint_impl(text)
         applied_text = text;
 
     __gg_set_text_if_changed(self, self.gg.hud.br_hint, "br_hint", applied_text);
+    if (isdefined(self.gg.hud.br_hint))
+        self.gg.hud.br_hint.color = (1, 1, 0);
 
     if (visible)
         self.gg.hud.br_hint.alpha = 1;
