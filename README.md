@@ -383,7 +383,7 @@ Usage from `gumballs.gsc`:
 * BR delayed show (default 1.5s)
 * Selection cadence (round-based vs. alternative)
 * Override policy for manual gums
-* Dev toggles: `gg_enable`, `gg_debug`, and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.
+* Dev toggles: `gg_enable`, `gg_debug`, `gg_debug_hud`, and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.
 * Build 5 consumption DVARs (safe fallbacks):
   - `gg_default_uses` (int, default 3)
   - `gg_default_rounds` (int, default 3)
@@ -398,6 +398,7 @@ Usage from `gumballs.gsc`:
   - `gg_reigndrops_include_firesale` (0/1, default 1) - include Fire Sale in the Reign Drops bundle.
   - `gg_powerup_hints` (0/1, default 1) - allow HUD hint text after spawning a drop.
   - `gg_log_dispatch` (0/1, default 0) - optional dispatch logging (otherwise `set gg_debug 1` surfaces the same feed).
+  - `gg_debug_hud` (0/1, default 0) - toggles the on-screen debug HUD text overlay (now yellow for clarity).
 * Build 7 armed-gum knobs:
   - `gg_armed_grace_secs` (float, default 3.0) - grace window before armed gums can trigger.
   - `gg_armed_poll_ms` (int, default 150) - polling cadence when watching weapon changes.
@@ -500,3 +501,13 @@ stateDiagram-v2
 - Using `gg_force_gum <id>` without `set` is a console command and will error.
 
 ---
+
+### Debug Logging
+
+When `gg_debug_hud` is enabled, debug HUD text now renders in **yellow** for high-contrast visibility in-game.
+
+---
+
+## What Changed (Build 10A — Yellow Debug HUD)
+- Debug HUD text color changed to bright yellow (RGB 1,1,0) for visibility.
+- All debug messages retain `[gg]` prefix and update safely with color persistence.
