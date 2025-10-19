@@ -9,6 +9,18 @@ GG_FADE_SECS() { return 0.25; }
 GG_BR_DELAYED_SHOW_SECS() { return 1.5; }
 GG_ARMED_GRACE_SECS() { return 3.0; }
 
+helpers_array_contains(arr, value)
+{
+    if (!isdefined(arr))
+        return false;
+    for (i = 0; i < arr.size; i++)
+    {
+        if (arr[i] == value)
+            return true;
+    }
+    return false;
+}
+
 get_current_mapname()
 {
     name = undefined;
@@ -56,6 +68,37 @@ is_cosmodrome()
     if (!isdefined(name))
         return false;
     return (name == "zombie_cosmodrome" || name == "cosmodrome");
+}
+
+get_map_perk_list()
+{
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.map_perk_cache))
+        return level.gb_helpers.map_perk_cache;
+
+    perks = [];
+
+    triggers = GetEntArray("zombie_vending", "targetname");
+    if (!isdefined(triggers))
+        triggers = [];
+
+    for (i = 0; i < triggers.size; i++)
+    {
+        trig = triggers[i];
+        if (!isdefined(trig) || !isdefined(trig.script_noteworthy))
+            continue;
+
+        perk = trig.script_noteworthy;
+        if (!isdefined(perk) || perk == "")
+            continue;
+
+        if (!helpers_array_contains(perks, perk))
+            perks[perks.size] = perk;
+    }
+
+    if (isdefined(level.gb_helpers))
+        level.gb_helpers.map_perk_cache = perks;
+
+    return perks;
 }
 
 // Stubs (Step 1)
@@ -277,7 +320,23 @@ drop_powerup(player, code, pos_or_dist)
 
 player_has_all_map_perks(player)
 {
-    return false;
+    if (!isdefined(player))
+        return false;
+
+    perks = get_map_perk_list();
+    if (!isdefined(perks) || perks.size <= 0)
+        return true;
+
+    for (i = 0; i < perks.size; i++)
+    {
+        perk = perks[i];
+        if (!isdefined(perk) || perk == "")
+            continue;
+        if (!(player HasPerk(perk)))
+            return false;
+    }
+
+    return true;
 }
 
 helpers_init()
@@ -291,6 +350,7 @@ helpers_init()
     level.gb_helpers.map_allows = ::map_allows;
     level.gb_helpers.is_cosmodrome = ::is_cosmodrome;
     level.gb_helpers.get_current_mapname = ::get_current_mapname;
+    level.gb_helpers.get_map_perk_list = ::get_map_perk_list;
     level.gb_helpers.get_wonder_pool = ::get_wonder_pool;
     level.gb_helpers.get_weapon_display_name = ::get_weapon_display_name;
     level.gb_helpers.upgrade_weapon = ::upgrade_weapon;

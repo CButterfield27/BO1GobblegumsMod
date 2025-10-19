@@ -282,17 +282,50 @@ Usage from `gumballs.gsc`:
   * Optional Gersh/Quantum specials via `gg_wonder_include_specials` (default 0)
   * Suppression triggered by Wonderbar helper calls (e.g., Immolation)
 
-* Perkaholic (all map perks; Ascension triggers perk VO)
+* **Perkaholic**
+  * Auto, single-use gum that grants every perk available on the current map to players missing them.
+  * Uses the helper perk cache so map-specific machines are respected and skips consumption when nothing is left to grant.
+  * Triggers the Ascension/Cosmodrome perk VO via `level.perk_bought_func` when available.
+  * Grant cadence is configurable with `gg_perkaholic_grant_delay_ms` (default 250ms) to keep HUD updates readable.
 
 ### Economy / Round Control
 
-* Round Robbin (end round, +1600 pts each player)
-* Shopping Free (all purchases free for 60s)
-
-  * **Implementation**: adds +50k points baseline, refunds purchases, removes unused at end
+* **Round Robbin**
+  * Uses-based instant gum that wipes remaining zombies, optionally zeroes round counters, and lets the next round begin immediately.
+  * Awards every player the configurable `gg_round_robbin_bonus` (default +1600) and consumes one BR use; `gg_round_robbin_force_transition` (default 1) ensures round trackers stay in sync on scripted maps.
+* **Shopping Free**
+  * Timed gum controlled by `gg_shopping_free_secs` (default 60s); it grants `gg_shopping_free_temp_points` (default 50000) in temporary credit and keeps the player's visible score from falling while credit remains.
+  * Re-shows the BR HUD in timer mode, debounces purchases through a refund monitor, and removes any leftover credit automatically when the timer expires.
 * Stock Option (ammo taken from stockpile for 60s)
 
   * Fire monitor + expiry monitor
+
+#### Testing
+
+* **Round Robbin**
+  ```
+  set gg_enable 1
+  set gg_debug 1
+  set gg_force_gum round_robbin
+  bind 8 "+actionslot 4"
+  ```
+  Press the bound key to verify all remaining zombies die, every player receives the bonus, and the next round starts cleanly.
+* **Shopping Free**
+  ```
+  set gg_enable 1
+  set gg_debug 1
+  set gg_force_gum shopping_free
+  bind 8 "+actionslot 4"
+  ```
+  Activate and confirm the BR timer, free purchases while credit remains, and automatic cleanup when the timer ends.
+* **Perkaholic**
+  ```
+  set gg_enable 1
+  set gg_debug 1
+  set gg_force_gum perkaholic
+  bind 8 "+actionslot 4"
+  ```
+  Activate to grant every missing perk; on Cosmodrome maps the perk VO hook should fire before each grant.
 
 ### Future / Placeholders
 
@@ -370,6 +403,12 @@ Usage from `gumballs.gsc`:
   - `gg_wonder_label_reassert_ms` (int, default 250) - Wonderbar BR label reassert cadence.
   - `gg_test_drop_firesale_on_arm` (0/1, default 1 while testing) - spawn a Fire Sale when an armed gum activates (Wall/Crate/Wonderbar); disable after validation.
   - `gg_wonder_include_specials` (0/1, default 0) - optionally include Gersh Device (`zombie_black_hole_bomb`) and Quantum Bomb (`zombie_quantum_bomb`) in the Wonderbar weapon pool.
+* Build 8 economy knobs:
+  - `gg_round_robbin_bonus` (int, default 1600) - bonus points granted to every player when Round Robbin fires.
+  - `gg_round_robbin_force_transition` (0/1, default 1) - force `level.zombie_total` to zero so round counters advance immediately.
+  - `gg_shopping_free_secs` (float, default 60.0) - Shopping Free timer duration (seconds).
+  - `gg_shopping_free_temp_points` (int, default 50000) - temporary credit granted while Shopping Free is active.
+  - `gg_perkaholic_grant_delay_ms` (int, default 250) - delay between individual perk grants for Perkaholic (milliseconds).
 
 ---
 
@@ -382,7 +421,7 @@ Usage from `gumballs.gsc`:
 5. Consumption logic (uses/rounds/timer)
 6. Implement core power-up gums (alias map, spawn helper, Reign Drops bundle)
 7. Add armed gums (Wall, Crate, Wonderbar)
-8. Add economy/round gums (Shopping Free, Stock Option, Round Robbin)
+8. Add economy/round gums (Shopping Free, Round Robbin, Perkahlic)
 9. Harden map/perk checks + Ascension VO hooks
 10. Refine HUD polish (hint text, delayed show, suppression)
 11. Add placeholders, rarity weights, and debug commands
