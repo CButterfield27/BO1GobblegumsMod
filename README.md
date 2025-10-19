@@ -222,7 +222,7 @@ Usage from `gumballs.gsc`:
 
 ### Special Case
 
-* **Ascension/Perkaholic**: also trigger `perk_bought_func` VO hooks for free perks.
+* **Ascension perk VO**: Perkaholic activations and Free Perk pickups set `level.perk_bought` and, where supported, call `flag_set("perk_bought")` once via the Cosmodrome helper.
 
 ---
 
@@ -262,6 +262,7 @@ Usage from `gumballs.gsc`:
 * Immolation Liquidation (Fire Sale) - triggers Wonderbar label suppression for 35s via helper
 * Who?s Keeping Score (Double Points)
 * On the House (Free Perk)
+  * On Cosmodrome, picking up the drop sets `level.perk_bought` and calls `flag_set("perk_bought")` once through the new helper.
 * Fatal Contraption (Death Machine) ? only on maps that allow
 * Extra Credit (Bonus Points)
 * Reign Drops (spawns the full bundle—Double Points, Insta-Kill, optional Fire Sale, Nuke, Carpenter, Max Ammo, Free Perk, Bonus Points, and Death Machine when allowed—sequentially on a forward-offset circle; uses consume once the sequence finishes)
@@ -285,7 +286,7 @@ Usage from `gumballs.gsc`:
 * **Perkaholic**
   * Auto, single-use gum that grants every perk available on the current map to players missing them.
   * Uses the helper perk cache so map-specific machines are respected and skips consumption when nothing is left to grant.
-  * Triggers the Ascension/Cosmodrome perk VO via `level.perk_bought_func` when available.
+  * On Cosmodrome, asserts the perk VO flag once per activation by setting `level.perk_bought` and calling `flag_set("perk_bought")` via the helper after perks are granted.
   * Grant cadence is configurable with `gg_perkaholic_grant_delay_ms` (default 250ms) to keep HUD updates readable.
 
 ### Economy / Round Control
@@ -325,7 +326,7 @@ Usage from `gumballs.gsc`:
   set gg_force_gum perkaholic
   bind 8 "+actionslot 4"
   ```
-  Activate to grant every missing perk; on Cosmodrome maps the perk VO hook should fire before each grant.
+  Activate to grant every missing perk; on Cosmodrome maps expect one debug log showing the perk VO flag assertion after the grants complete.
 
 ### Future / Placeholders
 
@@ -425,6 +426,11 @@ Usage from `gumballs.gsc`:
 9. Harden map/perk checks + Ascension VO hooks
 10. Refine HUD polish (hint text, delayed show, suppression)
 11. Add placeholders, rarity weights, and debug commands
+
+**Build 9 details**
+* Selection pools normalize map names and re-check `map_whitelist` / `map_blacklist` before filling `pool_remaining`, logging `[gg] forced gated gum` when dev overrides bypass gating.
+* Perkaholic reuses the cached perk list, dedupes missing perks, honours perk caps, and triggers the Cosmodrome VO helper once after grants complete.
+* Free Perk pickups use the same helper so Cosmodrome VO flags (`level.perk_bought` + `flag_set("perk_bought")`) stay consistent.
 
 ---
 

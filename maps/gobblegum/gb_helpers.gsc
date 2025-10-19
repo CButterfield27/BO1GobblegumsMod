@@ -1,3 +1,6 @@
+#include maps\_utility;
+#include common_scripts\utility;
+
 // Literal-return helpers (constants)
 ACT_AUTO() { return 1; }
 ACT_USER() { return 2; }
@@ -21,6 +24,30 @@ helpers_array_contains(arr, value)
     return false;
 }
 
+normalize_mapname(name)
+{
+    if (!isdefined(name) || name == "")
+        return "";
+
+    lower = tolower(name);
+    if (!isdefined(lower) || lower == "")
+        return "";
+
+    if (lower == "cosmodrome" || lower == "zm_cosmodrome")
+        return "zombie_cosmodrome";
+
+    if (lower == "coast" || lower == "zm_coast" || lower == "shangri_la")
+        return "zombie_coast";
+
+    if (lower == "kino" || lower == "kino_der_toten" || lower == "theater" || lower == "zm_theater")
+        return "zombie_theater";
+
+    if (lower == "moon" || lower == "zm_moon")
+        return "zombie_moon";
+
+    return lower;
+}
+
 get_current_mapname()
 {
     name = undefined;
@@ -32,7 +59,7 @@ get_current_mapname()
     {
         name = GetDvar("mapname");
     }
-    return name;
+    return normalize_mapname(name);
 }
 
 // Returns true for features supported by the current map.
@@ -49,9 +76,9 @@ map_allows(feature)
             return false;
 
         // Allow-list: cosmodrome (Ascension), coast (Shangri-La), moon
-        if (name == "zombie_cosmodrome" || name == "cosmodrome"
-            || name == "zombie_coast" || name == "coast"
-            || name == "zombie_moon" || name == "moon")
+        if (name == "zombie_cosmodrome"
+            || name == "zombie_coast"
+            || name == "zombie_moon")
         {
             return true;
         }
@@ -67,7 +94,7 @@ is_cosmodrome()
     name = get_current_mapname();
     if (!isdefined(name))
         return false;
-    return (name == "zombie_cosmodrome" || name == "cosmodrome");
+    return (name == "zombie_cosmodrome");
 }
 
 get_map_perk_list()
@@ -337,6 +364,55 @@ player_has_all_map_perks(player)
     return true;
 }
 
+trigger_perk_vo_if_cosmodrome(player, perk)
+{
+    if (!is_cosmodrome())
+        return false;
+
+    if (!isdefined(level))
+        return false;
+
+    invoked = false;
+    if (isdefined(level.perk_bought_func) && isdefined(player) && isdefined(perk) && perk != "")
+    {
+        player [[ level.perk_bought_func ]](perk);
+        invoked = true;
+    }
+
+    previously_set = false;
+    if (isdefined(level.perk_bought) && level.perk_bought)
+        previously_set = true;
+
+    level.perk_bought = true;
+
+    if (isdefined(level.flag_set))
+    {
+        [[ level.flag_set ]]("perk_bought");
+    }
+    else
+    {
+        flag_set("perk_bought");
+    }
+
+    if (GetDvarInt("gg_debug") == 1)
+    {
+        name = get_current_mapname();
+        if (!isdefined(name) || name == "")
+            name = "unknown_map";
+
+        label = "perk_bought flag set";
+        if (previously_set)
+            label = "perk_bought flag reassert";
+
+        if (invoked)
+            label = label + ", perk_bought_func invoked";
+
+        iprintln("[gg] cosmodrome perk VO: " + label + " (" + name + ")");
+    }
+
+    return true;
+}
+
 helpers_init()
 {
     if (isdefined(level.gb_helpers))
@@ -347,6 +423,7 @@ helpers_init()
     level.gb_helpers = spawnstruct();
     level.gb_helpers.map_allows = ::map_allows;
     level.gb_helpers.is_cosmodrome = ::is_cosmodrome;
+    level.gb_helpers.normalize_mapname = ::normalize_mapname;
     level.gb_helpers.get_current_mapname = ::get_current_mapname;
     level.gb_helpers.get_map_perk_list = ::get_map_perk_list;
     level.gb_helpers.get_wonder_pool = ::get_wonder_pool;
@@ -354,6 +431,7 @@ helpers_init()
     level.gb_helpers.upgrade_weapon = ::upgrade_weapon;
     level.gb_helpers.drop_powerup = ::drop_powerup;
     level.gb_helpers.player_has_all_map_perks = ::player_has_all_map_perks;
+    level.gb_helpers.trigger_perk_vo_if_cosmodrome = ::trigger_perk_vo_if_cosmodrome;
 
     level.gb_helpers.ACT_AUTO = ::ACT_AUTO;
     level.gb_helpers.ACT_USER = ::ACT_USER;
