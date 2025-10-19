@@ -128,7 +128,7 @@ Positioning
 
 #### Bottom Right (BR)
 
-* Hint text (scale 1.15, kept empty during gameplay; status messages now surface via the top-left debug feed when enabled)
+* Hint text (scale 1.15, kept empty during gameplay; status messages surface via the top-left debug feed when `gg_debug 1`)
 * Icon (48?48)
 * Usage Bar (shader `"white"`, width 75, height 5)
 
@@ -152,7 +152,7 @@ Positioning
 ---
 
 * Supports **delayed show** (smooth UX after selection/activation)
-* Hint helper calls clear the BR row and mirror messages to the debug `iprintln` feed
+* Hint helper calls clear the BR row and mirror messages to the debug `iprintln` feed (only when `gg_debug 1`; default remains silent)
 * Label can be **suppressed and reasserted** (e.g., during Fire Sale suppression loop)
 
 ---
@@ -383,13 +383,13 @@ Usage from `gumballs.gsc`:
 * BR delayed show (default 1.5s)
 * Selection cadence (round-based vs. alternative)
 * Override policy for manual gums
-* Dev toggles: `gg_enable`, `gg_debug_hud`, and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.
+* Dev toggles: `gg_enable`, `gg_debug`, and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.
 * Build 5 consumption DVARs (safe fallbacks):
   - `gg_default_uses` (int, default 3)
   - `gg_default_rounds` (int, default 3)
   - `gg_default_timer_secs` (float, default 60.0)
   - `gg_timer_tick_ms` (int, default 100)
-  - `gg_consume_logs` (0/1, default 1)
+  - `gg_consume_logs` (0/1, default 0)
 * Build 6 power-up knobs:
   - `gg_drop_forward_units` (float, default 70.0) - base forward offset when spawning drops.
   - `gg_reigndrops_forward_units` (float, default 145.0) - forward offset to the Reign Drops circle center.
@@ -397,7 +397,7 @@ Usage from `gumballs.gsc`:
   - `gg_reigndrops_spacing_ms` (int, default 150) - wait between Reign Drops spawns.
   - `gg_reigndrops_include_firesale` (0/1, default 1) - include Fire Sale in the Reign Drops bundle.
   - `gg_powerup_hints` (0/1, default 1) - allow HUD hint text after spawning a drop.
-  - `gg_log_dispatch` (0/1, default 1) - keeps the power-up gum logging consistent with Build 3.
+  - `gg_log_dispatch` (0/1, default 0) - optional dispatch logging (otherwise `set gg_debug 1` surfaces the same feed).
 * Build 7 armed-gum knobs:
   - `gg_armed_grace_secs` (float, default 3.0) - grace window before armed gums can trigger.
   - `gg_armed_poll_ms` (int, default 150) - polling cadence when watching weapon changes.

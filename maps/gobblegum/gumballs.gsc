@@ -747,7 +747,7 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_debug_select", 0);
     gg_ensure_dvar_int("gg_input_enable", 1);
     gg_ensure_dvar_int("gg_debounce_ms", 200);
-    gg_ensure_dvar_int("gg_log_dispatch", 1);
+    gg_ensure_dvar_int("gg_log_dispatch", 0);
     gg_ensure_dvar_int("gg_auto_on_select", 1);
     gg_ensure_dvar_int("gg_simulate_effects", 0);
 
@@ -756,7 +756,7 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_default_rounds", 3);
     gg_ensure_dvar_float("gg_default_timer_secs", 60.0);
     gg_ensure_dvar_int("gg_timer_tick_ms", 100);
-    gg_ensure_dvar_int("gg_consume_logs", 1);
+    gg_ensure_dvar_int("gg_consume_logs", 0);
 
     // Build 6 power-up knobs
     gg_ensure_dvar_float("gg_drop_forward_units", 70.0);
@@ -1023,12 +1023,15 @@ gg_get_armed_poll_secs()
 
 gg_show_hint_if_enabled(player, text)
 {
-    if (!gg_powerup_hints_enabled())
-        return;
     if (!isdefined(player))
         return;
+
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
         [[ level.gb_hud.clear_hint ]](player);
+
+    if (!gg_powerup_hints_enabled() || !gg_debug_enabled())
+        return;
+
     if (!isdefined(text) || text == "")
         return;
     player iprintln(text);
@@ -1082,12 +1085,14 @@ gg_spawn_firesale_test_drop(player)
 
 gg_show_powerup_hint(player, text, raw)
 {
-    if (!gg_powerup_hints_enabled())
-        return;
     if (!isdefined(player))
         return;
+
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
         [[ level.gb_hud.clear_hint ]](player);
+
+    if (!gg_powerup_hints_enabled() || !gg_debug_enabled())
+        return;
 
     if (!isdefined(text) || text == "")
         text = "Power-Up";
@@ -2072,7 +2077,7 @@ gg_get_debounce_ms()
 
 gg_log_dispatch_enabled()
 {
-    gg_ensure_dvar_int("gg_log_dispatch", 1);
+    gg_ensure_dvar_int("gg_log_dispatch", 0);
     return (GetDvarInt("gg_log_dispatch") == 1);
 }
 
@@ -2850,7 +2855,7 @@ gg_consume_logs_enabled()
 {
     if (isdefined(level.gg_config) && isdefined(level.gg_config.consume_logs))
         return level.gg_config.consume_logs;
-    return true;
+    return false;
 }
 
 // Determine if activation is allowed for the current model/state

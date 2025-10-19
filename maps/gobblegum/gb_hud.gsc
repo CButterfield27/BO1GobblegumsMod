@@ -434,8 +434,26 @@ __gg_set_hint_impl(text)
     self endon("disconnect");
     if (!isdefined(self.gg) || !isdefined(self.gg.hud))
         return;
-    __gg_set_text_if_changed(self, self.gg.hud.br_hint, "br_hint", text);
-    self.gg.hud.br_hint.alpha = 1;
+
+    if (!isdefined(text))
+        text = "";
+
+    debug_on = (GetDvarInt("gg_debug") == 1);
+
+    visible = false;
+    if (debug_on && text != "")
+        visible = true;
+
+    applied_text = "";
+    if (visible)
+        applied_text = text;
+
+    __gg_set_text_if_changed(self, self.gg.hud.br_hint, "br_hint", applied_text);
+
+    if (visible)
+        self.gg.hud.br_hint.alpha = 1;
+    else
+        self.gg.hud.br_hint.alpha = 0;
 }
 
 // Build 5: BR bar model (uses/rounds/timer). Idempotent, minimal visuals.
