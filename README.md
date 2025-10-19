@@ -1,4 +1,4 @@
-﻿# BO1 GobbleGum MOD
+# BO1 GobbleGum MOD
 
 ---
 
@@ -105,7 +105,7 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to
 
 #### Top Center (TC)
 
-* Icon (56×56)
+* Icon (56�56)
 * Gum Name (scale 1.5)
 * Uses/Activation line (scale 1.15)
 * Description (scale 1.15)
@@ -132,7 +132,7 @@ Positioning
 * Hint line (scale 1.15) driven by the tokenised pipeline:
   - `set_hint` / `clear_hint` / `update_hint`
   - `suppress_hint(ms)` / `end_suppress_hint()` keep the latest string cached while hidden
-* Icon (48×48)
+* Icon (48�48)
 * Usage bar (shader `"white"`, width 75, height 5) supports uses / rounds / timer modes via `br_set_mode` helpers
 * Wonderbar label now reuses the hint pipeline; no standalone label widget
 
@@ -141,13 +141,13 @@ Positioning
 - Anchor: `setPoint("RIGHT", "BOTTOMRIGHT", x_off, y_off)` for icon, bars, hint
 - Bar consists of two layers at the same point:
   - Background bar (light gray) full width
-  - Foreground bar (yellow) full width initially; drains left→right as the gum consumes
+  - Foreground bar (yellow) full width initially; drains left?right as the gum consumes
 
 **Behavior**
 
 * `show_br_after_delay` reveals BR after `gg_br_delayed_show_secs` (default 1.5s); the delay token cancels on gum change, death, round rollover, or explicit hides.
 * Show/hide animate via token-based fades (`GG_HUD_FADE_SECS`, default 0.25s). `hide_br()` clears icon/text once the fade ends.
-* Wonderbar suppression honours `gg_wonder_label_suppress_ms` (default 35 000 ms Fire Sale window). The label thread calls `suppress_hint`/`end_suppress_hint` so the text auto-reasserts when suppression expires.
+* Wonderbar suppression honours `gg_wonder_label_suppress_ms` (default 35?000?ms Fire Sale window). The label thread calls `suppress_hint`/`end_suppress_hint` so the text auto-reasserts when suppression expires.
 * Progress bars clamp to `[0, 1]`; when uses/rounds reach 0 or timers elapse, the bar drains to zero and BR fades out immediately.
 
 ---
@@ -168,12 +168,12 @@ Positioning
 
 #### HUD Polish Highlights
 
-- **Hint text** — `set_hint`, `clear_hint`, `update_hint`, `suppress_hint(ms)`, `end_suppress_hint()`; Wonderbar + Fire Sale uses `gg_wonder_label_suppress_ms` (default 35 000 ms) and reasserts automatically after `end_suppress_hint`.
-- **TC show/hide** — token-based and auto-hides after `GG_TC_AUTOHIDE_SECS` (7.5 s); also hides immediately on selection change, round cleanup, `gg_gum_cleared`, death, or disconnect.
-- **BR delayed show** — token-based and cancelable on gum change, death, round rollover, or disconnect; default delay `gg_br_delayed_show_secs` (1.5 s).
-- **BR progress** — clamps to `[0, 1]`; timers sample using `gg_timer_tick_ms`, and uses/rounds hitting zero drain the bar completely and hide the panel.
-- **Fades** — token-based fades for TC/BR (0.25 s) so newer animations cancel older ones.
-- **Safety** — Every HUD thread `endon("disconnect")` and `endon("gg_gum_cleared")`; tokens guard against overlapping fades or late hint writes.
+- **Hint text** � `set_hint`, `clear_hint`, `update_hint`, `suppress_hint(ms)`, `end_suppress_hint()`; Wonderbar + Fire Sale uses `gg_wonder_label_suppress_ms` (default 35?000?ms) and reasserts automatically after `end_suppress_hint`.
+- **TC show/hide** � token-based and auto-hides after `GG_TC_AUTOHIDE_SECS` (7.5?s); also hides immediately on selection change, round cleanup, `gg_gum_cleared`, death, or disconnect.
+- **BR delayed show** � token-based and cancelable on gum change, death, round rollover, or disconnect; default delay `gg_br_delayed_show_secs` (1.5?s).
+- **BR progress** � clamps to `[0, 1]`; timers sample using `gg_timer_tick_ms`, and uses/rounds hitting zero drain the bar completely and hide the panel.
+- **Fades** � token-based fades for TC/BR (0.25?s) so newer animations cancel older ones.
+- **Safety** � Every HUD thread `endon("disconnect")` and `endon("gg_gum_cleared")`; tokens guard against overlapping fades or late hint writes.
 
 Usage from `gumballs.gsc`:
 
@@ -261,22 +261,22 @@ Usage from `gumballs.gsc`:
 ### Power-Ups
 
 * Cache Back (Max Ammo)
-* Dead of Nuclear Winter (Nuke) — gated off Kino der Toten (`zombie_theater`, `theater`)
+* Dead of Nuclear Winter (Nuke) � gated off Kino der Toten (`zombie_theater`, `theater`)
 * Kill Joy (Insta Kill)
 * Licensed Contractor (Carpenter)
 * Immolation Liquidation (Fire Sale) - triggers Wonderbar label suppression for 35s via helper
 * Who?s Keeping Score (Double Points)
 * On the House (Free Perk)
   * On Cosmodrome, picking up the drop sets `level.perk_bought` and calls `flag_set("perk_bought")` once through the new helper.
-* Fatal Contraption (Death Machine) — filtered out on maps where `helpers::map_allows_death_machine()` is false (dev overrides still honoured and logged)
+* Fatal Contraption (Death Machine) � filtered out on maps where `helpers::map_allows_death_machine()` is false (dev overrides still honoured and logged)
 * Extra Credit (Bonus Points)
-* Reign Drops (spawns the full bundle—Double Points, Insta-Kill, optional Fire Sale, Nuke, Carpenter, Max Ammo, Free Perk, Bonus Points, and Death Machine when allowed—sequentially on a forward-offset circle; uses consume once the sequence finishes)
+* Reign Drops (spawns the full bundle�Double Points, Insta-Kill, optional Fire Sale, Nuke, Carpenter, Max Ammo, Free Perk, Bonus Points, and Death Machine when allowed�sequentially on a forward-offset circle; uses consume once the sequence finishes)
 
 ### Weapons / Perks
 
 * Hidden Power (PaP current weapon)
 
-* Wall Power (next wall buy only—never box—upgraded after a 3s grace window with a forced Pack-a-Punch swap)
+* Wall Power (next wall buy only�never box�upgraded after a 3s grace window with a forced Pack-a-Punch swap)
 
 * Crate Power (next box gun upgraded, 3s grace)
 
@@ -388,7 +388,9 @@ Usage from `gumballs.gsc`:
 * BR delayed show (default 1.5s)
 * Selection cadence (round-based vs. alternative)
 * Override policy for manual gums
-* Dev toggles: `gg_enable`, `gg_debug`, `gg_debug_hud`, and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.
+* Dev toggles: `gg_enable` and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.
+* `gg_debug` (0/1, default 0) � enables console logging.
+* `gg_debug_hud` (0/1, default 0) � shows log messages in yellow debug HUD.
 * Build 5 consumption DVARs (safe fallbacks):
   - `gg_default_uses` (int, default 3)
   - `gg_default_rounds` (int, default 3)
@@ -403,14 +405,13 @@ Usage from `gumballs.gsc`:
   - `gg_reigndrops_include_firesale` (0/1, default 1) - include Fire Sale in the Reign Drops bundle.
   - `gg_powerup_hints` (0/1, default 1) - allow HUD hint text after spawning a drop.
   - `gg_log_dispatch` (0/1, default 0) - optional dispatch logging (otherwise `set gg_debug 1` surfaces the same feed).
-  - `gg_debug_hud` (0/1, default 0) - toggles the on-screen debug HUD text overlay (now yellow for clarity).
 * Build 7 armed-gum knobs:
   - `gg_armed_grace_secs` (float, default 3.0) - grace window before armed gums can trigger.
   - `gg_armed_poll_ms` (int, default 150) - polling cadence when watching weapon changes.
   - `gg_wonder_label_reassert_ms` (int, default 250) - Wonderbar BR label reassert cadence.
   - `gg_br_delayed_show_secs` (float, default 1.5) - default delay before the BR HUD fades in; cancelable token guards gum switches, deaths, and hides.
   - `gg_wonder_label_suppress_ms` (int, default 35000) - Wonderbar/Fire Sale hint suppression duration (milliseconds) before auto-reassert.
-  - `gg_test_drop_firesale_on_arm` (0/1, default 1 while testing) - spawn a Fire Sale when an armed gum activates (Wall/Crate/Wonderbar); disable after validation.
+  - `gg_test_drop_firesale_on_arm` (0/1, default 0) - spawn a Fire Sale when an armed gum activates (Wall/Crate/Wonderbar); disable after validation.
   - `gg_wonder_include_specials` (0/1, default 0) - optionally include Gersh Device (`zombie_black_hole_bomb`) and Quantum Bomb (`zombie_quantum_bomb`) in the Wonderbar weapon pool.
 * Build 8 economy knobs:
   - `gg_round_robbin_bonus` (int, default 1600) - bonus points granted to every player when Round Robbin fires.
@@ -511,6 +512,24 @@ stateDiagram-v2
 
 ### Debug Logging
 
-When `gg_debug_hud` is enabled, debug HUD text now renders in **yellow** for high-contrast visibility in-game.
+- All debug output routes through `helpers.gg_log("<message>")`.
+- Messages are uniformly prefixed with `[gg]` for easy filtering in console logs.
+- Hidden by default: `gg_debug`, `gg_log_dispatch`, and `gg_consume_logs` all default to `0`.
+- HUD mirroring: the yellow debug HUD now auto-enables when any logging flag is on (`gg_debug`, `gg_log_dispatch`, or `gg_consume_logs`) or when `gg_debug_hud` is explicitly set to `1`.
+- Defaults: `gg_debug_hud` defaults to `0` to avoid unintended on-screen logs.
+- Legacy ad-hoc `print`/`iprintln` calls were replaced for consistency.
 
 ---
+
+## What Changed (Build 10D - Debug Gating + HUD Logs)
+
+- Default safety: explicitly ensure `gg_debug_hud` starts at `0` so no HUD text appears unless requested.
+- Unified gating: `helpers.gg_log()` now emits when any of `gg_debug`, `gg_log_dispatch`, or `gg_consume_logs` are enabled (was `gg_debug` only).
+- HUD auto-mirror: the debug HUD will appear automatically when any logging flag is enabled, or can be forced with `gg_debug_hud 1`.
+- As before, all logging remains off by default; enabling flags is an explicit action.
+
+Snapshot of changes:
+- maps/gobblegum/gumballs.gsc: add `gg_ensure_dvar_int("gg_debug_hud", 0)` in `gg_init_dvars`.
+- maps/gobblegum/gb_helpers.gsc: update `gg_log` to respect `gg_log_dispatch`/`gg_consume_logs` and mirror to HUD accordingly.
+- maps/gobblegum/gb_hud.gsc: update debug HUD loop to auto-enable when any logging flag is active.
+

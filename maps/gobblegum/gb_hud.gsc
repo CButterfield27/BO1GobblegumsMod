@@ -464,6 +464,88 @@ __gg_hint_hide_immediate()
     self.gg.hud.br_hint.alpha = 0;
 }
 
+__gg_debug_hud_create()
+{
+    if (isdefined(level.gg_debug_text))
+        return;
+
+    text = createFontString("objective", 1.0);
+    text.foreground = true;
+    text.hidewheninmenu = true;
+    text.alpha = 0;
+    text.color = (1, 1, 0);
+    text.sort = 45;
+    text setPoint("LEFT", "TOP", 30, 140);
+    text.__last_update = gettime();
+    text.__fading = false;
+
+    level.gg_debug_text = text;
+    level.gg_debug_text_owner = self;
+
+    self thread __gg_debug_hud_owner_watch(text);
+}
+
+__gg_debug_hud_owner_watch(text)
+{
+    self waittill("disconnect");
+
+    if (isdefined(level.gg_debug_text_owner) && level.gg_debug_text_owner == self)
+    {
+        if (isdefined(level.gg_debug_text))
+            level.gg_debug_text destroy();
+        level.gg_debug_text = undefined;
+        level.gg_debug_text_owner = undefined;
+    }
+}
+
+__gg_debug_hud_loop()
+{
+    self endon("disconnect");
+
+    hold_secs = 3.0;
+    fade_secs = 0.5;
+
+    while (true)
+    {
+        // Show the debug HUD when explicitly requested, or when any logging mode is active
+        dvar_on = (GetDvarInt("gg_debug_hud") != 0)
+            || (GetDvarInt("gg_debug") != 0)
+            || (GetDvarInt("gg_log_dispatch") != 0)
+            || (GetDvarInt("gg_consume_logs") != 0);
+
+        if (dvar_on && (!isdefined(level.gg_debug_text) || !isdefined(level.gg_debug_text_owner)))
+        {
+            __gg_debug_hud_create();
+        }
+
+        if (!dvar_on && isdefined(level.gg_debug_text))
+        {
+            level.gg_debug_text.alpha = 0;
+        }
+        else if (dvar_on
+            && isdefined(level.gg_debug_text)
+            && isdefined(level.gg_debug_text_owner)
+            && level.gg_debug_text_owner == self
+            && isdefined(level.gg_debug_text.__last_update))
+        {
+            now = gettime();
+            if (level.gg_debug_text.alpha > 0
+                && (!isdefined(level.gg_debug_text.__fading) || !level.gg_debug_text.__fading)
+                && (now - level.gg_debug_text.__last_update) >= hold_secs)
+            {
+                level.gg_debug_text.__fading = true;
+                level.gg_debug_text FadeOverTime(fade_secs);
+                wait(fade_secs);
+                level.gg_debug_text.alpha = 0;
+                level.gg_debug_text.__fading = false;
+                level.gg_debug_text.__last_update = gettime();
+            }
+        }
+
+        wait(0.25);
+    }
+}
+
 ensure_api()
 {
     if (isdefined(level.gb_hud))
@@ -541,16 +623,22 @@ __gg_init_player_impl()
 {
     self endon("disconnect");
 
-    // Idempotent: reuse if already built
-    if (isdefined(self.gg) && isdefined(self.gg.hud) && isdefined(self.gg.hud.tc_icon))
-    {
-        self.gg.hud thread __gg_apply_layout_thread();
-        return;
-    }
-
     if (!isdefined(self.gg))
     {
         self.gg = spawnstruct();
+    }
+
+    if (!isdefined(self.gg.debug_hud_thread_started))
+    {
+        self.gg.debug_hud_thread_started = true;
+        self thread __gg_debug_hud_loop();
+    }
+
+    // Idempotent: reuse if already built
+    if (isdefined(self.gg.hud) && isdefined(self.gg.hud.tc_icon))
+    {
+        self.gg.hud thread __gg_apply_layout_thread();
+        return;
     }
 
     hud = spawnstruct();

@@ -1,6 +1,33 @@
 #include maps\_utility;
 #include common_scripts\utility;
 
+gg_log(msg)
+{
+    // Log when any logging mode is enabled: core debug, dispatch, or consume logs
+    should_log = (GetDvarInt("gg_debug") != 0)
+        || (GetDvarInt("gg_log_dispatch") != 0)
+        || (GetDvarInt("gg_consume_logs") != 0);
+
+    if (!should_log)
+        return;
+
+    if (!isdefined(msg))
+        msg = "";
+
+    message = "[gg] " + msg;
+    print(message);
+
+    // Mirror to HUD when the debug HUD is explicitly enabled, or when any logging mode is active
+    if ((GetDvarInt("gg_debug_hud") != 0 || should_log) && isdefined(level.gg_debug_text))
+    {
+        level.gg_debug_text setText(message);
+        level.gg_debug_text.color = (1, 1, 0);
+        level.gg_debug_text.alpha = 1;
+        level.gg_debug_text.__last_update = gettime();
+        level.gg_debug_text.__fading = false;
+    }
+}
+
 // Literal-return helpers (constants)
 ACT_AUTO() { return 1; }
 ACT_USER() { return 2; }
@@ -339,9 +366,9 @@ helpers_upgrade_debug(msg)
 {
     if (GetDvarInt("gg_debug") != 1)
         return;
-    if (!isdefined(msg))
+    if (!isdefined(msg) || msg == "")
         msg = "upgrade debug";
-    iprintln("^3Gumballs: " + msg);
+    gg_log("upgrade: " + msg);
 }
 
 drop_powerup(player, code, pos_or_dist)
@@ -413,8 +440,8 @@ trigger_perk_vo_if_cosmodrome(player, perk)
         if (invoked)
             label = label + ", perk_bought_func invoked";
 
-        iprintln("^3[gg] cosmodrome perk VO: " + label + " (" + name + ")");
-}
+        gg_log("cosmodrome perk vo: " + label + " (" + name + ")");
+    }
 
     return true;
 }
@@ -438,6 +465,7 @@ helpers_init()
     level.gb_helpers.drop_powerup = ::drop_powerup;
     level.gb_helpers.player_has_all_map_perks = ::player_has_all_map_perks;
     level.gb_helpers.trigger_perk_vo_if_cosmodrome = ::trigger_perk_vo_if_cosmodrome;
+    level.gb_helpers.gg_log = ::gg_log;
 
     level.gb_helpers.ACT_AUTO = ::ACT_AUTO;
     level.gb_helpers.ACT_USER = ::ACT_USER;
