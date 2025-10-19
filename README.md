@@ -128,32 +128,26 @@ Positioning
 
 #### Bottom Right (BR)
 
-* Hint text (scale 1.15, kept empty during gameplay; status messages surface via the top-left debug feed when `gg_debug 1`)
-* Icon (48?48)
-* Usage Bar (shader `"white"`, width 75, height 5)
-
-  * Modes: uses / rounds / timer
-* BR label (Wonderbar preview) driven by HUD helpers
+* Hint line (scale 1.15) driven by the tokenised pipeline:
+  - `set_hint` / `clear_hint` / `update_hint`
+  - `suppress_hint(ms)` / `end_suppress_hint()` keep the latest string cached while hidden
+* Icon (48×48)
+* Usage bar (shader `"white"`, width 75, height 5) supports uses / rounds / timer modes via `br_set_mode` helpers
+* Wonderbar label now reuses the hint pipeline; no standalone label widget
 
 Positioning
 
 - Anchor: `setPoint("RIGHT", "BOTTOMRIGHT", x_off, y_off)` for icon, bars, hint
 - Bar consists of two layers at the same point:
   - Background bar (light gray) full width
-  - Foreground bar (yellow) full width initially; drains left?right in later steps
-  - Title/label is disabled in Step 1 (hint text only)
+  - Foreground bar (yellow) full width initially; drains left→right as the gum consumes
 
 **Behavior**
 
-* Show on selection (no fades)
-* Hint text remains blank; debug messages are routed to the top-left `iprintln` feed instead of the BR hint row
-* Hide when consumed/cleared in later steps
-
----
-
-* Supports **delayed show** (smooth UX after selection/activation)
-* Hint helper calls clear the BR row and mirror messages to the debug `iprintln` feed (only when `gg_debug 1`; default remains silent)
-* Label can be **suppressed and reasserted** (e.g., during Fire Sale suppression loop)
+* `show_br_after_delay` reveals BR after `gg_br_delayed_show_secs` (default 1.5s); the delay token cancels on gum change, death, round rollover, or explicit hides.
+* Show/hide animate via token-based fades (`GG_HUD_FADE_SECS`, default 0.25s). `hide_br()` clears icon/text once the fade ends.
+* Wonderbar suppression honours `gg_wonder_label_suppress_ms` (default 35 000 ms Fire Sale window). The label thread calls `suppress_hint`/`end_suppress_hint` so the text auto-reasserts when suppression expires.
+* BR hides when the gum ends or is replaced.
 
 ---
 
@@ -163,12 +157,20 @@ Positioning
 * `hud.show_tc(player, gum)` / `hud.hide_tc_after(player, secs, expected_name)`
 * `hud.update_tc(player, gum)`
 * `hud.show_br(player, gum)` / `hud.hide_br(player)`
-* `hud.show_br_after_delay(player, secs, expected_name)` *(stubbed initially)*
-* `hud.set_hint(player, text)` / `hud.clear_hint(player)`
+* `hud.show_br_after_delay(player, secs, expected_name)`
+* `hud.set_hint(player, text)` / `hud.clear_hint(player)` / `hud.update_hint(player)`
+* `hud.suppress_hint(player, ms)` / `hud.end_suppress_hint(player)`
 * `hud.br_set_mode(player, mode)`
 * `hud.br_set_total_uses(player, n)` / `hud.br_consume_use(player)`
 * `hud.br_set_total_rounds(player, n)` / `hud.br_consume_round(player)`
 * `hud.br_start_timer(player, secs)` / `hud.br_stop_timer(player)`
+
+#### HUD Polish Highlights
+
+- **Hint text** — `set_hint`, `clear_hint`, `update_hint`, `suppress_hint(ms)`, `end_suppress_hint()`; Wonderbar + Fire Sale uses `gg_wonder_label_suppress_ms` (default 35 000 ms) and reasserts automatically after `end_suppress_hint`.
+- **BR delayed show** — token-based and cancelable on gum change, death, round rollover, or disconnect; default delay `gg_br_delayed_show_secs` (1.5 s).
+- **Fades** — token-based fades for TC/BR (0.25 s). TC auto-hides after 7.5 s; BR fades out when the gum ends.
+- **Safety** — Every HUD thread `endon("disconnect")` and `endon("gg_gum_cleared")`; tokens guard against overlapping fades or late hint writes.
 
 Usage from `gumballs.gsc`:
 
@@ -351,7 +353,7 @@ Usage from `gumballs.gsc`:
 
 ### Core ? HUD
 
-* All HUD functions above (show/hide/update, bar, hint, delay, `br_set_label`, `br_clear_label`)
+* All HUD functions above: TC/BR show-hide with token-based fades, consumption bar helpers, delayed BR reveal, and the hint pipeline (`set`/`clear`/`update`/`suppress`/`end_suppress`)
 
 ### Core ? Helpers
 
@@ -403,6 +405,8 @@ Usage from `gumballs.gsc`:
   - `gg_armed_grace_secs` (float, default 3.0) - grace window before armed gums can trigger.
   - `gg_armed_poll_ms` (int, default 150) - polling cadence when watching weapon changes.
   - `gg_wonder_label_reassert_ms` (int, default 250) - Wonderbar BR label reassert cadence.
+  - `gg_br_delayed_show_secs` (float, default 1.5) - default delay before the BR HUD fades in; cancelable token guards gum switches, deaths, and hides.
+  - `gg_wonder_label_suppress_ms` (int, default 35000) - Wonderbar/Fire Sale hint suppression duration (milliseconds) before auto-reassert.
   - `gg_test_drop_firesale_on_arm` (0/1, default 1 while testing) - spawn a Fire Sale when an armed gum activates (Wall/Crate/Wonderbar); disable after validation.
   - `gg_wonder_include_specials` (0/1, default 0) - optionally include Gersh Device (`zombie_black_hole_bomb`) and Quantum Bomb (`zombie_quantum_bomb`) in the Wonderbar weapon pool.
 * Build 8 economy knobs:
@@ -507,7 +511,3 @@ stateDiagram-v2
 When `gg_debug_hud` is enabled, debug HUD text now renders in **yellow** for high-contrast visibility in-game.
 
 ---
-
-## What Changed (Build 10A — Yellow Debug HUD)
-- Debug HUD text color changed to bright yellow (RGB 1,1,0) for visibility.
-- All debug messages retain `[gg]` prefix and update safely with color persistence.

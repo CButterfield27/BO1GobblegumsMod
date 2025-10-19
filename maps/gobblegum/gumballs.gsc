@@ -503,6 +503,8 @@ build_player_state(player)
 
     if (!isdefined(player.gg.selected_id))
         player.gg.selected_id = undefined;
+    if (!isdefined(player.gg.selected_name))
+        player.gg.selected_name = "";
 
     if (!isdefined(player.gg.selection_active))
         player.gg.selection_active = false;
@@ -541,6 +543,23 @@ build_player_state(player)
 
     if (!isdefined(player.gg.input_thread_started))
         player.gg.input_thread_started = false;
+
+    if (!isdefined(player.gg.tc_fade_token))
+        player.gg.tc_fade_token = 0;
+    if (!isdefined(player.gg.tc_timer_token))
+        player.gg.tc_timer_token = 0;
+    if (!isdefined(player.gg.br_fade_token))
+        player.gg.br_fade_token = 0;
+    if (!isdefined(player.gg.br_delay_token))
+        player.gg.br_delay_token = 0;
+    if (!isdefined(player.gg.hint_last_text))
+        player.gg.hint_last_text = "";
+    if (!isdefined(player.gg.hint_suppressed_until))
+        player.gg.hint_suppressed_until = 0;
+    if (!isdefined(player.gg.br_pending_gum_id))
+        player.gg.br_pending_gum_id = undefined;
+    if (!isdefined(player.gg.br_pending_gum))
+        player.gg.br_pending_gum = undefined;
 
     if (!isdefined(player.gg.armed_flags))
     {
@@ -630,10 +649,19 @@ gg_show_gum_selection(player, gum, round_number)
     }
 
     player.gg.selected_id = gum.id;
+    if (isdefined(gum.name))
+        player.gg.selected_name = gum.name;
+    else
+        player.gg.selected_name = "";
     player.gg.selection_active = true;
     player.gg.effect_active = false;
     player.gg.effect_id = undefined;
     player.gg.used_this_round = false;
+    if (!isdefined(player.gg.br_delay_token))
+        player.gg.br_delay_token = 0;
+    player.gg.br_delay_token += 1;
+    player.gg.br_pending_gum = gum;
+    player.gg.br_pending_gum_id = gum.id;
 
     msg = "Gumballs: selected " + gum.id;
     if (isdefined(round_number))
@@ -651,14 +679,30 @@ gg_show_gum_selection(player, gum, round_number)
     if (isdefined(level.gb_hud.hide_tc_after))
     {
         expected_name = "";
-        if (isdefined(gum.name))
+        if (isdefined(gum.id))
+            expected_name = gum.id;
+        else if (isdefined(gum.name))
             expected_name = gum.name;
         tc_secs = gg_get_tc_autohide_secs();
         [[ level.gb_hud.hide_tc_after ]](player, tc_secs, expected_name);
     }
 
-    if (isdefined(level.gb_hud.show_br))
+    if (isdefined(level.gb_hud.show_br_after_delay))
+    {
+        delay_secs = gg_get_br_delayed_show_secs();
+        if (gg_is_auto_activation(gum))
+            delay_secs = 0;
+        expected_key = "";
+        if (isdefined(gum.id))
+            expected_key = gum.id;
+        else if (isdefined(gum.name))
+            expected_key = gum.name;
+        [[ level.gb_hud.show_br_after_delay ]](player, delay_secs, expected_key);
+    }
+    else if (isdefined(level.gb_hud.show_br))
+    {
         [[ level.gb_hud.show_br ]](player, gum);
+    }
 
     // Seed consumption state for the selected gum and configure BR bar
     gg_seed_consumption_state(player, gum);
@@ -707,6 +751,9 @@ gg_selection_close(player, reason, hide_ui, reset_state)
 
     player.gg.selection_active = false;
     player.gg.selected_id = undefined;
+    player.gg.selected_name = "";
+    player.gg.br_pending_gum = undefined;
+    player.gg.br_pending_gum_id = undefined;
     if (isdefined(reason))
         player.gg.last_selection_close_reason = reason;
 
@@ -714,10 +761,10 @@ gg_selection_close(player, reason, hide_ui, reset_state)
     {
         if (isdefined(level.gb_hud.br_stop_timer))
             [[ level.gb_hud.br_stop_timer ]](player);
-        if (isdefined(level.gb_hud.br_clear_label))
-            [[ level.gb_hud.br_clear_label ]](player);
         if (isdefined(level.gb_hud.hide_br))
             [[ level.gb_hud.hide_br ]](player);
+        if (isdefined(level.gb_hud.clear_hint))
+            [[ level.gb_hud.clear_hint ]](player);
     }
 
     if (reset_state)
@@ -770,6 +817,8 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_test_drop_firesale_on_arm", 1);
     gg_ensure_dvar_int("gg_wonder_label_reassert_ms", 250);
     gg_ensure_dvar_int("gg_wonder_include_specials", 0);
+    gg_ensure_dvar_float("gg_br_delayed_show_secs", 1.5);
+    gg_ensure_dvar_int("gg_wonder_label_suppress_ms", 35000);
 
     // Build 8 round/economy knobs
     gg_ensure_dvar_int("gg_round_robbin_bonus", 1600);
@@ -838,6 +887,14 @@ gg_cache_config()
     level.gg_config.wonder_label_reassert_ms = GetDvarInt("gg_wonder_label_reassert_ms");
     if (level.gg_config.wonder_label_reassert_ms < 50)
         level.gg_config.wonder_label_reassert_ms = 50;
+
+    level.gg_config.br_delayed_show_secs = GetDvarFloat("gg_br_delayed_show_secs");
+    if (level.gg_config.br_delayed_show_secs < 0)
+        level.gg_config.br_delayed_show_secs = 0;
+
+    level.gg_config.wonder_label_suppress_ms = GetDvarInt("gg_wonder_label_suppress_ms");
+    if (level.gg_config.wonder_label_suppress_ms < 0)
+        level.gg_config.wonder_label_suppress_ms = 0;
 
     level.gg_config.round_robbin_bonus = GetDvarInt("gg_round_robbin_bonus");
     if (level.gg_config.round_robbin_bonus < 0)
@@ -1026,15 +1083,21 @@ gg_show_hint_if_enabled(player, text)
     if (!isdefined(player))
         return;
 
-    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
-        [[ level.gb_hud.clear_hint ]](player);
-
-    if (!gg_powerup_hints_enabled() || !gg_debug_enabled())
-        return;
-
     if (!isdefined(text) || text == "")
+    {
+        if (gg_debug_enabled() && isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+            [[ level.gb_hud.clear_hint ]](player);
         return;
-    player iprintln("^3" + text);
+    }
+
+    if (!gg_debug_enabled())
+        return;
+
+    if (!gg_powerup_hints_enabled())
+        return;
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.set_hint))
+        [[ level.gb_hud.set_hint ]](player, text);
 }
 
 gg_get_wonder_label_reassert_ms()
@@ -1088,10 +1151,7 @@ gg_show_powerup_hint(player, text, raw)
     if (!isdefined(player))
         return;
 
-    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
-        [[ level.gb_hud.clear_hint ]](player);
-
-    if (!gg_powerup_hints_enabled() || !gg_debug_enabled())
+    if (!gg_powerup_hints_enabled())
         return;
 
     if (!isdefined(text) || text == "")
@@ -1101,7 +1161,8 @@ gg_show_powerup_hint(player, text, raw)
     if (!isdefined(raw) || !raw)
         msg = "Spawned: " + text;
 
-    player iprintln("^3" + msg);
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.set_hint))
+        [[ level.gb_hud.set_hint ]](player, msg);
 }
 
 gg_log_powerup_spawn(gum_id, code)
@@ -1135,19 +1196,24 @@ gg_wonderbar_suppress_label(player, duration)
     if (!isdefined(player.gg))
         build_player_state(player);
 
-    if (!isdefined(duration) || duration < 0)
-        duration = 0;
+    suppress_secs = duration;
+    if (!isdefined(suppress_secs) || suppress_secs <= 0)
+        suppress_secs = gg_get_wonder_label_suppress_ms() / 1000.0;
 
     if (!isdefined(player.gg.wonderbar_suppress_until))
         player.gg.wonderbar_suppress_until = 0;
 
-    player.gg.wonderbar_suppress_until = gettime() + int(duration * 1000);
+    suppress_ms = int(suppress_secs * 1000);
+    if (suppress_ms < 0)
+        suppress_ms = 0;
 
-    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_clear_label))
-        [[ level.gb_hud.br_clear_label ]](player);
+    player.gg.wonderbar_suppress_until = gettime() + suppress_ms;
+
+    if (suppress_ms > 0 && isdefined(level.gb_hud) && isdefined(level.gb_hud.suppress_hint))
+        [[ level.gb_hud.suppress_hint ]](player, suppress_ms);
 
     if (gg_debug_enabled())
-        iprintln("^3Gumballs: Wonderbar label suppressed (" + duration + "s)");
+        iprintln("^3Gumballs: Wonderbar label suppressed (" + suppress_secs + "s)");
 }
 
 gg_spawn_powerup_drop(player, code, fan_offset)
@@ -1484,6 +1550,22 @@ gg_get_tc_autohide_secs()
     return 7.5;
 }
 
+gg_get_br_delayed_show_secs()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.br_delayed_show_secs))
+        return level.gg_config.br_delayed_show_secs;
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.GG_BR_DELAYED_SHOW_SECS))
+        return [[ level.gb_helpers.GG_BR_DELAYED_SHOW_SECS ]]();
+    return 1.5;
+}
+
+gg_get_wonder_label_suppress_ms()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.wonder_label_suppress_ms))
+        return level.gg_config.wonder_label_suppress_ms;
+    return 35000;
+}
+
 gg_get_select_interval_secs()
 {
     gg_ensure_dvar_int("gg_select_cadence_ms", 250);
@@ -1582,11 +1664,23 @@ gg_player_lifecycle()
     self endon("disconnect");
 
     gg_initialize_player(self);
+    self thread gg_player_death_listener();
 
     while (true)
     {
         self waittill("spawned_player");
         gg_initialize_player(self);
+    }
+}
+
+gg_player_death_listener()
+{
+    self endon("disconnect");
+
+    while (true)
+    {
+        self waittill("death");
+        self notify("gg_gum_cleared");
     }
 }
 
@@ -1670,6 +1764,8 @@ gg_handle_round_start(round_number)
         if (!gg_is_player_selectable(player))
             continue;
 
+        player notify("gg_gum_cleared");
+
         selection_active = gg_selection_is_active(player);
         consumed_last_round = false;
         if (isdefined(player.gg) && isdefined(player.gg.used_this_round) && player.gg.used_this_round)
@@ -1684,6 +1780,7 @@ gg_handle_round_start(round_number)
             else if (selection_active)
             {
                 gg_selection_close(player, "round_change_unused", true, true);
+                player notify("gg_gum_cleared");
                 if (gg_debug_select_enabled())
                     gg_log_select("Gumballs: unused gum discarded on round change");
             }
@@ -1691,6 +1788,7 @@ gg_handle_round_start(round_number)
         else if (selection_active)
         {
             gg_selection_close(player, "round_change", true, false);
+            player notify("gg_gum_cleared");
         }
 
         // ROUNDS model: decrement exactly once per new round while active
@@ -3052,11 +3150,11 @@ gg_end_current_gum(player, reason)
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_stop_timer))
         [[ level.gb_hud.br_stop_timer ]](player);
 
-    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_clear_label))
-        [[ level.gb_hud.br_clear_label ]](player);
-
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.hide_br))
         [[ level.gb_hud.hide_br ]](player);
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+        [[ level.gb_hud.clear_hint ]](player);
 
     player.gg.is_active = false;
     player.gg.uses_remaining = 0;
@@ -3088,11 +3186,12 @@ gg_end_current_gum(player, reason)
     player notify("gg_crate_power_cancel");
     player notify("gg_wonderbar_cancel");
 
-    player notify("gg_gum_cleared");
     player notify("gg_wonderbar_end");
 
     player.gg.selected_id = undefined;
     player.gg.selection_active = false;
+
+    player notify("gg_gum_cleared");
 }
 
 // Power-Ups
@@ -3126,7 +3225,7 @@ gg_fx_immolation(player, gum)
 {
     if (gg_powerup_single_drop(player, gum))
     {
-        gg_wonderbar_suppress_label(player, 35);
+        gg_wonderbar_suppress_label(player, 0);
     }
 }
 
@@ -3532,6 +3631,15 @@ gg_crate_power_arm(player, gum)
 
     player notify("gg_crate_power_cancel");
 
+    if (!isdefined(player.gg.br_delay_token))
+        player.gg.br_delay_token = 0;
+    player.gg.br_delay_token += 1;
+    player.gg.br_pending_gum = gum;
+    if (isdefined(gum) && isdefined(gum.id))
+        player.gg.br_pending_gum_id = gum.id;
+    else
+        player.gg.br_pending_gum_id = undefined;
+
     if (!isdefined(player.gg.crate_power_token))
         player.gg.crate_power_token = 0;
     player.gg.crate_power_token += 1;
@@ -3658,6 +3766,12 @@ gg_wonderbar_arm(player, gum)
 
     player notify("gg_wonderbar_cancel");
 
+    player.gg.br_pending_gum = gum;
+    if (isdefined(gum) && isdefined(gum.id))
+        player.gg.br_pending_gum_id = gum.id;
+    else
+        player.gg.br_pending_gum_id = undefined;
+
     if (!isdefined(player.gg.wonderbar_token))
         player.gg.wonderbar_token = 0;
     if (!isdefined(player.gg.wonderbar_label_token))
@@ -3690,8 +3804,8 @@ gg_wonderbar_arm(player, gum)
             [[ level.gb_hud.br_set_mode ]](player, "uses");
         if (isdefined(level.gb_hud.br_set_total_uses))
             [[ level.gb_hud.br_set_total_uses ]](player, 1);
-        if (isdefined(level.gb_hud.br_set_label))
-            [[ level.gb_hud.br_set_label ]](player, label_text);
+        if (label_text != "" && isdefined(level.gb_hud.set_hint))
+            [[ level.gb_hud.set_hint ]](player, label_text);
     }
 
     gg_show_hint_if_enabled(player, "Armed: Wonderbar");
@@ -3837,12 +3951,10 @@ gg_wonderbar_apply_choice(player, acquired_weapon)
     player GiveStartAmmo(wonder);
     player SwitchToWeapon(wonder);
 
-    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_set_label))
-    {
-        label_text = gg_wonderbar_choice_label(wonder);
-        [[ level.gb_hud.br_set_label ]](player, label_text);
-        player.gg.wonderbar_label_text = label_text;
-    }
+    label_text = gg_wonderbar_choice_label(wonder);
+    player.gg.wonderbar_label_text = label_text;
+    if (label_text != "" && isdefined(level.gb_hud) && isdefined(level.gb_hud.set_hint))
+        [[ level.gb_hud.set_hint ]](player, label_text);
 
     return true;
 }
@@ -3871,11 +3983,6 @@ gg_wonderbar_on_success(player, gum, weapon)
         player.gg.wonderbar_choice = undefined;
         player.gg.wonderbar_label_text = "";
     }
-    if (isdefined(level.gb_hud))
-    {
-        if (isdefined(level.gb_hud.br_clear_label))
-            [[ level.gb_hud.br_clear_label ]](player);
-    }
     gg_end_current_gum(player, "wonderbar_applied");
 }
 
@@ -3884,6 +3991,9 @@ gg_wonderbar_label_thread(expected_token)
     self endon("disconnect");
     self endon("gg_gum_cleared");
     self endon("gg_wonderbar_cancel");
+
+    last_applied_label = "";
+    was_suppressed = false;
 
     while (true)
     {
@@ -3896,16 +4006,54 @@ gg_wonderbar_label_thread(expected_token)
 
         if (suppress)
         {
-            if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_clear_label))
-                [[ level.gb_hud.br_clear_label ]](self);
+            remaining = self.gg.wonderbar_suppress_until - gettime();
+            if (remaining < 0)
+                remaining = 0;
+            if (remaining > 0 && isdefined(level.gb_hud) && isdefined(level.gb_hud.suppress_hint))
+                [[ level.gb_hud.suppress_hint ]](self, int(remaining));
+            was_suppressed = true;
         }
         else
         {
+            if (was_suppressed)
+            {
+                if (isdefined(level.gb_hud) && isdefined(level.gb_hud.end_suppress_hint))
+                    [[ level.gb_hud.end_suppress_hint ]](self);
+                was_suppressed = false;
+            }
+
             label_text = "";
             if (isdefined(self.gg) && isdefined(self.gg.wonderbar_label_text))
                 label_text = self.gg.wonderbar_label_text;
-            if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_set_label))
-                [[ level.gb_hud.br_set_label ]](self, label_text);
+
+            cached = "";
+            if (isdefined(self.gg) && isdefined(self.gg.hint_last_text))
+                cached = self.gg.hint_last_text;
+
+            if (label_text == "")
+            {
+                if (last_applied_label != "" && cached == last_applied_label)
+                {
+                    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+                        [[ level.gb_hud.clear_hint ]](self);
+                    last_applied_label = "";
+                }
+            }
+            else
+            {
+                if (cached == label_text)
+                {
+                    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.update_hint))
+                        [[ level.gb_hud.update_hint ]](self);
+                    last_applied_label = label_text;
+                }
+                else if (cached == "" || cached == last_applied_label)
+                {
+                    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.set_hint))
+                        [[ level.gb_hud.set_hint ]](self, label_text);
+                    last_applied_label = label_text;
+                }
+            }
         }
 
         wait(gg_get_wonder_label_reassert_secs());
@@ -4086,8 +4234,22 @@ gg_shopping_free_begin(player, gum, secs, temp_points)
 
 gg_shopping_free_refresh_hud(player, gum, secs)
 {
+    if (!isdefined(player))
+        return;
     if (!isdefined(level.gb_hud))
         return;
+
+    if (isdefined(player.gg))
+    {
+        if (!isdefined(player.gg.br_delay_token))
+            player.gg.br_delay_token = 0;
+        player.gg.br_delay_token += 1;
+        player.gg.br_pending_gum = gum;
+        if (isdefined(gum) && isdefined(gum.id))
+            player.gg.br_pending_gum_id = gum.id;
+        else
+            player.gg.br_pending_gum_id = undefined;
+    }
 
     if (isdefined(level.gb_hud.show_br))
         [[ level.gb_hud.show_br ]](player, gum);

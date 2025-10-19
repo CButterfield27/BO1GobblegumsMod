@@ -8,7 +8,8 @@ CONS_TIMED() { return 1; }
 CONS_ROUNDS() { return 2; }
 CONS_USES() { return 3; }
 GG_TC_AUTOHIDE_SECS() { return 7.5; }
-GG_FADE_SECS() { return 0.25; }
+GG_HUD_FADE_SECS() { return 0.25; }
+GG_FADE_SECS() { return GG_HUD_FADE_SECS(); }
 GG_BR_DELAYED_SHOW_SECS() { return 1.5; }
 GG_ARMED_GRACE_SECS() { return 3.0; }
 
@@ -439,6 +440,7 @@ helpers_init()
     level.gb_helpers.CONS_ROUNDS = ::CONS_ROUNDS;
     level.gb_helpers.CONS_USES = ::CONS_USES;
     level.gb_helpers.GG_TC_AUTOHIDE_SECS = ::GG_TC_AUTOHIDE_SECS;
+    level.gb_helpers.GG_HUD_FADE_SECS = ::GG_HUD_FADE_SECS;
     level.gb_helpers.GG_FADE_SECS = ::GG_FADE_SECS;
     level.gb_helpers.GG_BR_DELAYED_SHOW_SECS = ::GG_BR_DELAYED_SHOW_SECS;
     level.gb_helpers.GG_ARMED_GRACE_SECS = ::GG_ARMED_GRACE_SECS;
