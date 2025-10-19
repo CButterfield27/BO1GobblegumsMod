@@ -91,6 +91,8 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to
 * Activation debounce
 * Effect end timers (e.g., Stock Option, Shopping Free)
 * `player.gg.selected_id` stores current gum id
+* `player.gg.selection_active` tracks whether the round's selection slot is occupied (cleared on activation or round rollover)
+* `player.gg.effect_active` / `player.gg.effect_id` track effects that persist after the slot is freed
 * `player.gg.uses_remaining`, `player.gg.rounds_remaining`, `player.gg.timer_endtime` reserved for consumption models
 * `player.gg.armed_flags` default false
 * `player.gg.hud` assigned by `gb_hud::init_player`
@@ -196,13 +198,14 @@ Usage from `gumballs.gsc`:
 
 * On round start:
 
+  * Close the previous selection slot if it is still occupied (unused gums are discarded; ongoing effects continue with `effect_active` while the slot is freed)
   * Apply ROUNDS tick (if a rounds-based gum is active): decrement 1, update BR, end at 0
-  * If no gum is currently selected/active this round: select and apply a new gum
+  * Always assign a fresh gum for the new round once cleanup completes
   * Round 1 delay: 10s before first gum
-  * Pick gum: skip invalid (e.g., Perkaholic with full perks), reset cycle if empty
+  * Pick gum: skip invalid (e.g., Perkaholic with full perks) and map-gated entries (e.g., DoNW on `zombie_theater`/`theater`), reset cycle if empty
   * Apply gum: set player vars, init BR bar mode and totals
   * Show HUD: show TC + BR (no fades yet)
-  * Auto-gums: may activate immediately
+  * Auto-gums: may activate immediately and detach the selection slot; timed/armed gums free the slot while the effect continues
   * Remove gum from `pool_remaining` (no repeats until reset)
   * Schedule TC auto-hide (7.5s)
 
@@ -215,6 +218,7 @@ Usage from `gumballs.gsc`:
 * `gg_set_selected_gum_name()` + `gg_apply_selected_gum()`
 * Applies gum immediately, HUD updates
 * Policy toggle: whether overrides affect pool uniqueness
+* Dev override `gg_force_gum` bypasses map gating (logs under `gg_debug`)
 
 ### Special Case
 
@@ -252,7 +256,7 @@ Usage from `gumballs.gsc`:
 ### Power-Ups
 
 * Cache Back (Max Ammo)
-* Dead of Nuclear Winter (Nuke)
+* Dead of Nuclear Winter (Nuke) — gated off Kino der Toten (`zombie_theater`, `theater`)
 * Kill Joy (Insta Kill)
 * Licensed Contractor (Carpenter)
 * Immolation Liquidation (Fire Sale) - triggers Wonderbar label suppression for 35s via helper
@@ -260,17 +264,19 @@ Usage from `gumballs.gsc`:
 * On the House (Free Perk)
 * Fatal Contraption (Death Machine) ? only on maps that allow
 * Extra Credit (Bonus Points)
-* Reign Drops (all power-ups at once)
+* Reign Drops (spawns the full bundle—Double Points, Insta-Kill, optional Fire Sale, Nuke, Carpenter, Max Ammo, Free Perk, Bonus Points, and Death Machine when allowed—sequentially on a forward-offset circle; uses consume once the sequence finishes)
 
 ### Weapons / Perks
 
 * Hidden Power (PaP current weapon)
 
-* Wall Power (next wall buy upgraded, 3s grace)
+* Wall Power (next wall buy only—never box—upgraded after a 3s grace window)
 
 * Crate Power (next box gun upgraded, 3s grace)
 
 * Wonderbar (next box gun is WW)
+  * Removes the box result before granting the cached Wonder Weapon, restores start ammo, and auto-switches to the reward
+  * Mystery Box spin temporarily displays the Wonder Weapon model for the armed player
   * Label shows WW name
   * Label reasserts visibility every 0.25s until gum ends
   * Optional Gersh/Quantum specials via `gg_wonder_include_specials` (default 0)
@@ -352,6 +358,8 @@ Usage from `gumballs.gsc`:
   - `gg_consume_logs` (0/1, default 1)
 * Build 6 power-up knobs:
   - `gg_drop_forward_units` (float, default 70.0) - base forward offset when spawning drops.
+  - `gg_reigndrops_forward_units` (float, default 145.0) - forward offset to the Reign Drops circle center.
+  - `gg_reigndrops_radius` (float, default 70.0) - radius used when distributing the Reign Drops bundle.
   - `gg_reigndrops_spacing_ms` (int, default 150) - wait between Reign Drops spawns.
   - `gg_reigndrops_include_firesale` (0/1, default 1) - include Fire Sale in the Reign Drops bundle.
   - `gg_powerup_hints` (0/1, default 1) - allow HUD hint text after spawning a drop.
