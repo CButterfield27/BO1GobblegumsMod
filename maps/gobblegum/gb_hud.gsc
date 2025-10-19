@@ -113,6 +113,357 @@ __gg_apply_layout(hud)
     }
 }
 
+__gg_get_fade_secs()
+{
+    secs = 0.25;
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.GG_HUD_FADE_SECS))
+    {
+        secs = [[ level.gb_helpers.GG_HUD_FADE_SECS ]]();
+    }
+    if (!isdefined(secs) || secs < 0)
+        secs = 0;
+    return secs;
+}
+
+__gg_tc_elements()
+{
+    elems = [];
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return elems;
+    elems[elems.size] = self.gg.hud.tc_icon;
+    elems[elems.size] = self.gg.hud.tc_name;
+    elems[elems.size] = self.gg.hud.tc_uses;
+    elems[elems.size] = self.gg.hud.tc_desc;
+    return elems;
+}
+
+__gg_tc_current_alpha()
+{
+    elems = __gg_tc_elements();
+    for (i = 0; i < elems.size; i++)
+    {
+        elem = elems[i];
+        if (isdefined(elem) && isdefined(elem.alpha))
+            return elem.alpha;
+    }
+    return 0;
+}
+
+__gg_tc_apply_alpha(alpha)
+{
+    if (alpha < 0)
+        alpha = 0;
+    if (alpha > 1)
+        alpha = 1;
+    elems = __gg_tc_elements();
+    for (i = 0; i < elems.size; i++)
+    {
+        elem = elems[i];
+        if (!isdefined(elem))
+            continue;
+        elem.alpha = alpha;
+    }
+}
+
+__gg_tc_invalidate_autohide()
+{
+    if (!isdefined(self.gg))
+        return 0;
+    if (!isdefined(self.gg.tc_token))
+        self.gg.tc_token = 0;
+    self.gg.tc_token += 1;
+    return self.gg.tc_token;
+}
+
+__gg_tc_begin_show(gum)
+{
+    token = __gg_tc_invalidate_autohide();
+
+    if (isdefined(self.gg))
+    {
+        if (isdefined(gum) && isdefined(gum.id))
+            self.gg.tc_active_id = gum.id;
+        else
+            self.gg.tc_active_id = "";
+        if (isdefined(gum) && isdefined(gum.name))
+            self.gg.tc_active_name = gum.name;
+        else
+            self.gg.tc_active_name = "";
+    }
+
+    return token;
+}
+
+__gg_tc_start_fade(target_alpha)
+{
+    if (!isdefined(self.gg.tc_fade_token))
+        self.gg.tc_fade_token = 0;
+    self.gg.tc_fade_token += 1;
+    tok = self.gg.tc_fade_token;
+
+    start_alpha = __gg_tc_current_alpha();
+    duration = __gg_get_fade_secs();
+    if (duration <= 0)
+    {
+        __gg_tc_apply_alpha(target_alpha);
+        return tok;
+    }
+
+    self thread __gg_tc_fade_thread(start_alpha, target_alpha, duration, tok);
+    return tok;
+}
+
+__gg_tc_fade_thread(start_alpha, target_alpha, duration_secs, expected_token)
+{
+    self endon("disconnect");
+    // removed endon("gg_gum_cleared") to ensure fades finish
+
+    total_ms = int(duration_secs * 1000);
+    if (total_ms <= 0)
+    {
+        __gg_tc_apply_alpha(target_alpha);
+        return;
+    }
+
+    start_time = gettime();
+    while (true)
+    {
+        if (!isdefined(self.gg) || !isdefined(self.gg.tc_fade_token) || self.gg.tc_fade_token != expected_token)
+            return;
+
+        now = gettime();
+        elapsed = now - start_time;
+        if (elapsed >= total_ms)
+        {
+            __gg_tc_apply_alpha(target_alpha);
+            return;
+        }
+
+        frac = elapsed * 1.0 / total_ms;
+        if (frac < 0)
+            frac = 0;
+        if (frac > 1)
+            frac = 1;
+
+        current = start_alpha + (target_alpha - start_alpha) * frac;
+        __gg_tc_apply_alpha(current);
+        wait(0.05);
+    }
+}
+
+__gg_br_elements()
+{
+    elems = [];
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return elems;
+    elems[elems.size] = self.gg.hud.br_icon;
+    elems[elems.size] = self.gg.hud.br_bar_bg;
+    elems[elems.size] = self.gg.hud.br_bar_fg;
+    elems[elems.size] = self.gg.hud.br_hint;
+    return elems;
+}
+
+__gg_br_current_alpha()
+{
+    elems = __gg_br_elements();
+    for (i = 0; i < elems.size; i++)
+    {
+        elem = elems[i];
+        if (isdefined(elem) && isdefined(elem.alpha))
+            return elem.alpha;
+    }
+    return 0;
+}
+
+__gg_br_should_force_zero(elem)
+{
+    if (!isdefined(elem))
+        return false;
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return false;
+    if (__gg_hint_is_suppressed())
+        return true;
+    // Keep hint hidden when no text is assigned
+    if (elem == self.gg.hud.br_hint)
+    {
+        cached = __gg_cache_get(self, "br_hint");
+        if (!isdefined(cached) || cached == "")
+            return true;
+    }
+    return false;
+}
+
+__gg_br_apply_alpha(alpha)
+{
+    if (alpha < 0)
+        alpha = 0;
+    if (alpha > 1)
+        alpha = 1;
+    elems = __gg_br_elements();
+    for (i = 0; i < elems.size; i++)
+    {
+        elem = elems[i];
+        if (!isdefined(elem))
+            continue;
+        if (__gg_br_should_force_zero(elem))
+        {
+            elem.alpha = 0;
+            continue;
+        }
+        elem.alpha = alpha;
+    }
+    if (isdefined(self.gg) && isdefined(self.gg.hud) && isdefined(self.gg.hud.br_label))
+    {
+        label_text = "";
+        if (isdefined(self.gg.hud.__cache))
+            label_text = __gg_cache_get(self, "br_label");
+        if (!isdefined(label_text) || label_text == "")
+            self.gg.hud.br_label.alpha = 0;
+        else
+            self.gg.hud.br_label.alpha = alpha;
+    }
+}
+
+__gg_br_start_fade(target_alpha, clear_after)
+{
+    if (!isdefined(self.gg.br_fade_token))
+        self.gg.br_fade_token = 0;
+    self.gg.br_fade_token += 1;
+    tok = self.gg.br_fade_token;
+
+    start_alpha = __gg_br_current_alpha();
+    duration = __gg_get_fade_secs();
+    if (duration <= 0)
+    {
+        __gg_br_apply_alpha(target_alpha);
+        if (target_alpha <= 0 && clear_after)
+            __gg_br_clear_visual_state();
+        return tok;
+    }
+
+    self thread __gg_br_fade_thread(start_alpha, target_alpha, duration, tok, clear_after);
+    return tok;
+}
+
+__gg_br_fade_thread(start_alpha, target_alpha, duration_secs, expected_token, clear_after)
+{
+    self endon("disconnect");
+    // removed endon("gg_gum_cleared") to ensure fades finish
+
+    total_ms = int(duration_secs * 1000);
+    if (total_ms <= 0)
+    {
+        __gg_br_apply_alpha(target_alpha);
+        if (target_alpha <= 0 && clear_after)
+            __gg_br_clear_visual_state();
+        return;
+    }
+
+    start_time = gettime();
+    while (true)
+    {
+        if (!isdefined(self.gg) || !isdefined(self.gg.br_fade_token) || self.gg.br_fade_token != expected_token)
+            return;
+
+        now = gettime();
+        elapsed = now - start_time;
+        if (elapsed >= total_ms)
+        {
+            __gg_br_apply_alpha(target_alpha);
+            if (target_alpha <= 0 && clear_after)
+                __gg_br_clear_visual_state();
+            return;
+        }
+
+        frac = elapsed * 1.0 / total_ms;
+        if (frac < 0)
+            frac = 0;
+        if (frac > 1)
+            frac = 1;
+
+        current = start_alpha + (target_alpha - start_alpha) * frac;
+        __gg_br_apply_alpha(current);
+        wait(0.05);
+    }
+}
+
+__gg_br_clear_visual_state()
+{
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+
+    if (isdefined(self.gg.hud.br_icon))
+        self.gg.hud.br_icon.alpha = 0;
+    if (isdefined(self.gg.hud.br_bar_bg))
+        self.gg.hud.br_bar_bg.alpha = 0;
+    if (isdefined(self.gg.hud.br_bar_fg))
+    {
+        self.gg.hud.br_bar_fg.alpha = 0;
+        self.gg.hud.br_bar_fg SetShader("white", 0, self.gg.hud.br_bar_fg.height);
+    }
+    if (isdefined(self.gg.hud.br_hint))
+        self.gg.hud.br_hint.alpha = 0;
+    if (isdefined(self.gg.hud.br_label))
+        self.gg.hud.br_label.alpha = 0;
+
+    if (isdefined(self.gg.hud.__br))
+    {
+        self.gg.hud.__br.total = 0;
+        self.gg.hud.__br.remaining = 0;
+    }
+
+    if (isdefined(self.gg))
+    {
+        self.gg.br_pending_gum = undefined;
+        self.gg.br_pending_gum_id = undefined;
+    }
+
+    __gg_cache_set(self, "br_hint", "");
+    __gg_cache_set(self, "br_label", "");
+}
+
+__gg_hint_store(text)
+{
+    if (!isdefined(self.gg))
+        return;
+    if (!isdefined(text))
+        text = "";
+    self.gg.hint_last_text = text;
+}
+
+__gg_hint_is_suppressed()
+{
+    if (!isdefined(self.gg) || !isdefined(self.gg.hint_suppressed_until))
+        return false;
+    return (self.gg.hint_suppressed_until > gettime());
+}
+
+__gg_hint_apply_text(text, alpha)
+{
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud) || !isdefined(self.gg.hud.br_hint))
+        return;
+
+    if (!isdefined(text))
+        text = "";
+
+    __gg_set_text_if_changed(self, self.gg.hud.br_hint, "br_hint", text);
+    self.gg.hud.br_hint.color = (1, 1, 0);
+    if (alpha < 0)
+        alpha = 0;
+    if (alpha > 1)
+        alpha = 1;
+    if (text == "")
+        alpha = 0;
+    self.gg.hud.br_hint.alpha = alpha;
+}
+
+__gg_hint_hide_immediate()
+{
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud) || !isdefined(self.gg.hud.br_hint))
+        return;
+    self.gg.hud.br_hint.alpha = 0;
+}
+
 ensure_api()
 {
     if (isdefined(level.gb_hud))
@@ -125,11 +476,15 @@ ensure_api()
     level.gb_hud.show_tc = ::show_tc;
     level.gb_hud.hide_tc_after = ::hide_tc_after;
     level.gb_hud.update_tc = ::update_tc;
+    level.gb_hud.hide_tc_immediate = ::hide_tc_immediate;
     level.gb_hud.show_br = ::show_br;
     level.gb_hud.hide_br = ::hide_br;
     level.gb_hud.show_br_after_delay = ::show_br_after_delay;
     level.gb_hud.set_hint = ::set_hint;
     level.gb_hud.clear_hint = ::clear_hint;
+    level.gb_hud.update_hint = ::update_hint;
+    level.gb_hud.suppress_hint = ::suppress_hint;
+    level.gb_hud.end_suppress_hint = ::end_suppress_hint;
     level.gb_hud.br_set_mode = ::br_set_mode;
     level.gb_hud.br_set_total_uses = ::br_set_total_uses;
     level.gb_hud.br_consume_use = ::br_consume_use;
@@ -285,7 +640,6 @@ __gg_apply_layout_thread()
     __gg_apply_layout(self.gg.hud);
 }
 
-// Step-1 behavior: immediate show/hide, no fades or timers
 show_tc(player, gum)
 {
     if (!isdefined(player))
@@ -296,38 +650,61 @@ show_tc(player, gum)
 __gg_show_tc_impl(gum)
 {
     self endon("disconnect");
+    // removed endon("gg_gum_cleared") to ensure fades finish
     if (!isdefined(self.gg) || !isdefined(self.gg.hud))
         return;
     __gg_update_tc_impl(gum);
-    self.gg.hud.tc_icon.alpha = 1;
-    self.gg.hud.tc_name.alpha = 1;
-    self.gg.hud.tc_uses.alpha = 1;
-    self.gg.hud.tc_desc.alpha = 1;
+
+    __gg_tc_begin_show(gum);
+    __gg_tc_start_fade(1);
 }
 
 hide_tc_after(player, secs, expected_name)
 {
     if (!isdefined(player))
         return;
-    // Run a small per-player thread to delay-hide TC elements
-    player thread __gg_tc_hide_after(secs);
+    expected_token = undefined;
+    if (isdefined(player.gg) && isdefined(player.gg.tc_token))
+        expected_token = player.gg.tc_token;
+    player thread __gg_tc_hide_after(secs, expected_name, expected_token);
 }
 
-__gg_tc_hide_after(secs)
+__gg_tc_hide_after(secs, expected_name, expected_token)
 {
     self endon("disconnect");
+    // removed endon("gg_gum_cleared") to ensure fades finish
     if (!isdefined(self.gg) || !isdefined(self.gg.hud))
         return;
+
+    wait(0.05);
+    if (isdefined(self.gg) && isdefined(self.gg.tc_token))
+    {
+        expected_token = self.gg.tc_token;
+    }
+
     if (!isdefined(secs))
         secs = 0;
     if (secs > 0)
         wait(secs);
+
     if (!isdefined(self.gg) || !isdefined(self.gg.hud))
         return;
-    self.gg.hud.tc_icon.alpha = 0;
-    self.gg.hud.tc_name.alpha = 0;
-    self.gg.hud.tc_uses.alpha = 0;
-    self.gg.hud.tc_desc.alpha = 0;
+    if (isdefined(expected_token) && (!isdefined(self.gg.tc_token) || self.gg.tc_token != expected_token))
+        return;
+
+    if (isdefined(expected_name) && expected_name != "")
+    {
+        current_name = "";
+        if (isdefined(self.gg.tc_active_name))
+            current_name = self.gg.tc_active_name;
+        current_id = "";
+        if (isdefined(self.gg.tc_active_id))
+            current_id = self.gg.tc_active_id;
+        if (expected_name != current_name && expected_name != current_id)
+            return;
+    }
+
+    __gg_tc_start_fade(0);
 }
 
 update_tc(player, gum)
@@ -356,67 +733,126 @@ __gg_update_tc_impl(gum)
     // uses line can be filled later
 }
 
- show_br(player, gum)
- {
-     if (!isdefined(player))
-         return;
-     player thread __gg_show_br_impl(gum);
- }
-
- __gg_show_br_impl(gum)
- {
-     self endon("disconnect");
-     if (!isdefined(self.gg) || !isdefined(self.gg.hud))
-         return;
-     l = __gg_get_layout();
-    if (isdefined(gum) && isdefined(gum.shader))
-        __gg_set_shader_if_changed(self, self.gg.hud.br_icon, "br_icon", gum.shader, l.br_icon_size, l.br_icon_size);
-   // No BR title for Step-1 (leave hint blank until set)
-   __gg_set_text_if_changed(self, self.gg.hud.br_hint, "br_hint", "");
-
-    self.gg.hud.br_icon.alpha = 1;
-    self.gg.hud.br_bar_bg.alpha = 1;
-    self.gg.hud.br_bar_fg.alpha = 1;
-    self.gg.hud.br_hint.alpha = 1;
-    // Ensure debug hint color persists as bright yellow
-    if (isdefined(self.gg.hud.br_hint))
-        self.gg.hud.br_hint.color = (1, 1, 0);
-    if (isdefined(self.gg.hud.br_label))
-    {
-        label_text = "";
-        if (isdefined(self.gg.hud.__cache))
-            label_text = __gg_cache_get(self, "br_label");
-        if (isdefined(label_text) && label_text != "")
-            self.gg.hud.br_label.alpha = 1;
-        else
-            self.gg.hud.br_label.alpha = 0;
-    }
+hide_tc_immediate(player)
+{
+    if (!isdefined(player))
+        return;
+    player thread __gg_hide_tc_immediate_impl();
 }
 
- hide_br(player)
- {
-     if (!isdefined(player))
-         return;
-     player thread __gg_hide_br_impl();
- }
+__gg_hide_tc_immediate_impl()
+{
+    self endon("disconnect");
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+    __gg_tc_invalidate_autohide();
+    __gg_tc_apply_alpha(0);
+    // Invalidate any in-flight TC fade so it can't re-raise alpha
+    if (isdefined(self.gg.tc_fade_token))
+        self.gg.tc_fade_token += 1;
+    self.gg.tc_active_id = "";
+    self.gg.tc_active_name = "";
+}
 
- __gg_hide_br_impl()
- {
-     self endon("disconnect");
-     if (!isdefined(self.gg) || !isdefined(self.gg.hud))
-         return;
-    self.gg.hud.br_icon.alpha = 0;
-    self.gg.hud.br_bar_bg.alpha = 0;
-    self.gg.hud.br_bar_fg.alpha = 0;
-    self.gg.hud.br_hint.alpha = 0;
-    if (isdefined(self.gg.hud.br_label))
-        self.gg.hud.br_label.alpha = 0;
+show_br(player, gum)
+{
+    if (!isdefined(player))
+        return;
+    player thread __gg_show_br_impl(gum);
+}
+
+__gg_show_br_impl(gum)
+{
+    self endon("disconnect");
+    // removed endon("gg_gum_cleared") to ensure fades finish
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+    l = __gg_get_layout();
+    if (isdefined(gum) && isdefined(gum.shader))
+        __gg_set_shader_if_changed(self, self.gg.hud.br_icon, "br_icon", gum.shader, l.br_icon_size, l.br_icon_size);
+
+    if (isdefined(self.gg.hud.br_hint))
+        self.gg.hud.br_hint.color = (1, 1, 0);
+
+    __gg_br_start_fade(1, false);
+    __gg_br_update_width_from_state();
+}
+
+hide_br(player)
+{
+    if (!isdefined(player))
+        return;
+    player thread __gg_hide_br_impl();
+}
+
+__gg_hide_br_impl()
+{
+    self endon("disconnect");
+    // removed endon("gg_gum_cleared") to ensure fades finish
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+
+    if (!isdefined(self.gg.br_delay_token))
+        self.gg.br_delay_token = 0;
+    self.gg.br_delay_token += 1;
+
+    __gg_br_start_fade(0, true);
 }
 
 show_br_after_delay(player, secs, expected_name)
 {
-    // Step 1: show immediately (ignore delay)
-    show_br(player, undefined);
+    if (!isdefined(player))
+        return;
+    player thread __gg_br_after_delay_impl(secs, expected_name);
+}
+
+__gg_br_after_delay_impl(secs, expected_name)
+{
+    self endon("disconnect");
+    // removed endon("gg_gum_cleared") to ensure fades finish
+
+    if (!isdefined(self.gg))
+        return;
+
+    if (!isdefined(self.gg.br_delay_token))
+        self.gg.br_delay_token = 0;
+    self.gg.br_delay_token += 1;
+    tok = self.gg.br_delay_token;
+
+    if (!isdefined(secs))
+        secs = 0;
+    if (secs < 0)
+        secs = 0;
+    if (secs > 0)
+        wait(secs);
+
+    if (!isdefined(self.gg.br_delay_token) || self.gg.br_delay_token != tok)
+        return;
+
+    if (isdefined(expected_name) && expected_name != "")
+    {
+        current_name = "";
+        if (isdefined(self.gg.selected_name))
+            current_name = self.gg.selected_name;
+        current_id = "";
+        if (isdefined(self.gg.selected_id))
+            current_id = self.gg.selected_id;
+        if (expected_name != current_name && expected_name != current_id)
+            return;
+    }
+
+    gum = undefined;
+    if (isdefined(self.gg.br_pending_gum))
+        gum = self.gg.br_pending_gum;
+    if (!isdefined(gum) && isdefined(self.gg.br_pending_gum_id) && isdefined(level.gg_find_gum_by_id))
+        gum = [[ level.gg_find_gum_by_id ]](self.gg.br_pending_gum_id);
+    if (!isdefined(gum) && isdefined(self.gg.selected_id) && isdefined(level.gg_find_gum_by_id))
+        gum = [[ level.gg_find_gum_by_id ]](self.gg.selected_id);
+
+    if (!isdefined(gum))
+        return;
+
+    show_br(self, gum);
 }
 
 set_hint(player, text)
@@ -430,36 +866,108 @@ set_hint(player, text)
 
 clear_hint(player)
 {
-    set_hint(player, "");
+    if (!isdefined(player))
+        return;
+    player thread __gg_clear_hint_impl();
+}
+
+update_hint(player)
+{
+    if (!isdefined(player))
+        return;
+    player thread __gg_update_hint_impl();
+}
+
+suppress_hint(player, ms)
+{
+    if (!isdefined(player))
+        return;
+    player thread __gg_suppress_hint_impl(ms);
+}
+
+end_suppress_hint(player)
+{
+    if (!isdefined(player))
+        return;
+    player thread __gg_end_suppress_hint_impl();
 }
 
 __gg_set_hint_impl(text)
 {
     self endon("disconnect");
+    // removed endon("gg_gum_cleared") to ensure fades finish
     if (!isdefined(self.gg) || !isdefined(self.gg.hud))
         return;
 
     if (!isdefined(text))
         text = "";
 
-    debug_on = (GetDvarInt("gg_debug") == 1);
+    __gg_hint_store(text);
 
-    visible = false;
-    if (debug_on && text != "")
-        visible = true;
+    if (__gg_hint_is_suppressed())
+        return;
 
-    applied_text = "";
-    if (visible)
-        applied_text = text;
+    __gg_hint_apply_text(text, 1);
+}
 
-    __gg_set_text_if_changed(self, self.gg.hud.br_hint, "br_hint", applied_text);
-    if (isdefined(self.gg.hud.br_hint))
-        self.gg.hud.br_hint.color = (1, 1, 0);
+__gg_clear_hint_impl()
+{
+    self endon("disconnect");
+    // removed endon("gg_gum_cleared") to ensure fades finish
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
 
-    if (visible)
-        self.gg.hud.br_hint.alpha = 1;
+    __gg_hint_store("");
+    __gg_hint_apply_text("", 0);
+}
+
+__gg_update_hint_impl()
+{
+    self endon("disconnect");
+    // removed endon("gg_gum_cleared") to ensure fades finish
+    if (!isdefined(self.gg) || !isdefined(self.gg.hud))
+        return;
+
+    text = "";
+    if (isdefined(self.gg.hint_last_text))
+        text = self.gg.hint_last_text;
+
+    if (__gg_hint_is_suppressed())
+        return;
+
+    if (text == "")
+        __gg_hint_apply_text("", 0);
     else
-        self.gg.hud.br_hint.alpha = 0;
+        __gg_hint_apply_text(text, 1);
+}
+
+__gg_suppress_hint_impl(ms)
+{
+    self endon("disconnect");
+    // removed endon("gg_gum_cleared") to ensure fades finish
+    if (!isdefined(self.gg))
+        return;
+
+    if (!isdefined(ms))
+        ms = 0;
+    if (ms < 0)
+        ms = 0;
+
+    until = gettime() + int(ms);
+    self.gg.hint_suppressed_until = until;
+
+    __gg_hint_hide_immediate();
+}
+
+__gg_end_suppress_hint_impl()
+{
+    self endon("disconnect");
+    // removed endon("gg_gum_cleared") to ensure fades finish
+    if (!isdefined(self.gg))
+        return;
+
+    self.gg.hint_suppressed_until = 0;
+    __gg_update_hint_impl();
 }
 
 // Build 5: BR bar model (uses/rounds/timer). Idempotent, minimal visuals.
@@ -485,6 +993,17 @@ __gg_br_base_width()
 {
     l = __gg_get_layout();
     return l.br_bar_w;
+}
+
+__gg_clamp01(value)
+{
+    if (!isdefined(value))
+        return 0;
+    if (value < 0)
+        return 0;
+    if (value > 1)
+        return 1;
+    return value;
 }
 
 __gg_br_set_mode_impl(mode)
@@ -571,14 +1090,16 @@ __gg_br_update_width_from_state()
     remaining = 0;
     if (isdefined(st.remaining) && st.remaining >= 0)
         remaining = st.remaining;
-    frac = remaining * 1.0 / total;
-    if (frac < 0)
-        frac = 0;
-    if (frac > 1)
-        frac = 1;
+    frac = 0;
+    if (total > 0)
+        frac = remaining * 1.0 / total;
+    frac = __gg_clamp01(frac);
     w = int(__gg_br_base_width() * frac);
     if (isdefined(self.gg.hud.br_bar_fg))
         self.gg.hud.br_bar_fg SetShader("white", w, self.gg.hud.br_bar_fg.height);
+
+    if (frac <= 0 && isdefined(st.mode) && (st.mode == "uses" || st.mode == "rounds"))
+        __gg_br_start_fade(0, true);
 }
 
 br_start_timer(player, secs)
@@ -598,7 +1119,6 @@ br_stop_timer(player)
 __gg_br_start_timer_impl(secs)
 {
     self endon("disconnect");
-    self endon("gg_gum_cleared");
     if (!isdefined(self.gg) || !isdefined(self.gg.hud))
         return;
     st = __gg_br_get_state();
@@ -610,13 +1130,16 @@ __gg_br_start_timer_impl(secs)
     start = gettime();
     duration_ms = int(secs * 1000);
     base_w = __gg_br_base_width();
+    tick_ms = GetDvarInt("gg_timer_tick_ms");
+    if (!isdefined(tick_ms) || tick_ms < 10)
+        tick_ms = 100;
     // simple polling loop; idempotent via token
     while (true)
     {
         if (!isdefined(self.gg) || !isdefined(self.gg.hud))
-            return;
+            break;
         if (!isdefined(self.gg.hud.__br) || self.gg.hud.__br.token != tok)
-            return;
+            break;
         now = gettime();
         elapsed = now - start;
         if (elapsed >= duration_ms)
@@ -627,12 +1150,20 @@ __gg_br_start_timer_impl(secs)
             return;
         }
         frac = 1.0 - (elapsed * 1.0 / duration_ms);
-        if (frac < 0) frac = 0;
-        if (frac > 1) frac = 1;
+        frac = __gg_clamp01(frac);
         w = int(base_w * frac);
         if (isdefined(self.gg.hud.br_bar_fg))
             self.gg.hud.br_bar_fg SetShader("white", w, self.gg.hud.br_bar_fg.height);
-        wait(0.1);
+        wait(tick_ms / 1000.0);
+    }
+
+    // If the loop exits early (e.g. gum cleared), make sure the bar is fully drained.
+    if (isdefined(self.gg) && isdefined(self.gg.hud))
+    {
+        if (isdefined(self.gg.hud.br_bar_fg))
+            self.gg.hud.br_bar_fg SetShader("white", 0, self.gg.hud.br_bar_fg.height);
+        if (isdefined(self.gg.hud.__br))
+            self.gg.hud.__br.remaining = 0;
     }
 }
 
@@ -674,3 +1205,4 @@ br_clear_label(player)
 {
     br_set_label(player, "");
 }
+
