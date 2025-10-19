@@ -546,8 +546,12 @@ build_player_state(player)
 
     if (!isdefined(player.gg.tc_fade_token))
         player.gg.tc_fade_token = 0;
-    if (!isdefined(player.gg.tc_timer_token))
-        player.gg.tc_timer_token = 0;
+    if (!isdefined(player.gg.tc_token))
+        player.gg.tc_token = 0;
+    if (!isdefined(player.gg.tc_active_id))
+        player.gg.tc_active_id = "";
+    if (!isdefined(player.gg.tc_active_name))
+        player.gg.tc_active_name = "";
     if (!isdefined(player.gg.br_fade_token))
         player.gg.br_fade_token = 0;
     if (!isdefined(player.gg.br_delay_token))
@@ -756,6 +760,11 @@ gg_selection_close(player, reason, hide_ui, reset_state)
     player.gg.br_pending_gum_id = undefined;
     if (isdefined(reason))
         player.gg.last_selection_close_reason = reason;
+
+    // Only hide TC immediately when hide_ui is requested; otherwise allow
+    // the TC autohide timer (7.5s) scheduled during selection to run.
+    if (hide_ui && isdefined(level.gb_hud) && isdefined(level.gb_hud.hide_tc_immediate))
+        [[ level.gb_hud.hide_tc_immediate ]](player);
 
     if (hide_ui && isdefined(level.gb_hud))
     {
@@ -1183,9 +1192,13 @@ gg_log_powerup_spawn(gum_id, code)
 
 gg_can_spawn_death_machine()
 {
-    if (!isdefined(level.gb_helpers) || !isdefined(level.gb_helpers.map_allows))
+    if (!isdefined(level.gb_helpers))
         return true;
-    return [[ level.gb_helpers.map_allows ]]("death_machine");
+    if (isdefined(level.gb_helpers.map_allows_death_machine))
+        return [[ level.gb_helpers.map_allows_death_machine ]]();
+    if (isdefined(level.gb_helpers.map_allows))
+        return [[ level.gb_helpers.map_allows ]]("death_machine");
+    return true;
 }
 
 gg_wonderbar_suppress_label(player, duration)
@@ -1681,6 +1694,17 @@ gg_player_death_listener()
     {
         self waittill("death");
         self notify("gg_gum_cleared");
+        if (isdefined(level.gb_hud))
+        {
+            if (isdefined(level.gb_hud.hide_tc_immediate))
+                [[ level.gb_hud.hide_tc_immediate ]](self);
+            if (isdefined(level.gb_hud.br_stop_timer))
+                [[ level.gb_hud.br_stop_timer ]](self);
+            if (isdefined(level.gb_hud.hide_br))
+                [[ level.gb_hud.hide_br ]](self);
+            if (isdefined(level.gb_hud.clear_hint))
+                [[ level.gb_hud.clear_hint ]](self);
+        }
     }
 }
 
@@ -1691,6 +1715,12 @@ gg_initialize_player(player)
 
     player notify("gg_gum_cleared");
     gg_init_player_hud(player);
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.hide_tc_immediate))
+        [[ level.gb_hud.hide_tc_immediate ]](player);
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.hide_br))
+        [[ level.gb_hud.hide_br ]](player);
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+        [[ level.gb_hud.clear_hint ]](player);
     build_player_state(player);
     gg_bind_input_listener(player);
     // Ensure late joiners get a selection for the current round
@@ -2076,6 +2106,33 @@ gg_is_gum_allowed_on_map(gum)
             {
                 return false;
             }
+        }
+    }
+
+    if (isdefined(gum.id) && gum.id == "fatal_contraption")
+    {
+        allows_dm = true;
+        if (isdefined(level.gb_helpers))
+        {
+            if (isdefined(level.gb_helpers.map_allows_death_machine))
+            {
+                allows_dm = [[ level.gb_helpers.map_allows_death_machine ]]();
+            }
+            else if (isdefined(level.gb_helpers.map_allows))
+            {
+                allows_dm = [[ level.gb_helpers.map_allows ]]("death_machine");
+            }
+        }
+        if (!allows_dm)
+        {
+            if (gg_debug_select_enabled())
+            {
+                note = "Gumballs: gate fatal_contraption for map";
+                if (isdefined(mapname) && mapname != "")
+                    note = note + " " + mapname;
+                gg_log_select(note);
+            }
+            return false;
         }
     }
 
@@ -3063,17 +3120,19 @@ gg_handle_post_activation(player, gum)
 
     if (gg_is_auto_activation(gum))
     {
+        // Always allow the TC block to remain for the standard autohide window.
+        // Close selection state but do NOT hide UI immediately.
         gg_selection_close(player, "auto_activation", false, false);
         return;
     }
 
     if (type == gg_cons_timed())
     {
-        gg_selection_close(player, "timed_activation", true, false);
+        gg_selection_close(player, "timed_activation", false, false);
     }
     else if (type == gg_cons_rounds())
     {
-        gg_selection_close(player, "rounds_activation", true, false);
+        gg_selection_close(player, "rounds_activation", false, false);
     }
 }
 
@@ -3144,7 +3203,8 @@ gg_end_current_gum(player, reason)
     if (gg_consume_logs_enabled() && isdefined(reason))
         iprintln("^3Gumballs: ending gum (" + reason + ")");
 
-    gg_selection_close(player, reason, true, true);
+    // keep TC autohide window
+    gg_selection_close(player, reason, false, true);
     gg_set_effect_state(player, undefined, false);
 
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_stop_timer))
@@ -4445,4 +4505,6 @@ gg_round_monitor() {}
 gg_assign_gum_for_new_round() {}
 gg_on_round_flow() {}
 gg_on_match_end() {}
+
+
 

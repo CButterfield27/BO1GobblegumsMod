@@ -105,7 +105,7 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to
 
 #### Top Center (TC)
 
-* Icon (56?56)
+* Icon (56×56)
 * Gum Name (scale 1.5)
 * Uses/Activation line (scale 1.15)
 * Description (scale 1.15)
@@ -120,8 +120,9 @@ Positioning
 
 **Behavior**
 
-* Fade in on selection
-* Auto-hide after 7.5s
+* Fade in on selection (token-based)
+* Auto-hide after `GG_TC_AUTOHIDE_SECS` (default 7.5s) using a guarded token; newer shows invalidate pending hides.
+* Hides immediately on selection change, round cleanup, `gg_gum_cleared`, death, or disconnect.
 * Refresh on state change
 
 ---
@@ -147,14 +148,14 @@ Positioning
 * `show_br_after_delay` reveals BR after `gg_br_delayed_show_secs` (default 1.5s); the delay token cancels on gum change, death, round rollover, or explicit hides.
 * Show/hide animate via token-based fades (`GG_HUD_FADE_SECS`, default 0.25s). `hide_br()` clears icon/text once the fade ends.
 * Wonderbar suppression honours `gg_wonder_label_suppress_ms` (default 35 000 ms Fire Sale window). The label thread calls `suppress_hint`/`end_suppress_hint` so the text auto-reasserts when suppression expires.
-* BR hides when the gum ends or is replaced.
+* Progress bars clamp to `[0, 1]`; when uses/rounds reach 0 or timers elapse, the bar drains to zero and BR fades out immediately.
 
 ---
 
 ### HUD API
 
 * `hud.init_player(player)`
-* `hud.show_tc(player, gum)` / `hud.hide_tc_after(player, secs, expected_name)`
+* `hud.show_tc(player, gum)` / `hud.hide_tc_after(player, secs, expected_name)` / `hud.hide_tc_immediate(player)`
 * `hud.update_tc(player, gum)`
 * `hud.show_br(player, gum)` / `hud.hide_br(player)`
 * `hud.show_br_after_delay(player, secs, expected_name)`
@@ -168,8 +169,10 @@ Positioning
 #### HUD Polish Highlights
 
 - **Hint text** — `set_hint`, `clear_hint`, `update_hint`, `suppress_hint(ms)`, `end_suppress_hint()`; Wonderbar + Fire Sale uses `gg_wonder_label_suppress_ms` (default 35 000 ms) and reasserts automatically after `end_suppress_hint`.
+- **TC show/hide** — token-based and auto-hides after `GG_TC_AUTOHIDE_SECS` (7.5 s); also hides immediately on selection change, round cleanup, `gg_gum_cleared`, death, or disconnect.
 - **BR delayed show** — token-based and cancelable on gum change, death, round rollover, or disconnect; default delay `gg_br_delayed_show_secs` (1.5 s).
-- **Fades** — token-based fades for TC/BR (0.25 s). TC auto-hides after 7.5 s; BR fades out when the gum ends.
+- **BR progress** — clamps to `[0, 1]`; timers sample using `gg_timer_tick_ms`, and uses/rounds hitting zero drain the bar completely and hide the panel.
+- **Fades** — token-based fades for TC/BR (0.25 s) so newer animations cancel older ones.
 - **Safety** — Every HUD thread `endon("disconnect")` and `endon("gg_gum_cleared")`; tokens guard against overlapping fades or late hint writes.
 
 Usage from `gumballs.gsc`:
@@ -265,7 +268,7 @@ Usage from `gumballs.gsc`:
 * Who?s Keeping Score (Double Points)
 * On the House (Free Perk)
   * On Cosmodrome, picking up the drop sets `level.perk_bought` and calls `flag_set("perk_bought")` once through the new helper.
-* Fatal Contraption (Death Machine) ? only on maps that allow
+* Fatal Contraption (Death Machine) — filtered out on maps where `helpers::map_allows_death_machine()` is false (dev overrides still honoured and logged)
 * Extra Credit (Bonus Points)
 * Reign Drops (spawns the full bundle—Double Points, Insta-Kill, optional Fire Sale, Nuke, Carpenter, Max Ammo, Free Perk, Bonus Points, and Death Machine when allowed—sequentially on a forward-offset circle; uses consume once the sequence finishes)
 

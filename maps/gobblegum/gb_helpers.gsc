@@ -90,6 +90,11 @@ map_allows(feature)
     return true;
 }
 
+map_allows_death_machine()
+{
+    return map_allows("death_machine");
+}
+
 is_cosmodrome()
 {
     name = get_current_mapname();
@@ -444,4 +449,5 @@ helpers_init()
     level.gb_helpers.GG_FADE_SECS = ::GG_FADE_SECS;
     level.gb_helpers.GG_BR_DELAYED_SHOW_SECS = ::GG_BR_DELAYED_SHOW_SECS;
     level.gb_helpers.GG_ARMED_GRACE_SECS = ::GG_ARMED_GRACE_SECS;
+    level.gb_helpers.map_allows_death_machine = ::map_allows_death_machine;
 }
