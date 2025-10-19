@@ -378,6 +378,9 @@ __gg_update_tc_impl(gum)
     self.gg.hud.br_bar_bg.alpha = 1;
     self.gg.hud.br_bar_fg.alpha = 1;
     self.gg.hud.br_hint.alpha = 1;
+    // Ensure debug hint color persists as bright yellow
+    if (isdefined(self.gg.hud.br_hint))
+        self.gg.hud.br_hint.color = (1, 1, 0);
     if (isdefined(self.gg.hud.br_label))
     {
         label_text = "";

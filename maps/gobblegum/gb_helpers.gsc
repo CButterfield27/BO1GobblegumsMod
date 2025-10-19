@@ -335,7 +335,7 @@ helpers_upgrade_debug(msg)
         return;
     if (!isdefined(msg))
         msg = "upgrade debug";
-    iprintln("Gumballs: " + msg);
+    iprintln("^3Gumballs: " + msg);
 }
 
 drop_powerup(player, code, pos_or_dist)
@@ -407,8 +407,8 @@ trigger_perk_vo_if_cosmodrome(player, perk)
         if (invoked)
             label = label + ", perk_bought_func invoked";
 
-        iprintln("[gg] cosmodrome perk VO: " + label + " (" + name + ")");
-    }
+        iprintln("^3[gg] cosmodrome perk VO: " + label + " (" + name + ")");
+}
 
     return true;
 }
