@@ -9,6 +9,18 @@ GG_FADE_SECS() { return 0.25; }
 GG_BR_DELAYED_SHOW_SECS() { return 1.5; }
 GG_ARMED_GRACE_SECS() { return 3.0; }
 
+helpers_array_contains(arr, value)
+{
+    if (!isdefined(arr))
+        return false;
+    for (i = 0; i < arr.size; i++)
+    {
+        if (arr[i] == value)
+            return true;
+    }
+    return false;
+}
+
 get_current_mapname()
 {
     name = undefined;
@@ -56,6 +68,37 @@ is_cosmodrome()
     if (!isdefined(name))
         return false;
     return (name == "zombie_cosmodrome" || name == "cosmodrome");
+}
+
+get_map_perk_list()
+{
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.map_perk_cache))
+        return level.gb_helpers.map_perk_cache;
+
+    perks = [];
+
+    triggers = GetEntArray("zombie_vending", "targetname");
+    if (!isdefined(triggers))
+        triggers = [];
+
+    for (i = 0; i < triggers.size; i++)
+    {
+        trig = triggers[i];
+        if (!isdefined(trig) || !isdefined(trig.script_noteworthy))
+            continue;
+
+        perk = trig.script_noteworthy;
+        if (!isdefined(perk) || perk == "")
+            continue;
+
+        if (!helpers_array_contains(perks, perk))
+            perks[perks.size] = perk;
+    }
+
+    if (isdefined(level.gb_helpers))
+        level.gb_helpers.map_perk_cache = perks;
+
+    return perks;
 }
 
 // Stubs (Step 1)
@@ -174,60 +217,58 @@ upgrade_weapon(player, base)
         return false;
     }
 
-    if (player maps\_zombiemode_weapons::is_weapon_upgraded(base))
-    {
-        // Already upgraded; nothing to do.
-        return false;
-    }
-
     upgrade = level.zombie_weapons[base].upgrade_name;
     if (!isdefined(upgrade) || upgrade == "")
     {
         return false;
     }
 
-    // Ensure the upgrade weapon exists in the table so Pack-a-Punch options resolve.
-    if (!isdefined(level.zombie_weapons[upgrade]))
+    if (player maps\_zombiemode_weapons::is_weapon_upgraded(base) || player HasWeapon(upgrade))
+    {
+        // Already upgraded; nothing to do.
+        return true;
+    }
+
+    had_base = (player HasWeapon(base));
+    success = false;
+
+    if (isdefined(level.zombie_weapons[upgrade]))
+    {
+        options = player maps\_zombiemode_weapons::get_pack_a_punch_weapon_options(upgrade);
+
+        if (isdefined(options))
+        {
+            player GiveWeapon(upgrade, 0, options);
+        }
+        else
+        {
+            helpers_upgrade_debug("Using basic GiveWeapon for " + upgrade);
+            player GiveWeapon(upgrade);
+        }
+
+        success = player HasWeapon(upgrade);
+
+        if (!success && had_base && !(player HasWeapon(base)))
+        {
+            player GiveWeapon(base);
+            player GiveStartAmmo(base);
+            maps\_zombiemode_weapons::acquire_weapon_toggle(base, player);
+        }
+    }
+
+    if (!success)
     {
         return upgrade_weapon_fallback(player, base, upgrade);
     }
 
-    options = player maps\_zombiemode_weapons::get_pack_a_punch_weapon_options(upgrade);
-
-    had_base = (player HasWeapon(base));
-    if (had_base)
+    if (had_base && player HasWeapon(base))
     {
         player TakeWeapon(base);
         maps\_zombiemode_weapons::unacquire_weapon_toggle(base);
     }
 
-    if (isdefined(options))
-    {
-        player GiveWeapon(upgrade, 0, options);
-    }
-    else
-    {
-        helpers_upgrade_debug("Using basic GiveWeapon for " + upgrade);
-        player GiveWeapon(upgrade);
-    }
-
-    if (!player HasWeapon(upgrade))
-    {
-        // Re-equip the original weapon if the replacement failed outright.
-        if (had_base)
-        {
-            player GiveWeapon(base);
-            player GiveStartAmmo(base);
-            maps\_zombiemode_weapons::acquire_weapon_toggle(base, player);
-            player SwitchToWeapon(base);
-        }
-        return false;
-    }
-
     player GiveStartAmmo(upgrade);
-
     maps\_zombiemode_weapons::acquire_weapon_toggle(upgrade, player);
-
     player SwitchToWeapon(upgrade);
     player maps\_zombiemode_weapons::play_weapon_vo(upgrade);
     player notify("pap_taken");
@@ -277,7 +318,23 @@ drop_powerup(player, code, pos_or_dist)
 
 player_has_all_map_perks(player)
 {
-    return false;
+    if (!isdefined(player))
+        return false;
+
+    perks = get_map_perk_list();
+    if (!isdefined(perks) || perks.size <= 0)
+        return true;
+
+    for (i = 0; i < perks.size; i++)
+    {
+        perk = perks[i];
+        if (!isdefined(perk) || perk == "")
+            continue;
+        if (!(player HasPerk(perk)))
+            return false;
+    }
+
+    return true;
 }
 
 helpers_init()
@@ -291,6 +348,7 @@ helpers_init()
     level.gb_helpers.map_allows = ::map_allows;
     level.gb_helpers.is_cosmodrome = ::is_cosmodrome;
     level.gb_helpers.get_current_mapname = ::get_current_mapname;
+    level.gb_helpers.get_map_perk_list = ::get_map_perk_list;
     level.gb_helpers.get_wonder_pool = ::get_wonder_pool;
     level.gb_helpers.get_weapon_display_name = ::get_weapon_display_name;
     level.gb_helpers.upgrade_weapon = ::upgrade_weapon;

@@ -53,6 +53,7 @@ gg_registry_init()
     gum.activate_func = "gg_fx_perkaholic";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
+    gum.tags[0] = "perk";
     gum.whitelist = [];
     gum.blacklist = [];
     gum.blacklist[gum.blacklist.size] = "zombie_theater";
@@ -66,7 +67,7 @@ gg_registry_init()
     gum.name = "Wall Power";
     gum.shader = "bo6_wall_power";
     gum.desc = "Next wall-buy is PaP";
-    gum.activation = 2; // USER
+    gum.activation = 1; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 1;
     gum.activate_func = "gg_fx_wall_power";
@@ -290,11 +291,13 @@ gg_registry_init()
     gum.activate_func = "gg_fx_round_robbin";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
+    gum.tags[0] = "economy";
+    gum.tags[1] = "round";
     gum.whitelist = [];
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     // Shopping Free - Timed (TEST: timed-based)
     gum = spawnstruct();
@@ -304,10 +307,11 @@ gg_registry_init()
     gum.desc = "All purchases are free";
     gum.activation = 1; // AUTO
     gum.consumption = 1; // TIMED
-    gum.base_duration_secs = 60;
+    gum.base_duration_secs = gg_get_shopping_free_secs();
     gum.activate_func = "gg_fx_shopping_free";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
+    gum.tags[0] = "economy";
     gum.whitelist = [];
     gum.blacklist = [];
     gum.exclusion_groups = [];
@@ -698,6 +702,13 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_wonder_label_reassert_ms", 250);
     gg_ensure_dvar_int("gg_wonder_include_specials", 0);
 
+    // Build 8 round/economy knobs
+    gg_ensure_dvar_int("gg_round_robbin_bonus", 1600);
+    gg_ensure_dvar_int("gg_round_robbin_force_transition", 1);
+    gg_ensure_dvar_float("gg_shopping_free_secs", 60.0);
+    gg_ensure_dvar_int("gg_shopping_free_temp_points", 50000);
+    gg_ensure_dvar_int("gg_perkaholic_grant_delay_ms", 250);
+
     // Cache commonly used defaults for quick access
     gg_cache_config();
 }
@@ -758,6 +769,24 @@ gg_cache_config()
     level.gg_config.wonder_label_reassert_ms = GetDvarInt("gg_wonder_label_reassert_ms");
     if (level.gg_config.wonder_label_reassert_ms < 50)
         level.gg_config.wonder_label_reassert_ms = 50;
+
+    level.gg_config.round_robbin_bonus = GetDvarInt("gg_round_robbin_bonus");
+    if (level.gg_config.round_robbin_bonus < 0)
+        level.gg_config.round_robbin_bonus = 0;
+
+    level.gg_config.round_robbin_force_transition = (GetDvarInt("gg_round_robbin_force_transition") != 0);
+
+    level.gg_config.shopping_free_secs = GetDvarFloat("gg_shopping_free_secs");
+    if (level.gg_config.shopping_free_secs <= 0)
+        level.gg_config.shopping_free_secs = 1.0;
+
+    level.gg_config.shopping_free_temp_points = GetDvarInt("gg_shopping_free_temp_points");
+    if (level.gg_config.shopping_free_temp_points < 0)
+        level.gg_config.shopping_free_temp_points = 0;
+
+    level.gg_config.perkaholic_grant_delay_ms = GetDvarInt("gg_perkaholic_grant_delay_ms");
+    if (level.gg_config.perkaholic_grant_delay_ms < 0)
+        level.gg_config.perkaholic_grant_delay_ms = 0;
 }
 
 gg_init_powerup_tables()
@@ -929,11 +958,11 @@ gg_show_hint_if_enabled(player, text)
         return;
     if (!isdefined(player))
         return;
-    if (!isdefined(level.gb_hud) || !isdefined(level.gb_hud.set_hint))
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+        [[ level.gb_hud.clear_hint ]](player);
+    if (!isdefined(text) || text == "")
         return;
-    if (!isdefined(text))
-        text = "";
-    [[ level.gb_hud.set_hint ]](player, text);
+    player iprintln(text);
 }
 
 gg_get_wonder_label_reassert_ms()
@@ -988,8 +1017,8 @@ gg_show_powerup_hint(player, text, raw)
         return;
     if (!isdefined(player))
         return;
-    if (!isdefined(level.gb_hud) || !isdefined(level.gb_hud.set_hint))
-        return;
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+        [[ level.gb_hud.clear_hint ]](player);
 
     if (!isdefined(text) || text == "")
         text = "Power-Up";
@@ -998,7 +1027,7 @@ gg_show_powerup_hint(player, text, raw)
     if (!isdefined(raw) || !raw)
         msg = "Spawned: " + text;
 
-    [[ level.gb_hud.set_hint ]](player, msg);
+    player iprintln(msg);
 }
 
 gg_log_powerup_spawn(gum_id, code)
@@ -2435,10 +2464,7 @@ gg_effect_stub_common(player, gum, category)
     if (!gg_simulate_effects_enabled())
         return;
 
-    if (!isdefined(level.gb_hud) || !isdefined(level.gb_hud.set_hint))
-        return;
-
-    [[ level.gb_hud.set_hint ]](player, "Activated: " + gum_name);
+    gg_show_hint_if_enabled(player, "Activated: " + gum_name);
 }
 
 // Armed gum shared helpers
@@ -3047,9 +3073,77 @@ gg_fx_reign_drops(player, gum)
 
 // Weapons & Perks
 
+gg_perkaholic_get_perks()
+{
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.get_map_perk_list))
+        return [[ level.gb_helpers.get_map_perk_list ]]();
+    return [];
+}
+
+gg_perkaholic_missing_perks(player, perks)
+{
+    missing = [];
+    if (!isdefined(perks))
+        perks = [];
+
+    for (i = 0; i < perks.size; i++)
+    {
+        perk = perks[i];
+        if (!isdefined(perk) || perk == "")
+            continue;
+        if (!isdefined(player) || !(player HasPerk(perk)))
+            missing[missing.size] = perk;
+    }
+
+    return missing;
+}
+
+gg_perkaholic_should_trigger_vo()
+{
+    if (!isdefined(level.gb_helpers) || !isdefined(level.gb_helpers.is_cosmodrome))
+        return false;
+    return [[ level.gb_helpers.is_cosmodrome ]]();
+}
+
 gg_fx_perkaholic(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Weapons/Perks");
+    if (!isdefined(player))
+        return;
+
+    perks = gg_perkaholic_get_perks();
+    missing = gg_perkaholic_missing_perks(player, perks);
+
+    if (!isdefined(missing) || missing.size <= 0)
+    {
+        gg_mark_activation_skip(player);
+        if (gg_debug_enabled())
+            iprintln("Gumballs: Perkaholic skipped (no missing perks)");
+        gg_show_hint_if_enabled(player, "Perkaholic: all perks acquired");
+        return;
+    }
+
+    delay = gg_get_perkaholic_grant_delay_secs();
+    trigger_vo = gg_perkaholic_should_trigger_vo() && isdefined(level.perk_bought_func);
+
+    for (i = 0; i < missing.size; i++)
+    {
+        perk = missing[i];
+        if (!isdefined(perk) || perk == "")
+            continue;
+
+        if (trigger_vo)
+            player [[ level.perk_bought_func ]](perk);
+
+        player maps\_zombiemode_perks::give_perk(perk);
+
+        if (gg_debug_enabled())
+            iprintln("Gumballs: Perkaholic granted " + perk);
+
+        if (delay > 0 && i < missing.size - 1)
+            wait(delay);
+    }
+
+    gg_show_hint_if_enabled(player, "Applied: Perkaholic");
 }
 
 gg_fx_wall_power(player, gum)
@@ -3639,6 +3733,109 @@ gg_fx_wonderbar(player, gum)
 
 // Economy & Round
 
+gg_get_round_robbin_bonus()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.round_robbin_bonus))
+        return level.gg_config.round_robbin_bonus;
+    return 1600;
+}
+
+gg_round_robbin_force_transition_enabled()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.round_robbin_force_transition))
+        return level.gg_config.round_robbin_force_transition;
+    return true;
+}
+
+gg_get_shopping_free_secs()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.shopping_free_secs))
+        return level.gg_config.shopping_free_secs;
+    return 60.0;
+}
+
+gg_get_shopping_free_temp_points()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.shopping_free_temp_points))
+        return level.gg_config.shopping_free_temp_points;
+    return 50000;
+}
+
+gg_get_perkaholic_grant_delay_secs()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.perkaholic_grant_delay_ms))
+        return level.gg_config.perkaholic_grant_delay_ms / 1000.0;
+    return 0.25;
+}
+
+gg_round_robbin_award_points()
+{
+    bonus = gg_get_round_robbin_bonus();
+    if (bonus <= 0)
+        return 0;
+
+    bonus = int(bonus);
+
+    players = get_players();
+    if (!isdefined(players))
+        players = [];
+
+    awarded = 0;
+    for (i = 0; i < players.size; i++)
+    {
+        target = players[i];
+        if (!isdefined(target))
+            continue;
+        target maps\_zombiemode_score::add_to_player_score(bonus);
+        awarded += 1;
+    }
+
+    if (gg_debug_enabled())
+        iprintln("Gumballs: Round Robbin +" + bonus + " -> players=" + awarded);
+
+    return awarded;
+}
+
+gg_round_robbin_kill_remaining()
+{
+    zombies = getaispeciesarray("axis");
+    if (!isdefined(zombies))
+        zombies = [];
+
+    killed = 0;
+    for (i = 0; i < zombies.size; i++)
+    {
+        zombie = zombies[i];
+        if (!isdefined(zombie))
+            continue;
+        if (isdefined(zombie.health) && zombie.health <= 0)
+            continue;
+
+        health = 666;
+        if (isdefined(zombie.health))
+            health = zombie.health + 666;
+
+        zombie.marked_for_death = true;
+        zombie.nuked = true;
+
+        origin = zombie.origin;
+        if (!isdefined(origin))
+            origin = (0, 0, 0);
+
+        zombie dodamage(health, origin);
+        killed += 1;
+    }
+
+    if (gg_round_robbin_force_transition_enabled())
+    {
+        if (isdefined(level) && isdefined(level.zombie_total))
+            level.zombie_total = 0;
+    }
+
+    if (gg_debug_enabled())
+        iprintln("Gumballs: Round Robbin cleared zombies=" + killed);
+}
+
 gg_fx_extra_credit(player, gum)
 {
     gg_effect_stub_common(player, gum, "Economy/Round");
@@ -3646,12 +3843,231 @@ gg_fx_extra_credit(player, gum)
 
 gg_fx_round_robbin(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Economy/Round");
+    if (!isdefined(player))
+        return;
+
+    gg_round_robbin_kill_remaining();
+    gg_round_robbin_award_points();
+    gg_show_hint_if_enabled(player, "Applied: Round Robbin");
+}
+
+gg_shopping_free_begin(player, gum, secs, temp_points)
+{
+    if (!isdefined(player))
+        return 0;
+
+    temp_points = int(temp_points);
+
+    if (!isdefined(player.shopping_free))
+        player.shopping_free = spawnstruct();
+
+    if (!isdefined(player.shopping_free.__token_counter))
+        player.shopping_free.__token_counter = 0;
+
+    player.shopping_free.__token_counter += 1;
+    token = player.shopping_free.__token_counter;
+
+    player.shopping_free.token = token;
+    player.shopping_free.active = true;
+    player.shopping_free.cleaned = false;
+    player.shopping_free.credit_used = 0;
+    player.shopping_free.credit_remaining = temp_points;
+    player.shopping_free.total_added = temp_points;
+    player.shopping_free.original_score = player.score;
+    player.shopping_free.start_time = gettime();
+    player.shopping_free.duration_ms = int(secs * 1000);
+    player.shopping_free.baseline = player.score;
+    player.shopping_free.last_score = player.score;
+    player.shopping_free.temp_points = temp_points;
+    player.shopping_free.secs = secs;
+    player.shopping_free.gum_id = "<unknown>";
+    if (isdefined(gum) && isdefined(gum.id))
+        player.shopping_free.gum_id = gum.id;
+
+    if (temp_points > 0)
+    {
+        player maps\_zombiemode_score::add_to_player_score(temp_points, false);
+        player.shopping_free.baseline = player.score;
+        player.shopping_free.last_score = player.score;
+    }
+
+    return token;
+}
+
+gg_shopping_free_refresh_hud(player, gum, secs)
+{
+    if (!isdefined(level.gb_hud))
+        return;
+
+    if (isdefined(level.gb_hud.show_br))
+        [[ level.gb_hud.show_br ]](player, gum);
+
+    if (isdefined(level.gb_hud.br_set_mode))
+        [[ level.gb_hud.br_set_mode ]](player, "timer");
+
+    if (isdefined(level.gb_hud.br_start_timer))
+        [[ level.gb_hud.br_start_timer ]](player, secs);
+}
+
+gg_shopping_free_token_active(expected_token)
+{
+    if (!isdefined(self.shopping_free))
+        return false;
+    if (!isdefined(self.shopping_free.token))
+        return false;
+    if (self.shopping_free.token != expected_token)
+        return false;
+    if (isdefined(self.shopping_free.active))
+        return self.shopping_free.active;
+    return false;
+}
+
+gg_shopping_free_refund_thread(expected_token)
+{
+    self endon("disconnect");
+
+    while (true)
+    {
+        if (!gg_shopping_free_token_active(expected_token))
+            return;
+
+        if (!isdefined(self.shopping_free))
+            return;
+
+        baseline = self.shopping_free.baseline;
+        if (!isdefined(baseline))
+            baseline = self.score;
+
+        current = self.score;
+
+        if (current < baseline)
+        {
+            diff = baseline - current;
+            credit_remaining = 0;
+            if (isdefined(self.shopping_free.credit_remaining))
+                credit_remaining = self.shopping_free.credit_remaining;
+
+            refund = diff;
+            if (credit_remaining <= 0)
+            {
+                refund = 0;
+            }
+            else if (refund > credit_remaining)
+            {
+                refund = credit_remaining;
+            }
+
+            if (refund > 0)
+            {
+                self maps\_zombiemode_score::add_to_player_score(refund, false);
+                self.shopping_free.credit_remaining = credit_remaining - refund;
+                if (self.shopping_free.credit_remaining < 0)
+                    self.shopping_free.credit_remaining = 0;
+                if (!isdefined(self.shopping_free.credit_used))
+                    self.shopping_free.credit_used = 0;
+                self.shopping_free.credit_used += refund;
+                current = self.score;
+            }
+
+            leftover = diff - refund;
+            if (leftover > 0)
+            {
+                self.shopping_free.baseline = current;
+            }
+            else
+            {
+                self.shopping_free.baseline = current;
+            }
+        }
+        else
+        {
+            self.shopping_free.baseline = current;
+        }
+
+        self.shopping_free.last_score = current;
+
+        tick = gg_get_timer_tick_ms();
+        if (tick < 10)
+            tick = 10;
+        wait(tick / 1000.0);
+    }
+}
+
+gg_shopping_free_finalize_credit()
+{
+    if (!isdefined(self.shopping_free))
+        return;
+    if (isdefined(self.shopping_free.cleaned) && self.shopping_free.cleaned)
+        return;
+
+    total = 0;
+    if (isdefined(self.shopping_free.total_added))
+        total = self.shopping_free.total_added;
+
+    remove = total;
+    if (!isdefined(self.score))
+        remove = 0;
+    else if (remove > self.score)
+        remove = self.score;
+
+    if (remove > 0)
+        self maps\_zombiemode_score::minus_to_player_score(remove);
+
+    self.shopping_free.credit_remaining = 0;
+    self.shopping_free.active = false;
+    self.shopping_free.cleaned = true;
+    self.shopping_free.baseline = self.score;
+    self.shopping_free.last_score = self.score;
+
+    gg_show_hint_if_enabled(self, "");
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+        [[ level.gb_hud.clear_hint ]](self);
+
+    if (gg_debug_enabled())
+    {
+        used = 0;
+        if (isdefined(self.shopping_free.credit_used))
+            used = self.shopping_free.credit_used;
+        iprintln("Gumballs: Shopping Free cleanup (used=" + used + ", removed=" + remove + ")");
+    }
+}
+
+gg_shopping_free_cleanup_thread(expected_token)
+{
+    self endon("disconnect");
+
+    self waittill("gg_gum_cleared");
+
+    if (!gg_shopping_free_token_active(expected_token))
+        return;
+
+    gg_shopping_free_finalize_credit();
 }
 
 gg_fx_shopping_free(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Economy/Round");
+    if (!isdefined(player))
+        return;
+
+    secs = gg_get_shopping_free_secs();
+    temp_points = gg_get_shopping_free_temp_points();
+
+    gg_set_effect_state(player, gum, true);
+
+    token = gg_shopping_free_begin(player, gum, secs, temp_points);
+
+    if (isdefined(player.gg))
+        player.gg.timer_endtime = gettime() + int(secs * 1000);
+
+    gg_shopping_free_refresh_hud(player, gum, secs);
+    gg_show_hint_if_enabled(player, "Shopping Free: purchases are free");
+
+    player thread gg_shopping_free_refund_thread(token);
+    player thread gg_shopping_free_cleanup_thread(token);
+
+    if (gg_debug_enabled())
+        iprintln("Gumballs: Shopping Free activated (token=" + token + ", secs=" + secs + ", credit=" + temp_points + ")");
 }
 
 gg_fx_stock_option(player, gum)
