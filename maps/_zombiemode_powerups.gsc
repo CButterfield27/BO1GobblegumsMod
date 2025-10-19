@@ -2297,7 +2297,24 @@ free_perk_powerup( item )
 	{
 		if ( !players[i] maps\_laststand::player_is_in_laststand() && !(players[i].sessionstate == "spectator") )
 		{
+			count_before = 0;
+			if ( isdefined( players[i].num_perks ) )
+			{
+				count_before = players[i].num_perks;
+			}
+
 			players[i] maps\_zombiemode_perks::give_random_perk();
+
+			count_after = count_before;
+			if ( isdefined( players[i].num_perks ) )
+			{
+				count_after = players[i].num_perks;
+			}
+
+			if ( count_after > count_before && isdefined( level.gb_helpers ) && isdefined( level.gb_helpers.trigger_perk_vo_if_cosmodrome ) )
+			{
+				[[ level.gb_helpers.trigger_perk_vo_if_cosmodrome ]]( players[i] );
+			}
 		}
 	}
 }

@@ -384,6 +384,8 @@ gg_register_gum(id, data)
     if (!isdefined(id))
         return;
 
+    gg_normalize_gum_maps(data);
+
     idx = undefined;
     if (isdefined(level.gg_registry.index[id]))
     {
@@ -420,6 +422,73 @@ gg_find_gum_by_id(id)
     }
 
     return undefined;
+}
+
+gg_normalize_mapname(name)
+{
+    if (!isdefined(name) || name == "")
+        return "";
+
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.normalize_mapname))
+        return [[ level.gb_helpers.normalize_mapname ]](name);
+
+    lower = tolower(name);
+    if (!isdefined(lower) || lower == "")
+        return "";
+
+    if (lower == "cosmodrome" || lower == "zm_cosmodrome")
+        return "zombie_cosmodrome";
+
+    if (lower == "coast" || lower == "zm_coast" || lower == "shangri_la")
+        return "zombie_coast";
+
+    if (lower == "kino" || lower == "kino_der_toten" || lower == "theater" || lower == "zm_theater")
+        return "zombie_theater";
+
+    if (lower == "moon" || lower == "zm_moon")
+        return "zombie_moon";
+
+    return lower;
+}
+
+gg_get_current_mapname()
+{
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.get_current_mapname))
+        return [[ level.gb_helpers.get_current_mapname ]]();
+
+    return gg_normalize_mapname(GetDvar("mapname"));
+}
+
+gg_normalize_map_array(source)
+{
+    normalized = [];
+
+    if (!isdefined(source))
+        return normalized;
+
+    for (i = 0; i < source.size; i++)
+    {
+        entry = source[i];
+        norm = gg_normalize_mapname(entry);
+        if (!isdefined(norm) || norm == "")
+            continue;
+        if (!gg_array_contains(normalized, norm))
+            normalized[normalized.size] = norm;
+    }
+
+    return normalized;
+}
+
+gg_normalize_gum_maps(gum)
+{
+    if (!isdefined(gum))
+        return;
+
+    if (isdefined(gum.whitelist))
+        gum.whitelist = gg_normalize_map_array(gum.whitelist);
+
+    if (isdefined(gum.blacklist))
+        gum.blacklist = gg_normalize_map_array(gum.blacklist);
 }
 
 build_player_state(player)
@@ -1750,7 +1819,17 @@ gg_reset_player_remaining_pool(player)
     for (i = 0; i < player.gg.pool_full.size; i++)
     {
         id = player.gg.pool_full[i];
-        if (isdefined(id))
+        if (!isdefined(id))
+            continue;
+
+        gum = gg_find_gum_by_id(id);
+        if (!isdefined(gum))
+            continue;
+
+        if (!gg_is_gum_allowed_on_map(gum))
+            continue;
+
+        if (!gg_array_contains(player.gg.pool_remaining, id))
             player.gg.pool_remaining[player.gg.pool_remaining.size] = id;
     }
 }
@@ -1785,7 +1864,13 @@ gg_try_force_gum(player)
         }
 
         if (gg_debug_enabled())
-            iprintln("Gumballs: forced gum '" + forced_id + "' bypassing map gating");
+        {
+            mapname = gg_get_current_mapname();
+            message = "[gg] forced gated gum " + forced_id;
+            if (isdefined(mapname) && mapname != "")
+                message = message + " (" + mapname + ")";
+            iprintln(message);
+        }
     }
     else if (!gg_is_gum_selectable_for_player(player, gum))
     {
@@ -1859,14 +1944,17 @@ gg_is_gum_allowed_on_map(gum)
     if (!isdefined(gum))
         return false;
 
-    mapname = GetDvar("mapname");
+    mapname = gg_get_current_mapname();
+    if (!isdefined(mapname))
+        mapname = "";
 
     if (isdefined(gum.whitelist) && gum.whitelist.size > 0)
     {
         allowed = false;
         for (i = 0; i < gum.whitelist.size; i++)
         {
-            if (gum.whitelist[i] == mapname)
+            candidate = gg_normalize_mapname(gum.whitelist[i]);
+            if (candidate == mapname)
             {
                 allowed = true;
                 break;
@@ -1880,7 +1968,8 @@ gg_is_gum_allowed_on_map(gum)
     {
         for (i = 0; i < gum.blacklist.size; i++)
         {
-            if (gum.blacklist[i] == mapname)
+            candidate = gg_normalize_mapname(gum.blacklist[i]);
+            if (candidate == mapname)
             {
                 return false;
             }
@@ -3091,18 +3180,68 @@ gg_perkaholic_missing_perks(player, perks)
         perk = perks[i];
         if (!isdefined(perk) || perk == "")
             continue;
-        if (!isdefined(player) || !(player HasPerk(perk)))
+        if (isdefined(player) && (player HasPerk(perk)))
+            continue;
+        if (!gg_array_contains(missing, perk))
             missing[missing.size] = perk;
     }
 
     return missing;
 }
 
-gg_perkaholic_should_trigger_vo()
+gg_get_player_perk_count(player)
 {
-    if (!isdefined(level.gb_helpers) || !isdefined(level.gb_helpers.is_cosmodrome))
+    if (!isdefined(player))
+        return 0;
+
+    if (isdefined(player.num_perks))
+        return player.num_perks;
+
+    count = 0;
+    if (!isdefined(level.gb_helpers) || !isdefined(level.gb_helpers.get_map_perk_list))
+        return count;
+
+    perks = [[ level.gb_helpers.get_map_perk_list ]]();
+    if (!isdefined(perks))
+        perks = [];
+
+    for (i = 0; i < perks.size; i++)
+    {
+        perk = perks[i];
+        if (!isdefined(perk) || perk == "")
+            continue;
+        if (player HasPerk(perk))
+            count++;
+    }
+
+    return count;
+}
+
+gg_get_perk_cap()
+{
+    if (isdefined(level) && isdefined(level.max_perks))
+        return level.max_perks;
+    return 4;
+}
+
+gg_perkaholic_slots_available(player)
+{
+    cap = gg_get_perk_cap();
+    if (cap <= 0)
+        return 12;
+
+    current = gg_get_player_perk_count(player);
+    room = cap - current;
+    if (room < 0)
+        room = 0;
+    return room;
+}
+
+gg_perkaholic_trigger_vo_helper(player, perk)
+{
+    if (!isdefined(level.gb_helpers) || !isdefined(level.gb_helpers.trigger_perk_vo_if_cosmodrome))
         return false;
-    return [[ level.gb_helpers.is_cosmodrome ]]();
+    return [[ level.gb_helpers.trigger_perk_vo_if_cosmodrome ]](player, perk);
 }
 
 gg_fx_perkaholic(player, gum)
@@ -3122,25 +3261,71 @@ gg_fx_perkaholic(player, gum)
         return;
     }
 
-    delay = gg_get_perkaholic_grant_delay_secs();
-    trigger_vo = gg_perkaholic_should_trigger_vo() && isdefined(level.perk_bought_func);
+    slots = gg_perkaholic_slots_available(player);
+    if (slots <= 0)
+    {
+        gg_mark_activation_skip(player);
+        if (gg_debug_enabled())
+            iprintln("Gumballs: Perkaholic skipped (perk cap reached)");
+        gg_show_hint_if_enabled(player, "Perkaholic: perk slots capped");
+        return;
+    }
 
-    for (i = 0; i < missing.size; i++)
+    grant_list = [];
+    for (i = 0; i < missing.size && grant_list.size < slots; i++)
     {
         perk = missing[i];
         if (!isdefined(perk) || perk == "")
             continue;
+        if (gg_array_contains(grant_list, perk))
+            continue;
+        grant_list[grant_list.size] = perk;
+    }
 
-        if (trigger_vo)
-            player [[ level.perk_bought_func ]](perk);
+    if (grant_list.size <= 0)
+    {
+        gg_mark_activation_skip(player);
+        if (gg_debug_enabled())
+            iprintln("Gumballs: Perkaholic skipped (no eligible perks)");
+        gg_show_hint_if_enabled(player, "Perkaholic: all perks acquired");
+        return;
+    }
+
+    if (gg_debug_enabled() && missing.size > grant_list.size)
+        iprintln("Gumballs: Perkaholic limited to " + grant_list.size + " perks (cap " + slots + ")");
+
+    delay = gg_get_perkaholic_grant_delay_secs();
+
+    granted = 0;
+    for (i = 0; i < grant_list.size; i++)
+    {
+        perk = grant_list[i];
+        if (!isdefined(perk) || perk == "")
+            continue;
+
+        if (player HasPerk(perk))
+            continue;
 
         player maps\_zombiemode_perks::give_perk(perk);
+
+        gg_perkaholic_trigger_vo_helper(player, perk);
 
         if (gg_debug_enabled())
             iprintln("Gumballs: Perkaholic granted " + perk);
 
-        if (delay > 0 && i < missing.size - 1)
+        granted++;
+
+        if (delay > 0 && i < grant_list.size - 1)
             wait(delay);
+    }
+
+    if (granted <= 0)
+    {
+        gg_mark_activation_skip(player);
+        if (gg_debug_enabled())
+            iprintln("Gumballs: Perkaholic skipped (grant blocked)");
+        gg_show_hint_if_enabled(player, "Perkaholic: perk slots capped");
+        return;
     }
 
     gg_show_hint_if_enabled(player, "Applied: Perkaholic");
