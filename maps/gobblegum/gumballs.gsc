@@ -67,7 +67,7 @@ gg_registry_init()
     gum.name = "Wall Power";
     gum.shader = "bo6_wall_power";
     gum.desc = "Next wall-buy is PaP";
-    gum.activation = 2; // USER
+    gum.activation = 1; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 1;
     gum.activate_func = "gg_fx_wall_power";
@@ -305,7 +305,7 @@ gg_registry_init()
     gum.name = "Shopping Free";
     gum.shader = "t7_hud_zm_bgb_shopping_free";
     gum.desc = "All purchases are free";
-    gum.activation = 2; // USER
+    gum.activation = 1; // AUTO
     gum.consumption = 1; // TIMED
     gum.base_duration_secs = gg_get_shopping_free_secs();
     gum.activate_func = "gg_fx_shopping_free";
@@ -958,11 +958,11 @@ gg_show_hint_if_enabled(player, text)
         return;
     if (!isdefined(player))
         return;
-    if (!isdefined(level.gb_hud) || !isdefined(level.gb_hud.set_hint))
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+        [[ level.gb_hud.clear_hint ]](player);
+    if (!isdefined(text) || text == "")
         return;
-    if (!isdefined(text))
-        text = "";
-    [[ level.gb_hud.set_hint ]](player, text);
+    player iprintln(text);
 }
 
 gg_get_wonder_label_reassert_ms()
@@ -1017,8 +1017,8 @@ gg_show_powerup_hint(player, text, raw)
         return;
     if (!isdefined(player))
         return;
-    if (!isdefined(level.gb_hud) || !isdefined(level.gb_hud.set_hint))
-        return;
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+        [[ level.gb_hud.clear_hint ]](player);
 
     if (!isdefined(text) || text == "")
         text = "Power-Up";
@@ -1027,7 +1027,7 @@ gg_show_powerup_hint(player, text, raw)
     if (!isdefined(raw) || !raw)
         msg = "Spawned: " + text;
 
-    [[ level.gb_hud.set_hint ]](player, msg);
+    player iprintln(msg);
 }
 
 gg_log_powerup_spawn(gum_id, code)
@@ -2464,10 +2464,7 @@ gg_effect_stub_common(player, gum, category)
     if (!gg_simulate_effects_enabled())
         return;
 
-    if (!isdefined(level.gb_hud) || !isdefined(level.gb_hud.set_hint))
-        return;
-
-    [[ level.gb_hud.set_hint ]](player, "Activated: " + gum_name);
+    gg_show_hint_if_enabled(player, "Activated: " + gum_name);
 }
 
 // Armed gum shared helpers

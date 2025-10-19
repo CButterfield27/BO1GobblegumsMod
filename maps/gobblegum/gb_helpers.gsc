@@ -217,60 +217,58 @@ upgrade_weapon(player, base)
         return false;
     }
 
-    if (player maps\_zombiemode_weapons::is_weapon_upgraded(base))
-    {
-        // Already upgraded; nothing to do.
-        return false;
-    }
-
     upgrade = level.zombie_weapons[base].upgrade_name;
     if (!isdefined(upgrade) || upgrade == "")
     {
         return false;
     }
 
-    // Ensure the upgrade weapon exists in the table so Pack-a-Punch options resolve.
-    if (!isdefined(level.zombie_weapons[upgrade]))
+    if (player maps\_zombiemode_weapons::is_weapon_upgraded(base) || player HasWeapon(upgrade))
+    {
+        // Already upgraded; nothing to do.
+        return true;
+    }
+
+    had_base = (player HasWeapon(base));
+    success = false;
+
+    if (isdefined(level.zombie_weapons[upgrade]))
+    {
+        options = player maps\_zombiemode_weapons::get_pack_a_punch_weapon_options(upgrade);
+
+        if (isdefined(options))
+        {
+            player GiveWeapon(upgrade, 0, options);
+        }
+        else
+        {
+            helpers_upgrade_debug("Using basic GiveWeapon for " + upgrade);
+            player GiveWeapon(upgrade);
+        }
+
+        success = player HasWeapon(upgrade);
+
+        if (!success && had_base && !(player HasWeapon(base)))
+        {
+            player GiveWeapon(base);
+            player GiveStartAmmo(base);
+            maps\_zombiemode_weapons::acquire_weapon_toggle(base, player);
+        }
+    }
+
+    if (!success)
     {
         return upgrade_weapon_fallback(player, base, upgrade);
     }
 
-    options = player maps\_zombiemode_weapons::get_pack_a_punch_weapon_options(upgrade);
-
-    had_base = (player HasWeapon(base));
-    if (had_base)
+    if (had_base && player HasWeapon(base))
     {
         player TakeWeapon(base);
         maps\_zombiemode_weapons::unacquire_weapon_toggle(base);
     }
 
-    if (isdefined(options))
-    {
-        player GiveWeapon(upgrade, 0, options);
-    }
-    else
-    {
-        helpers_upgrade_debug("Using basic GiveWeapon for " + upgrade);
-        player GiveWeapon(upgrade);
-    }
-
-    if (!player HasWeapon(upgrade))
-    {
-        // Re-equip the original weapon if the replacement failed outright.
-        if (had_base)
-        {
-            player GiveWeapon(base);
-            player GiveStartAmmo(base);
-            maps\_zombiemode_weapons::acquire_weapon_toggle(base, player);
-            player SwitchToWeapon(base);
-        }
-        return false;
-    }
-
     player GiveStartAmmo(upgrade);
-
     maps\_zombiemode_weapons::acquire_weapon_toggle(upgrade, player);
-
     player SwitchToWeapon(upgrade);
     player maps\_zombiemode_weapons::play_weapon_vo(upgrade);
     player notify("pap_taken");

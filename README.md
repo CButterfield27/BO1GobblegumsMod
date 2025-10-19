@@ -128,7 +128,7 @@ Positioning
 
 #### Bottom Right (BR)
 
-* Hint text (scale 1.15)
+* Hint text (scale 1.15, kept empty during gameplay; status messages now surface via the top-left debug feed when enabled)
 * Icon (48?48)
 * Usage Bar (shader `"white"`, width 75, height 5)
 
@@ -146,13 +146,13 @@ Positioning
 **Behavior**
 
 * Show on selection (no fades)
-* Hint text initially blank until set by core
+* Hint text remains blank; debug messages are routed to the top-left `iprintln` feed instead of the BR hint row
 * Hide when consumed/cleared in later steps
 
 ---
 
 * Supports **delayed show** (smooth UX after selection/activation)
-* Hint text set/cleared dynamically
+* Hint helper calls clear the BR row and mirror messages to the debug `iprintln` feed
 * Label can be **suppressed and reasserted** (e.g., during Fire Sale suppression loop)
 
 ---
@@ -270,7 +270,7 @@ Usage from `gumballs.gsc`:
 
 * Hidden Power (PaP current weapon)
 
-* Wall Power (next wall buy only—never box—upgraded after a 3s grace window)
+* Wall Power (next wall buy only—never box—upgraded after a 3s grace window with a forced Pack-a-Punch swap)
 
 * Crate Power (next box gun upgraded, 3s grace)
 
@@ -294,7 +294,7 @@ Usage from `gumballs.gsc`:
   * Uses-based instant gum that wipes remaining zombies, optionally zeroes round counters, and lets the next round begin immediately.
   * Awards every player the configurable `gg_round_robbin_bonus` (default +1600) and consumes one BR use; `gg_round_robbin_force_transition` (default 1) ensures round trackers stay in sync on scripted maps.
 * **Shopping Free**
-  * Timed gum controlled by `gg_shopping_free_secs` (default 60s); it grants `gg_shopping_free_temp_points` (default 50000) in temporary credit and keeps the player's visible score from falling while credit remains.
+  * Auto-activates on selection. Timed gum controlled by `gg_shopping_free_secs` (default 60s); it grants `gg_shopping_free_temp_points` (default 50000) in temporary credit and keeps the player's visible score from falling while credit remains.
   * Re-shows the BR HUD in timer mode, debounces purchases through a refund monitor, and removes any leftover credit automatically when the timer expires.
 * Stock Option (ammo taken from stockpile for 60s)
 
