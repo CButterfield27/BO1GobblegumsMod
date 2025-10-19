@@ -55,6 +55,8 @@ gg_registry_init()
     gum.tags = [];
     gum.whitelist = [];
     gum.blacklist = [];
+    gum.blacklist[gum.blacklist.size] = "zombie_theater";
+    gum.blacklist[gum.blacklist.size] = "theater";
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
     gg_register_gum(gum.id, gum);
@@ -489,6 +491,8 @@ build_player_state(player)
         player.gg.wonderbar_armed_time = 0;
     if (!isdefined(player.gg.wonderbar_token))
         player.gg.wonderbar_token = 0;
+    if (!isdefined(player.gg.reign_drops_token))
+        player.gg.reign_drops_token = 0;
     if (!isdefined(player.gg.wonderbar_label_token))
         player.gg.wonderbar_label_token = 0;
     if (!isdefined(player.gg.wonderbar_choice))
@@ -683,6 +687,8 @@ gg_init_dvars()
 
     // Build 6 power-up knobs
     gg_ensure_dvar_float("gg_drop_forward_units", 70.0);
+    gg_ensure_dvar_float("gg_reigndrops_forward_units", 145.0);
+    gg_ensure_dvar_float("gg_reigndrops_radius", 70.0);
     gg_ensure_dvar_int("gg_reigndrops_spacing_ms", 150);
     gg_ensure_dvar_int("gg_reigndrops_include_firesale", 1);
     gg_ensure_dvar_int("gg_powerup_hints", 1);
@@ -725,6 +731,14 @@ gg_cache_config()
     if (level.gg_config.drop_forward_units <= 0)
         level.gg_config.drop_forward_units = 70.0;
 
+    level.gg_config.reigndrops_forward_units = GetDvarFloat("gg_reigndrops_forward_units");
+    if (level.gg_config.reigndrops_forward_units <= 0)
+        level.gg_config.reigndrops_forward_units = 145.0;
+
+    level.gg_config.reigndrops_radius = GetDvarFloat("gg_reigndrops_radius");
+    if (level.gg_config.reigndrops_radius <= 0)
+        level.gg_config.reigndrops_radius = 70.0;
+
     level.gg_config.reigndrops_spacing_ms = GetDvarInt("gg_reigndrops_spacing_ms");
     if (level.gg_config.reigndrops_spacing_ms < 0)
         level.gg_config.reigndrops_spacing_ms = 0;
@@ -759,6 +773,7 @@ gg_init_powerup_tables()
         alias["immolation"] = "fire_sale";
         alias["on_the_house"] = "free_perk";
         alias["fatal_contraption"] = "minigun";
+        alias["extra_credit"] = "bonus_points_player";
         level.gg_powerup_alias = alias;
     }
 
@@ -773,6 +788,7 @@ gg_init_powerup_tables()
         labels["fire_sale"] = "Fire Sale";
         labels["free_perk"] = "Free Perk";
         labels["minigun"] = "Death Machine";
+        labels["bonus_points_player"] = "Bonus Points";
         level.gg_powerup_labels = labels;
     }
 }
@@ -842,6 +858,20 @@ gg_get_drop_forward_units()
 {
     if (isdefined(level.gg_config) && isdefined(level.gg_config.drop_forward_units))
         return level.gg_config.drop_forward_units;
+    return 70.0;
+}
+
+gg_get_reigndrops_forward_units()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.reigndrops_forward_units))
+        return level.gg_config.reigndrops_forward_units;
+    return 145.0;
+}
+
+gg_get_reigndrops_radius()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.reigndrops_radius))
+        return level.gg_config.reigndrops_radius;
     return 70.0;
 }
 
@@ -1120,15 +1150,37 @@ gg_powerup_fan_offset(index, total)
 gg_collect_reign_drop_codes()
 {
     codes = [];
+    ids = [];
 
-    codes[codes.size] = "maxammo";
-    codes[codes.size] = "instakill";
-    codes[codes.size] = "doublepoints";
-    codes[codes.size] = "carpenter";
-    codes[codes.size] = "nuke";
-
+    ids[ids.size] = "whos_keeping_score";     // Double Points
+    ids[ids.size] = "kill_joy";               // Insta-Kill
     if (gg_reigndrops_include_firesale())
-        codes[codes.size] = "firesale";
+        ids[ids.size] = "immolation";        // Fire Sale (optional)
+    ids[ids.size] = "dead_of_nuclear_winter"; // Nuke
+    ids[ids.size] = "licensed_contractor";    // Carpenter
+    ids[ids.size] = "cache_back";             // Max Ammo
+    ids[ids.size] = "on_the_house";           // Free Perk
+    ids[ids.size] = "extra_credit";           // Bonus Points
+    if (gg_can_spawn_death_machine())
+        ids[ids.size] = "fatal_contraption"; // Death Machine (map-gated)
+
+    for (i = 0; i < ids.size; i++)
+    {
+        alias_id = ids[i];
+        if (!isdefined(alias_id) || alias_id == "")
+            continue;
+
+        code = gg_powerup_code_for_id(alias_id);
+        if (!isdefined(code) || code == "")
+        {
+            if (gg_should_log_dispatch())
+                iprintln("Gumballs: missing Reign Drops alias for " + alias_id);
+            continue;
+        }
+
+        if (!gg_array_contains(codes, code))
+            codes[codes.size] = code;
+    }
 
     return codes;
 }
@@ -1138,16 +1190,27 @@ gg_spawn_reign_drop_sequence(player, gum, codes)
     if (!isdefined(player) || !isdefined(codes) || codes.size <= 0)
         return false;
 
+    if (!isdefined(player.gg))
+        build_player_state(player);
+
     gum_id = "<unknown>";
     if (isdefined(gum) && isdefined(gum.id))
         gum_id = gum.id;
 
     spacing = gg_get_reigndrops_spacing_secs();
-    player thread gg_reign_drop_sequence_thread(gum_id, codes, spacing);
+    if (spacing < 0)
+        spacing = 0;
+
+    if (!isdefined(player.gg.reign_drops_token))
+        player.gg.reign_drops_token = 0;
+    player.gg.reign_drops_token += 1;
+    token = player.gg.reign_drops_token;
+
+    player thread gg_reign_drop_sequence_thread(gum_id, codes, spacing, token);
     return true;
 }
 
-gg_reign_drop_sequence_thread(gum_id, codes, spacing)
+gg_reign_drop_sequence_thread(gum_id, codes, spacing, expected_token)
 {
     self endon("disconnect");
     self endon("gg_gum_cleared");
@@ -1155,10 +1218,21 @@ gg_reign_drop_sequence_thread(gum_id, codes, spacing)
     if (!isdefined(codes) || codes.size <= 0)
         return;
 
-    forward = AnglesToForward(self.angles);
-    right = AnglesToRight(self.angles);
-    base_offset = gg_get_drop_forward_units();
-    base_pos = self.origin + (forward * base_offset);
+    if (!gg_reign_drops_token_active(expected_token))
+        return;
+
+    base_angles = (0, self.angles[1], 0);
+    forward = AnglesToForward(base_angles);
+    if (!isdefined(forward))
+        forward = (1, 0, 0);
+    center_offset = gg_get_reigndrops_forward_units();
+    if (!isdefined(center_offset) || center_offset <= 0)
+        center_offset = gg_get_drop_forward_units();
+    center = self.origin + (forward * center_offset);
+
+    radius = gg_get_reigndrops_radius();
+    if (!isdefined(radius) || radius <= 0)
+        radius = 70.0;
 
     wait_secs = spacing;
     if (!isdefined(wait_secs))
@@ -1167,8 +1241,17 @@ gg_reign_drop_sequence_thread(gum_id, codes, spacing)
         wait_secs = 0;
 
     total = codes.size;
+    if (total <= 0)
+        return;
+
+    step = 360.0 / total;
+    spawned_any = false;
+
     for (i = 0; i < total; i++)
     {
+        if (!gg_reign_drops_token_active(expected_token))
+            break;
+
         code = codes[i];
         if (!isdefined(code) || code == "")
             continue;
@@ -1183,18 +1266,61 @@ gg_reign_drop_sequence_thread(gum_id, codes, spacing)
         else if (drop_code == "firesale")
             drop_code = "fire_sale";
 
-        drop_pos = base_pos;
-        fan = gg_powerup_fan_offset(i, total);
-        if (isdefined(fan) && fan != 0)
-            drop_pos += (right * fan);
+        yaw = base_angles[1] + (i * step);
+        arc_angles = (0, yaw, 0);
+        dir = AnglesToForward(arc_angles);
+        if (!isdefined(dir))
+            dir = forward;
+
+        drop_pos = center + (dir * radius);
 
         level thread maps\_zombiemode_powerups::specific_powerup_drop(drop_code, drop_pos);
         gg_log_powerup_spawn(gum_id, drop_code);
+
+        if (gg_debug_enabled())
+            iprintln("Gumballs: Reign Drops [" + (i + 1) + "/" + total + "] " + drop_code + " @ " + gg_vector_to_string(drop_pos));
+
+        spawned_any = true;
 
         if (wait_secs > 0 && i < total - 1)
         {
             wait(wait_secs);
         }
+    }
+
+    if (spawned_any)
+    {
+        gg_reign_drops_consume_activation(gum_id, expected_token);
+    }
+}
+
+gg_reign_drops_consume_activation(gum_id, expected_token)
+{
+    if (!isdefined(self.gg))
+        build_player_state(self);
+
+    if (!isdefined(self.gg.uses_remaining))
+        self.gg.uses_remaining = 0;
+
+    if (self.gg.uses_remaining > 0)
+    {
+        self.gg.uses_remaining -= 1;
+        self.gg.used_this_round = true;
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_consume_use))
+            [[ level.gb_hud.br_consume_use ]](self);
+    }
+
+    if (gg_consume_logs_enabled())
+        iprintln("Gumballs: Reign Drops consumed -> remaining=" + self.gg.uses_remaining);
+    else if (gg_debug_enabled())
+        iprintln("Gumballs: Reign Drops remaining=" + self.gg.uses_remaining);
+
+    gg_set_effect_state(self, undefined, false);
+    gg_on_gum_used();
+
+    if (self.gg.uses_remaining <= 0)
+    {
+        gg_end_current_gum(self, "reign_drops_complete");
     }
 }
 
@@ -1614,7 +1740,25 @@ gg_try_force_gum(player)
         return undefined;
     }
 
-    if (!gg_is_gum_selectable_for_player(player, gum))
+    allowed_on_map = gg_is_gum_allowed_on_map(gum);
+    if (!allowed_on_map)
+    {
+        if (isdefined(gum.id) && gum.id == "perkaholic")
+        {
+            if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.player_has_all_map_perks))
+            {
+                if ([[ level.gb_helpers.player_has_all_map_perks ]](player))
+                {
+                    gg_log_select("Gumballs: forced gum '" + forced_id + "' blocked (perks)");
+                    return undefined;
+                }
+            }
+        }
+
+        if (gg_debug_enabled())
+            iprintln("Gumballs: forced gum '" + forced_id + "' bypassing map gating");
+    }
+    else if (!gg_is_gum_selectable_for_player(player, gum))
     {
         gg_log_select("Gumballs: forced gum '" + forced_id + "' not allowed");
         return undefined;
@@ -2333,6 +2477,24 @@ gg_array_contains(arr, value)
     return false;
 }
 
+gg_vector_to_string(vec)
+{
+    if (!isdefined(vec))
+        return "(?, ?, ?)";
+
+    x = 0;
+    y = 0;
+    z = 0;
+    if (isdefined(vec[0]))
+        x = vec[0];
+    if (isdefined(vec[1]))
+        y = vec[1];
+    if (isdefined(vec[2]))
+        z = vec[2];
+
+    return "(" + x + ", " + y + ", " + z + ")";
+}
+
 gg_detect_new_weapon(prev, curr)
 {
     if (!isdefined(curr))
@@ -2384,8 +2546,22 @@ gg_weapon_is_wall_buy(weapon)
     if (!isdefined(level.zombie_weapons[weapon]))
         return false;
 
-    if (maps\_zombiemode_weapons::get_is_in_box(weapon))
+    info = level.zombie_weapons[weapon];
+
+    is_box_weapon = false;
+    if (isdefined(info.is_in_box))
+        is_box_weapon = info.is_in_box;
+    else if (isdefined(maps\_zombiemode_weapons::get_is_in_box))
+        is_box_weapon = maps\_zombiemode_weapons::get_is_in_box(weapon);
+
+    if (is_box_weapon)
         return false;
+
+    if (isdefined(info.cost) && info.cost > 0)
+        return true;
+
+    if (isdefined(info.ammo_cost) && info.ammo_cost > 0)
+        return true;
 
     if (isdefined(maps\_zombiemode_weapons::get_weapon_toggle))
     {
@@ -2393,6 +2569,9 @@ gg_weapon_is_wall_buy(weapon)
         if (isdefined(toggle))
             return true;
     }
+
+    if (isdefined(info.hint) && info.hint != "")
+        return true;
 
     return false;
 }
@@ -2428,6 +2607,13 @@ gg_wonderbar_token_active(expected_token)
     if (!isdefined(self.gg) || !isdefined(self.gg.wonderbar_token))
         return false;
     return (self.gg.wonderbar_token == expected_token);
+}
+
+gg_reign_drops_token_active(expected_token)
+{
+    if (!isdefined(self.gg) || !isdefined(self.gg.reign_drops_token))
+        return false;
+    return (self.gg.reign_drops_token == expected_token);
 }
 
 gg_wonderbar_label_token_active(expected_token)
@@ -2849,9 +3035,10 @@ gg_fx_reign_drops(player, gum)
         return;
     }
 
+    gg_mark_activation_skip(player);
+
     if (!gg_spawn_reign_drop_sequence(player, gum, codes))
     {
-        gg_mark_activation_skip(player);
         return;
     }
 
@@ -2888,6 +3075,7 @@ gg_wall_power_arm(player, gum)
         player.gg.wall_power_token = 0;
     player.gg.wall_power_token += 1;
     token = player.gg.wall_power_token;
+    player.gg.wall_power_last_debug = undefined;
 
     snapshot = gg_clone_array(gg_get_primary_weapons(player));
     grace_end = gettime() + gg_get_armed_grace_ms();
@@ -2936,28 +3124,75 @@ gg_wall_power_monitor_thread(gum, expected_token, grace_end, snapshot)
     }
 }
 
+gg_wall_power_debug(player, reason, weapon)
+{
+    if (!gg_debug_enabled())
+        return;
+
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg))
+        build_player_state(player);
+
+    key = reason;
+    if (isdefined(weapon) && weapon != "")
+        key = key + ":" + weapon;
+
+    if (isdefined(player.gg.wall_power_last_debug) && player.gg.wall_power_last_debug == key)
+        return;
+
+    player.gg.wall_power_last_debug = key;
+
+    msg = "Gumballs: Wall Power " + reason;
+    if (isdefined(weapon) && weapon != "")
+        msg = msg + " (" + weapon + ")";
+    iprintln(msg);
+}
+
 gg_wall_power_should_upgrade(player, weapon, grace_end)
 {
     if (!isdefined(weapon) || weapon == "" || weapon == "none")
+    {
+        gg_wall_power_debug(player, "skip: invalid weapon", weapon);
         return false;
+    }
 
     if (isdefined(grace_end) && gettime() < grace_end)
+    {
+        gg_wall_power_debug(player, "skip: grace window", weapon);
         return false;
+    }
 
     if (gg_weapon_is_spawn_pistol(weapon))
+    {
+        gg_wall_power_debug(player, "skip: spawn pistol", weapon);
         return false;
+    }
 
     if (!gg_weapon_is_wall_buy(weapon))
+    {
+        gg_wall_power_debug(player, "skip: not a wall buy", weapon);
         return false;
+    }
 
     if (gg_weapon_is_box_weapon(weapon))
+    {
+        gg_wall_power_debug(player, "skip: box weapon", weapon);
         return false;
+    }
 
     if (!gg_weapon_has_upgrade(weapon))
+    {
+        gg_wall_power_debug(player, "skip: no upgrade", weapon);
         return false;
+    }
 
     if (player maps\_zombiemode_weapons::is_weapon_upgraded(weapon))
+    {
+        gg_wall_power_debug(player, "skip: already upgraded", weapon);
         return false;
+    }
 
     return true;
 }
@@ -2970,6 +3205,8 @@ gg_wall_power_on_success(player, gum, weapon)
     gg_show_hint_if_enabled(player, "Applied: Wall Power");
 
     player.gg.armed_flags.wall = false;
+    if (isdefined(player.gg))
+        player.gg.wall_power_last_debug = undefined;
 
     if (gg_debug_enabled())
         iprintln("Gumballs: Wall Power upgraded " + weapon);
