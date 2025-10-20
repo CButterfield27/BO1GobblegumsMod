@@ -47,6 +47,7 @@ gg_registry_init()
     gum.name = "Perkaholic";
     gum.shader = "bo6_perkaholic";
     gum.desc = "All map perks";
+    gum.uses_description = "Active";
     gum.activation = 1; // ACT_AUTO
     gum.consumption = 3; // CONS_USES (uses-based)
     gum.base_uses = 1;
@@ -67,6 +68,7 @@ gg_registry_init()
     gum.name = "Wall Power";
     gum.shader = "bo6_wall_power";
     gum.desc = "Next wall-buy is PaP";
+    gum.uses_description = "Active";
     gum.activation = 1; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 1;
@@ -86,6 +88,7 @@ gg_registry_init()
     gum.name = "Cache Back";
     gum.shader = "bo6_cache_back";
     gum.desc = "Spawns a Max Ammo Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 1;
@@ -104,6 +107,7 @@ gg_registry_init()
     gum.name = "Crate Power";
     gum.shader = "bo6_crate_power";
     gum.desc = "Next Mystery Box gun is PaP";
+    gum.uses_description = "Active";
     gum.activation = 1; // AUTO
     gum.consumption = 3; // USES
     gum.base_uses = 1;
@@ -123,6 +127,7 @@ gg_registry_init()
     gum.name = "Dead of Nuclear Winter";
     gum.shader = "t7_hud_zm_bgb_dead_of_nuclear_winter";
     gum.desc = "Spawns a Nuke Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 2;
@@ -141,6 +146,7 @@ gg_registry_init()
     gum.name = "Extra Credit";
     gum.shader = "t7_hud_zm_bgb_extra_credit";
     gum.desc = "Spawns a Bonus Points Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (4 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 4;
@@ -159,6 +165,7 @@ gg_registry_init()
     gum.name = "Fatal Contraption";
     gum.shader = "t7_hud_zm_bgb_fatal_contraption";
     gum.desc = "Spawns a Death Machine Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 2;
@@ -177,6 +184,7 @@ gg_registry_init()
     gum.name = "Hidden Power";
     gum.shader = "bo6_hidden_power";
     gum.desc = "PaP current weapon";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 1;
@@ -195,6 +203,7 @@ gg_registry_init()
     gum.name = "Immolation Liquidation";
     gum.shader = "bo6_immolation_liquidation";
     gum.desc = "Spawns a Fire Sale Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (3 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 3;
@@ -213,6 +222,7 @@ gg_registry_init()
     gum.name = "Kill Joy";
     gum.shader = "bo6_kill_joy";
     gum.desc = "Spawns an Insta-Kill Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 2;
@@ -231,6 +241,7 @@ gg_registry_init()
     gum.name = "Licensed Contractor";
     gum.shader = "t7_hud_zm_bgb_licensed_contractor";
     gum.desc = "Spawns a Carpenter Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (3 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 3;
@@ -249,6 +260,7 @@ gg_registry_init()
     gum.name = "On the House";
     gum.shader = "bo6_on_the_house";
     gum.desc = "Spawns a free perk Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 1;
@@ -267,6 +279,7 @@ gg_registry_init()
     gum.name = "Reign Drops";
     gum.shader = "bo6_reign_drops";
     gum.desc = "Spawns all core Power-Ups at once";
+    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 2;
@@ -285,6 +298,7 @@ gg_registry_init()
     gum.name = "Round Robbin";
     gum.shader = "t7_hud_zm_bgb_round_robbin";
     gum.desc = "Ends the current round. All players gain 1600 points";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 1;
@@ -305,6 +319,7 @@ gg_registry_init()
     gum.name = "Shopping Free";
     gum.shader = "t7_hud_zm_bgb_shopping_free";
     gum.desc = "All purchases are free";
+    gum.uses_description = "Lasts 1 minute";
     gum.activation = 1; // AUTO
     gum.consumption = 1; // TIMED
     gum.base_duration_secs = gg_get_shopping_free_secs();
@@ -324,6 +339,7 @@ gg_registry_init()
     gum.name = "Stock Option";
     gum.shader = "bo6_stock_option";
     gum.desc = "Ammo is taken from the player's stockpile";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 1; // TIMED
     gum.base_duration_secs = 60;
@@ -342,6 +358,7 @@ gg_registry_init()
     gum.name = "Who's Keeping Score";
     gum.shader = "bo6_who_keeping_score";
     gum.desc = "Spawns a Double Points Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 2;
@@ -360,6 +377,7 @@ gg_registry_init()
     gum.name = "Wonderbar";
     gum.shader = "bo6_wonderbar";
     gum.desc = "Next box gun is Wonder Weapon";
+    gum.uses_description = "Active";
     gum.activation = 1; // AUTO
     gum.consumption = 3; // USES
     gum.base_uses = 1;

@@ -70,6 +70,7 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to
 * `name` ? display/loc string
 * `shader` ? HUD icon material
 * `description` ? display/loc string
+* `uses_description` ? optional activation/uses copy rendered between the name and description in the TC HUD
 * `activation_type` ? AUTO or USER
 * `consumption_type` ? timed / rounds / uses
 * `activate_func` ? string key ? dispatcher
@@ -107,7 +108,7 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to
 
 * Icon (56�56)
 * Gum Name (scale 1.5)
-* Uses/Activation line (scale 1.15)
+* Uses/Activation line (scale 1.15; text sourced from `gum.uses_description`)
 * Description (scale 1.15)
 
 Positioning
@@ -121,9 +122,19 @@ Positioning
 **Behavior**
 
 * Fade in on selection (token-based)
+* Uses line hides automatically when `gum.uses_description` is empty and shares the same fade/autohide tokens as the rest of the block
 * Auto-hide after `GG_TC_AUTOHIDE_SECS` (default 7.5s) using a guarded token; newer shows invalidate pending hides.
 * Hides immediately on selection change, round cleanup, `gg_gum_cleared`, death, or disconnect.
 * Refresh on state change
+
+**Example Layout**
+
+```
+[Icon]
+[Name]
+[Uses Description]
+[Description]
+```
 
 ---
 
@@ -515,21 +526,10 @@ stateDiagram-v2
 - All debug output routes through `helpers.gg_log("<message>")`.
 - Messages are uniformly prefixed with `[gg]` for easy filtering in console logs.
 - Hidden by default: `gg_debug`, `gg_log_dispatch`, and `gg_consume_logs` all default to `0`.
-- HUD mirroring: the yellow debug HUD now auto-enables when any logging flag is on (`gg_debug`, `gg_log_dispatch`, or `gg_consume_logs`) or when `gg_debug_hud` is explicitly set to `1`.
-- Defaults: `gg_debug_hud` defaults to `0` to avoid unintended on-screen logs.
+- HUD mirroring: the yellow debug HUD auto-enables when any logging flag is on (`gg_debug`, `gg_log_dispatch`, or `gg_consume_logs`) or when `gg_debug_hud` is explicitly set to `1`.
+- HUD overlay: messages now stack up to five lines in the top-left; each new entry pushes older lines upward so nothing overlaps.
+- Fade cadence: every line holds for roughly three seconds, then fades out over 0.5 seconds while keeping the yellow font for continuity.
+- Control: `gg_debug_hud` (0/1) still defaults to `0`, so the overlay only appears when debug flags are intentionally enabled.
 - Legacy ad-hoc `print`/`iprintln` calls were replaced for consistency.
 
 ---
-
-## What Changed (Build 10D - Debug Gating + HUD Logs)
-
-- Default safety: explicitly ensure `gg_debug_hud` starts at `0` so no HUD text appears unless requested.
-- Unified gating: `helpers.gg_log()` now emits when any of `gg_debug`, `gg_log_dispatch`, or `gg_consume_logs` are enabled (was `gg_debug` only).
-- HUD auto-mirror: the debug HUD will appear automatically when any logging flag is enabled, or can be forced with `gg_debug_hud 1`.
-- As before, all logging remains off by default; enabling flags is an explicit action.
-
-Snapshot of changes:
-- maps/gobblegum/gumballs.gsc: add `gg_ensure_dvar_int("gg_debug_hud", 0)` in `gg_init_dvars`.
-- maps/gobblegum/gb_helpers.gsc: update `gg_log` to respect `gg_log_dispatch`/`gg_consume_logs` and mirror to HUD accordingly.
-- maps/gobblegum/gb_hud.gsc: update debug HUD loop to auto-enable when any logging flag is active.
-

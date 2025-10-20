@@ -17,14 +17,24 @@ gg_log(msg)
     message = "[gg] " + msg;
     print(message);
 
-    // Mirror to HUD when the debug HUD is explicitly enabled, or when any logging mode is active
-    if ((GetDvarInt("gg_debug_hud") != 0 || should_log) && isdefined(level.gg_debug_text))
+    if (GetDvarInt("gg_debug_hud") != 0 || should_log)
     {
-        level.gg_debug_text setText(message);
-        level.gg_debug_text.color = (1, 1, 0);
-        level.gg_debug_text.alpha = 1;
-        level.gg_debug_text.__last_update = gettime();
-        level.gg_debug_text.__fading = false;
+        if (!isdefined(level.gg_debug_queue))
+            level.gg_debug_queue = [];
+
+        level.gg_debug_queue[level.gg_debug_queue.size] = message;
+
+        max_queue = 16;
+        if (level.gg_debug_queue.size > max_queue)
+        {
+            trim = [];
+            start = level.gg_debug_queue.size - max_queue;
+            for (i = start; i < level.gg_debug_queue.size; i++)
+            {
+                trim[trim.size] = level.gg_debug_queue[i];
+            }
+            level.gg_debug_queue = trim;
+        }
     }
 }
 
