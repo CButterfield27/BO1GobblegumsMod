@@ -123,7 +123,7 @@ Positioning
 
 * Fade in on selection (token-based)
 * Uses line hides automatically when `gum.uses_description` is empty and shares the same fade/autohide tokens as the rest of the block
-* Gift Card uses line: "Press D-Pad Right to activate. (1 use)"
+* Hidden Power uses line: "Press D-Pad Right to activate. (1 use)"
 * Auto-hide after `GG_TC_AUTOHIDE_SECS` (default 7.5s) using a guarded token; newer shows invalidate pending hides.
 * Hides immediately on selection change, round cleanup, `gg_gum_cleared`, death, or disconnect.
 * Refresh on state change
@@ -266,6 +266,7 @@ Usage from `gumballs.gsc`:
 * Function map: string ? int code (fast path)
 * Fallback: string compare (exhaustive list)
 * Mapping adds user gum: `gift_card -> gg_fx_gift_card(self)`
+* Hidden Power dispatcher: `hidden_power -> gg_logic_hidden_power_start(self)`
 
 ---
 
@@ -287,7 +288,7 @@ Usage from `gumballs.gsc`:
 
 ### Weapons / Perks
 
-* Hidden Power (PaP current weapon)
+* Hidden Power - Instantly Pack-a-Punches your currently held weapon if an upgrade exists.
 
 * Wall Power (next wall buy only�never box�upgraded after a 3s grace window with a forced Pack-a-Punch swap)
 
@@ -459,11 +460,6 @@ Usage from `gumballs.gsc`:
 9. Harden map/perk checks + Ascension VO hooks
 10. Refine HUD polish (hint text, delayed show, suppression)
 11. Add placeholders, rarity weights, and debug commands
-
-**Build 9 details**
-* Selection pools normalize map names and re-check `map_whitelist` / `map_blacklist` before filling `pool_remaining`, logging `[gg] forced gated gum` when dev overrides bypass gating.
-* Perkaholic reuses the cached perk list, dedupes missing perks, honours perk caps, and triggers the Cosmodrome VO helper once after grants complete.
-* Free Perk pickups use the same helper so Cosmodrome VO flags (`level.perk_bought` + `flag_set("perk_bought")`) stay consistent.
 
 ---
 
