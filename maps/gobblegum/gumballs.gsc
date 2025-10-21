@@ -169,7 +169,7 @@ gg_registry_init()
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 1;
-    gum.activate_func = "gg_fx_gift_card";
+    gum.activate_func = "gg_logic_gift_card_start";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
     gum.tags[0] = "economy";
@@ -2533,7 +2533,9 @@ gg_init_dispatcher()
     gg_register_dispatcher_entry("gg_fx_on_the_house", ::gg_fx_on_the_house);
     gg_register_dispatcher_entry("gg_fx_fatal_contraption", ::gg_fx_fatal_contraption);
     gg_register_dispatcher_entry("gg_fx_extra_credit", ::gg_fx_extra_credit);
-    gg_register_dispatcher_entry("gg_fx_gift_card", ::gg_fx_gift_card);
+    gg_register_dispatcher_entry("gift_card", ::gg_logic_gift_card_start);
+    gg_register_dispatcher_entry("gg_logic_gift_card_start", ::gg_logic_gift_card_start);
+    gg_register_dispatcher_entry("gg_fx_gift_card", ::gg_logic_gift_card_start);
     gg_register_dispatcher_entry("gg_fx_reign_drops", ::gg_fx_reign_drops);
     gg_register_dispatcher_entry("hidden_power", ::gg_logic_hidden_power_start);
     gg_register_dispatcher_entry("gg_fx_hidden_power", ::gg_logic_hidden_power_start);
@@ -2718,7 +2720,7 @@ gg_dispatch_string_fallback(func_name)
     if (func_name == "gg_fx_extra_credit")
         return ::gg_fx_extra_credit;
     if (func_name == "gg_fx_gift_card")
-        return ::gg_fx_gift_card;
+        return ::gg_logic_gift_card_start;
     if (func_name == "gg_fx_reign_drops")
         return ::gg_fx_reign_drops;
     if (func_name == "hidden_power")
@@ -4363,7 +4365,7 @@ gg_get_perkaholic_grant_delay_secs()
     return 0.25;
 }
 
-gg_fx_gift_card(player, gum)
+gg_logic_gift_card_start(player, gum)
 {
     if (!isdefined(player))
         return;
@@ -4382,6 +4384,11 @@ gg_fx_gift_card(player, gum)
         [[ level.gb_helpers.gg_log ]]("gift card activated (points=" + amount + ")");
 
     gg_on_gum_used();
+}
+
+gg_fx_gift_card(player, gum)
+{
+    gg_logic_gift_card_start(player, gum);
 }
 
 gg_round_robbin_award_points()

@@ -381,11 +381,6 @@ helpers_upgrade_debug(msg)
     gg_log("upgrade: " + msg);
 }
 
-drop_powerup(player, code, pos_or_dist)
-{
-    // no-op in Step 1
-}
-
 player_has_all_map_perks(player)
 {
     if (!isdefined(player))
@@ -472,7 +467,6 @@ helpers_init()
     level.gb_helpers.get_wonder_pool = ::get_wonder_pool;
     level.gb_helpers.get_weapon_display_name = ::get_weapon_display_name;
     level.gb_helpers.upgrade_weapon = ::upgrade_weapon;
-    level.gb_helpers.drop_powerup = ::drop_powerup;
     level.gb_helpers.player_has_all_map_perks = ::player_has_all_map_perks;
     level.gb_helpers.trigger_perk_vo_if_cosmodrome = ::trigger_perk_vo_if_cosmodrome;
     level.gb_helpers.gg_log = ::gg_log;

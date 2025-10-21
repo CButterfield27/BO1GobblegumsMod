@@ -58,7 +58,7 @@ level thread maps\gobblegum\gumballs::gumballs_init();
 * HUD assets must be precached before any player HUD is built.
 * Core threads last so they can call both helpers and HUD safely.
 
-All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to the base round or perk systems.
+All wiring stays inside the existing `_zombiemode.gsc` lifecycle - no changes to the base round or perk systems.
 
 ---
 
@@ -66,20 +66,20 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to
 
 ### Gum Definition
 
-* `id` ? internal identifier
-* `name` ? display/loc string
-* `shader` ? HUD icon material
-* `description` ? display/loc string
-* `uses_description` ? optional activation/uses copy rendered between the name and description in the TC HUD
-* `activation_type` ? AUTO or USER
-* `consumption_type` ? timed / rounds / uses
-* `activate_func` ? string key ? dispatcher
+* `id` - internal identifier
+* `name` - display/loc string
+* `shader` - HUD icon material
+* `description` - display/loc string
+* `uses_description` - optional activation/uses copy rendered between the name and description in the TC HUD
+* `activation_type` - AUTO or USER
+* `consumption_type` - timed / rounds / uses
+* `activate_func` - string key -> dispatcher
 * **Metadata**
 
-  * `tags` ? categories (powerup, perk, economy, weapon)
-  * `map_whitelist`/`blacklist` ? enforce availability (e.g., Fatal Contraption on Ascension/Coast/Moon only)
-  * `exclusion_groups` ? gums that cannot overlap
-  * `rarity_weight` ? pool weighting
+  * `tags` - categories (powerup, perk, economy, weapon)
+  * `map_whitelist`/`blacklist` - enforce availability (e.g., Fatal Contraption on Ascension/Coast/Moon only)
+  * `exclusion_groups` - gums that cannot overlap
+  * `rarity_weight` - pool weighting
 
 ### Player State
 
@@ -106,7 +106,7 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to
 
 #### Top Center (TC)
 
-* Icon (56�56)
+* Icon (56x56)
 * Gum Name (scale 1.5)
 * Uses/Activation line (scale 1.15; text sourced from `gum.uses_description`)
 * Description (scale 1.15)
@@ -123,6 +123,7 @@ Positioning
 
 * Fade in on selection (token-based)
 * Uses line hides automatically when `gum.uses_description` is empty and shares the same fade/autohide tokens as the rest of the block
+* Gift Card uses line: "Press D-Pad Right to activate. (1 use)"
 * Hidden Power uses line: "Press D-Pad Right to activate. (1 use)"
 * Auto-hide after `GG_TC_AUTOHIDE_SECS` (default 7.5s) using a guarded token; newer shows invalidate pending hides.
 * Hides immediately on selection change, round cleanup, `gg_gum_cleared`, death, or disconnect.
@@ -144,7 +145,7 @@ Positioning
 * Hint line (scale 1.15) driven by the tokenised pipeline:
   - `set_hint` / `clear_hint` / `update_hint`
   - `suppress_hint(ms)` / `end_suppress_hint()` keep the latest string cached while hidden
-* Icon (48�48)
+* Icon (48x48)
 * Usage bar (shader `"white"`, width 75, height 5) supports uses / rounds / timer modes via `br_set_mode` helpers
 * Wonderbar label now reuses the hint pipeline; no standalone label widget
 
@@ -153,13 +154,13 @@ Positioning
 - Anchor: `setPoint("RIGHT", "BOTTOMRIGHT", x_off, y_off)` for icon, bars, hint
 - Bar consists of two layers at the same point:
   - Background bar (light gray) full width
-  - Foreground bar (yellow) full width initially; drains left?right as the gum consumes
+  - Foreground bar (yellow) full width initially; drains left-to-right as the gum consumes
 
 **Behavior**
 
 * `show_br_after_delay` reveals BR after `gg_br_delayed_show_secs` (default 1.5s); the delay token cancels on gum change, death, round rollover, or explicit hides.
 * Show/hide animate via token-based fades (`GG_HUD_FADE_SECS`, default 0.25s). `hide_br()` clears icon/text once the fade ends.
-* Wonderbar suppression honours `gg_wonder_label_suppress_ms` (default 35?000?ms Fire Sale window). The label thread calls `suppress_hint`/`end_suppress_hint` so the text auto-reasserts when suppression expires.
+* Wonderbar suppression honours `gg_wonder_label_suppress_ms` (default 35,000 ms Fire Sale window). The label thread calls `suppress_hint`/`end_suppress_hint` so the text auto-reasserts when suppression expires.
 * Progress bars clamp to `[0, 1]`; when uses/rounds reach 0 or timers elapse, the bar drains to zero and BR fades out immediately.
 
 ---
@@ -180,12 +181,12 @@ Positioning
 
 #### HUD Polish Highlights
 
-- **Hint text** � `set_hint`, `clear_hint`, `update_hint`, `suppress_hint(ms)`, `end_suppress_hint()`; Wonderbar + Fire Sale uses `gg_wonder_label_suppress_ms` (default 35?000?ms) and reasserts automatically after `end_suppress_hint`.
-- **TC show/hide** � token-based and auto-hides after `GG_TC_AUTOHIDE_SECS` (7.5?s); also hides immediately on selection change, round cleanup, `gg_gum_cleared`, death, or disconnect.
-- **BR delayed show** � token-based and cancelable on gum change, death, round rollover, or disconnect; default delay `gg_br_delayed_show_secs` (1.5?s).
-- **BR progress** � clamps to `[0, 1]`; timers sample using `gg_timer_tick_ms`, and uses/rounds hitting zero drain the bar completely and hide the panel.
-- **Fades** � token-based fades for TC/BR (0.25?s) so newer animations cancel older ones.
-- **Safety** � Every HUD thread `endon("disconnect")` and `endon("gg_gum_cleared")`; tokens guard against overlapping fades or late hint writes.
+- **Hint text**: `set_hint`, `clear_hint`, `update_hint`, `suppress_hint(ms)`, `end_suppress_hint()`; Wonderbar + Fire Sale uses `gg_wonder_label_suppress_ms` (default 35,000 ms) and reasserts automatically after `end_suppress_hint`.
+- **TC show/hide**: token-based and auto-hides after `GG_TC_AUTOHIDE_SECS` (7.5s); also hides immediately on selection change, round cleanup, `gg_gum_cleared`, death, or disconnect.
+- **BR delayed show**: token-based and cancelable on gum change, death, round rollover, or disconnect; default delay `gg_br_delayed_show_secs` (1.5s).
+- **BR progress**: clamps to `[0, 1]`; timers sample using `gg_timer_tick_ms`, and uses/rounds hitting zero drain the bar completely and hide the panel.
+- **Fades**: token-based fades for TC/BR (0.25s) so newer animations cancel older ones.
+- **Safety**: every HUD thread `endon("disconnect")` and `endon("gg_gum_cleared")`; tokens guard against overlapping fades or late hint writes.
 
 Usage from `gumballs.gsc`:
 
@@ -209,7 +210,7 @@ Usage from `gumballs.gsc`:
 
 ## 4. Gum Selection Logic
 
-* Build pool (`pool_full` ? `pool_remaining`)
+* Build pool (`pool_full` -> `pool_remaining`)
 
 * Watch `round_number` (0.25s cadence)
 
@@ -263,10 +264,11 @@ Usage from `gumballs.gsc`:
 
 ### Dispatcher
 
-* Function map: string ? int code (fast path)
+* Function map: string -> int code (fast path)
 * Fallback: string compare (exhaustive list)
-* Mapping adds user gum: `gift_card -> gg_fx_gift_card(self)`
-* Hidden Power dispatcher: `hidden_power -> gg_logic_hidden_power_start(self)`
+* Dispatch entries now include:
+  * `gift_card -> gg_logic_gift_card_start(self)`
+  * `hidden_power -> gg_logic_hidden_power_start(self)`
 
 ---
 
@@ -275,52 +277,43 @@ Usage from `gumballs.gsc`:
 ### Power-Ups
 
 * Cache Back (Max Ammo)
-* Dead of Nuclear Winter (Nuke) � gated off Kino der Toten (`zombie_theater`, `theater`)
+* Dead of Nuclear Winter (Nuke) - gated off Kino der Toten (`zombie_theater`, `theater`)
 * Kill Joy (Insta Kill)
 * Licensed Contractor (Carpenter)
 * Immolation Liquidation (Fire Sale) - triggers Wonderbar label suppression for 35s via helper
-* Who?s Keeping Score (Double Points)
+* Who's Keeping Score (Double Points)
 * On the House (Free Perk)
   * On Cosmodrome, picking up the drop sets `level.perk_bought` and calls `flag_set("perk_bought")` once through the new helper.
-* Fatal Contraption (Death Machine) � filtered out on maps where `helpers::map_allows_death_machine()` is false (dev overrides still honoured and logged)
+* Fatal Contraption (Death Machine) - filtered out on maps where `helpers::map_allows_death_machine()` is false (dev overrides still honoured and logged)
 * Extra Credit (Bonus Points)
-* Reign Drops (spawns the full bundle�Double Points, Insta-Kill, optional Fire Sale, Nuke, Carpenter, Max Ammo, Free Perk, Bonus Points, and Death Machine when allowed�sequentially on a forward-offset circle; uses consume once the sequence finishes)
+* Reign Drops - spawns the full bundle (Double Points, Insta-Kill, optional Fire Sale, Nuke, Carpenter, Max Ammo, Free Perk, Bonus Points, and Death Machine when allowed) sequentially on a forward-offset circle; uses consume once the sequence finishes.
 
 ### Weapons / Perks
 
-* Hidden Power - Instantly Pack-a-Punches your currently held weapon if an upgrade exists.
-
-* Wall Power (next wall buy only�never box�upgraded after a 3s grace window with a forced Pack-a-Punch swap)
-
-* Crate Power (next box gun upgraded, 3s grace)
-
-* Wonderbar (next box gun is WW)
-  * Removes the box result before granting the cached Wonder Weapon, restores start ammo, and auto-switches to the reward
-  * Mystery Box spin temporarily displays the Wonder Weapon model for the armed player
-  * Label shows WW name
-  * Label reasserts visibility every 0.25s until gum ends
-  * Optional Gersh/Quantum specials via `gg_wonder_include_specials` (default 0)
-  * Suppression triggered by Wonderbar helper calls (e.g., Immolation)
-
-* **Perkaholic**
-  * Auto, single-use gum that grants every perk available on the current map to players missing them.
+* Hidden Power - Instantly Pack-a-Punches your currently held weapon.
+* Wall Power - Next wall buy only (never box); upgrades after a 3s grace window with a forced Pack-a-Punch swap.
+* Crate Power - Next box gun upgraded (3s grace).
+* Wonderbar - Next box gun is a Wonder Weapon.
+  * Removes the box result before granting the cached Wonder Weapon, restores start ammo, and auto-switches to the reward.
+  * Mystery Box spin temporarily displays the Wonder Weapon model for the armed player.
+  * Label shows WW name.
+  * Label reasserts visibility every 0.25s until gum ends.
+  * Optional Gersh/Quantum specials via `gg_wonder_include_specials` (default 0).
+  * Suppression triggered by Wonderbar helper calls (e.g., Immolation).
+* Perkaholic - Auto, single-use gum that grants every perk available on the current map to players missing them.
   * Uses the helper perk cache so map-specific machines are respected and skips consumption when nothing is left to grant.
   * On Cosmodrome, asserts the perk VO flag once per activation by setting `level.perk_bought` and calling `flag_set("perk_bought")` via the helper after perks are granted.
   * Grant cadence is configurable with `gg_perkaholic_grant_delay_ms` (default 250ms) to keep HUD updates readable.
 
 ### Economy / Round Control
 
-* **Gift Card**
-  * User-activated gum that awards 30,000 points to the activating player immediately via the canonical score path.
-* **Round Robbin**
-  * Uses-based instant gum that wipes remaining zombies, optionally zeroes round counters, and lets the next round begin immediately.
+* Gift Card - Adds 30,000 points to the activating player immediately.
+* Round Robbin - Uses-based instant gum that wipes remaining zombies, optionally zeroes round counters, and lets the next round begin immediately.
   * Awards every player the configurable `gg_round_robbin_bonus` (default +1600) and consumes one BR use; `gg_round_robbin_force_transition` (default 1) ensures round trackers stay in sync on scripted maps.
-* **Shopping Free**
-  * Auto-activates on selection. Timed gum controlled by `gg_shopping_free_secs` (default 60s); it grants `gg_shopping_free_temp_points` (default 50000) in temporary credit and keeps the player's visible score from falling while credit remains.
+* Shopping Free - Auto-activates on selection. Timed gum controlled by `gg_shopping_free_secs` (default 60s); it grants `gg_shopping_free_temp_points` (default 50000) in temporary credit and keeps the player's visible score from falling while credit remains.
   * Re-shows the BR HUD in timer mode, debounces purchases through a refund monitor, and removes any leftover credit automatically when the timer expires.
-* Stock Option (ammo taken from stockpile for 60s)
-
-  * Fire monitor + expiry monitor
+* Stock Option - Ammo taken from stockpile for 60s.
+  * Fire monitor + expiry monitor.
 
 #### Testing
 
@@ -378,18 +371,17 @@ Usage from `gumballs.gsc`:
 
 ## 8. API Surfaces
 
-### Core ? HUD
+### Core / HUD
 
 * All HUD functions above: TC/BR show-hide with token-based fades, consumption bar helpers, delayed BR reveal, and the hint pipeline (`set`/`clear`/`update`/`suppress`/`end_suppress`)
 
-### Core ? Helpers
+### Core / Helpers
 
 * `helpers.map_allows("death_machine")`
 * `helpers.is_cosmodrome()` / `helpers.get_current_mapname()`
 * `helpers.get_wonder_pool(map)` (respects `gg_wonder_include_specials`)
 * `helpers.get_weapon_display_name(weapon)`
 * `helpers.upgrade_weapon(player, base)`
-* `helpers.drop_powerup(player, code, pos|dist)`
 * `helpers.player_has_all_map_perks(player)`
 
 ### Legacy Stubs (no-op, for compatibility)
@@ -413,8 +405,8 @@ Usage from `gumballs.gsc`:
 * Selection cadence (round-based vs. alternative)
 * Override policy for manual gums
 * Dev toggles: `gg_enable` and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.
-* `gg_debug` (0/1, default 0) � enables console logging.
-* `gg_debug_hud` (0/1, default 0) � shows log messages in yellow debug HUD.
+* `gg_debug` (0/1, default 0) - enables console logging.
+* `gg_debug_hud` (0/1, default 0) - shows log messages in yellow debug HUD.
 * Build 5 consumption DVARs (safe fallbacks):
   - `gg_default_uses` (int, default 3)
   - `gg_default_rounds` (int, default 3)
@@ -450,7 +442,7 @@ Usage from `gumballs.gsc`:
 ## 10. Build Order
 
 1. Skeleton registry + HUD stubs
-2. Round watcher + gum selection ? dummy HUD updates
+2. Round watcher + gum selection -> dummy HUD updates
 3. Dispatcher + input + dummy effect stubs
 4. Position Hud Elements
 5. Consumption logic (uses/rounds/timer)
@@ -495,8 +487,8 @@ stateDiagram-v2
     Armed --> Selected: trigger satisfied\nconsume 1 use
     Instant --> Selected: after effect
 
-    Selected --> NoGum: uses == 0 ? hide BR
-    Active --> NoGum: uses == 0 ? hide BR
+    Selected --> NoGum: uses == 0 -> hide BR
+    Active --> NoGum: uses == 0 -> hide BR
 
     %% Global interrupts
     Selected --> NoGum: gg_gum_cleared / death / disconnect
@@ -542,3 +534,6 @@ stateDiagram-v2
 - Legacy ad-hoc `print`/`iprintln` calls were replaced for consistency.
 
 ---
+
+
+
