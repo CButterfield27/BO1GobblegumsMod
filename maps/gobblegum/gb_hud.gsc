@@ -809,6 +809,7 @@ gg_hud_precache()
     PrecacheShader("bo6_wall_power");
     PrecacheShader("bo6_who_keeping_score");
     PrecacheShader("bo6_wonderbar");
+    preCacheShader("bo7_gift_card");
 }
 
 init_player(player)

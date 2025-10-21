@@ -159,6 +159,26 @@ gg_registry_init()
     gum.rarity_weight = 1;
     gg_register_gum(gum.id, gum);
 
+    // Gift Card - Uses
+    gum = spawnstruct();
+    gum.id = "gift_card";
+    gum.name = "Gift Card";
+    gum.shader = "bo7_gift_card";
+    gum.desc = "Adds 30,000 points to your score.";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
+    gum.activate_func = "gg_fx_gift_card";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.tags[0] = "economy";
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    gg_register_gum(gum.id, gum);
+
     // Fatal Contraption (Death Machine) - Uses (map-allowed)
     gum = spawnstruct();
     gum.id = "fatal_contraption";
@@ -853,6 +873,7 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_round_robbin_force_transition", 1);
     gg_ensure_dvar_float("gg_shopping_free_secs", 60.0);
     gg_ensure_dvar_int("gg_shopping_free_temp_points", 50000);
+    gg_ensure_dvar_int("gg_gift_card_points", 30000);
     gg_ensure_dvar_int("gg_perkaholic_grant_delay_ms", 250);
 
     // Cache commonly used defaults for quick access
@@ -937,6 +958,10 @@ gg_cache_config()
     level.gg_config.shopping_free_temp_points = GetDvarInt("gg_shopping_free_temp_points");
     if (level.gg_config.shopping_free_temp_points < 0)
         level.gg_config.shopping_free_temp_points = 0;
+
+    level.gg_config.gift_card_points = GetDvarInt("gg_gift_card_points");
+    if (level.gg_config.gift_card_points < 0)
+        level.gg_config.gift_card_points = 0;
 
     level.gg_config.perkaholic_grant_delay_ms = GetDvarInt("gg_perkaholic_grant_delay_ms");
     if (level.gg_config.perkaholic_grant_delay_ms < 0)
@@ -2507,6 +2532,7 @@ gg_init_dispatcher()
     gg_register_dispatcher_entry("gg_fx_on_the_house", ::gg_fx_on_the_house);
     gg_register_dispatcher_entry("gg_fx_fatal_contraption", ::gg_fx_fatal_contraption);
     gg_register_dispatcher_entry("gg_fx_extra_credit", ::gg_fx_extra_credit);
+    gg_register_dispatcher_entry("gg_fx_gift_card", ::gg_fx_gift_card);
     gg_register_dispatcher_entry("gg_fx_reign_drops", ::gg_fx_reign_drops);
     gg_register_dispatcher_entry("gg_fx_hidden_power", ::gg_fx_hidden_power);
     gg_register_dispatcher_entry("gg_fx_crate_power", ::gg_fx_crate_power);
@@ -2689,6 +2715,8 @@ gg_dispatch_string_fallback(func_name)
         return ::gg_fx_fatal_contraption;
     if (func_name == "gg_fx_extra_credit")
         return ::gg_fx_extra_credit;
+    if (func_name == "gg_fx_gift_card")
+        return ::gg_fx_gift_card;
     if (func_name == "gg_fx_reign_drops")
         return ::gg_fx_reign_drops;
     if (func_name == "gg_fx_hidden_power")
@@ -4178,11 +4206,39 @@ gg_get_shopping_free_temp_points()
     return 50000;
 }
 
+gg_get_gift_card_points()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.gift_card_points))
+        return level.gg_config.gift_card_points;
+    return 30000;
+}
+
 gg_get_perkaholic_grant_delay_secs()
 {
     if (isdefined(level.gg_config) && isdefined(level.gg_config.perkaholic_grant_delay_ms))
         return level.gg_config.perkaholic_grant_delay_ms / 1000.0;
     return 0.25;
+}
+
+gg_fx_gift_card(player, gum)
+{
+    if (!isdefined(player))
+        return;
+
+    amount = gg_get_gift_card_points();
+    amount = int(amount);
+    if (amount < 0)
+        amount = 0;
+
+    player maps\_zombiemode_score::add_to_player_score(amount);
+
+    hint = "Gift Card: +" + amount + " points";
+    gg_show_hint_if_enabled(player, hint);
+
+    if (gg_debug_enabled())
+        [[ level.gb_helpers.gg_log ]]("gift card activated (points=" + amount + ")");
+
+    gg_on_gum_used();
 }
 
 gg_round_robbin_award_points()

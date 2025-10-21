@@ -123,6 +123,7 @@ Positioning
 
 * Fade in on selection (token-based)
 * Uses line hides automatically when `gum.uses_description` is empty and shares the same fade/autohide tokens as the rest of the block
+* Gift Card uses line: "Press D-Pad Right to activate. (1 use)"
 * Auto-hide after `GG_TC_AUTOHIDE_SECS` (default 7.5s) using a guarded token; newer shows invalidate pending hides.
 * Hides immediately on selection change, round cleanup, `gg_gum_cleared`, death, or disconnect.
 * Refresh on state change
@@ -264,6 +265,7 @@ Usage from `gumballs.gsc`:
 
 * Function map: string ? int code (fast path)
 * Fallback: string compare (exhaustive list)
+* Mapping adds user gum: `gift_card -> gg_fx_gift_card(self)`
 
 ---
 
@@ -307,6 +309,8 @@ Usage from `gumballs.gsc`:
 
 ### Economy / Round Control
 
+* **Gift Card**
+  * User-activated gum that awards 30,000 points to the activating player immediately via the canonical score path.
 * **Round Robbin**
   * Uses-based instant gum that wipes remaining zombies, optionally zeroes round counters, and lets the next round begin immediately.
   * Awards every player the configurable `gg_round_robbin_bonus` (default +1600) and consumes one BR use; `gg_round_robbin_force_transition` (default 1) ensures round trackers stay in sync on scripted maps.
@@ -327,6 +331,14 @@ Usage from `gumballs.gsc`:
   bind 8 "+actionslot 4"
   ```
   Press the bound key to verify all remaining zombies die, every player receives the bonus, and the next round starts cleanly.
+* **Gift Card**
+  ```
+  set gg_enable 1
+  set gg_debug 1
+  set gg_force_gum gift_card
+  bind 8 "+actionslot 4"
+  ```
+  Activate to add +30000 points instantly, confirm the score updates, and the BR HUD hides after the single use.
 * **Shopping Free**
   ```
   set gg_enable 1
@@ -429,6 +441,7 @@ Usage from `gumballs.gsc`:
   - `gg_round_robbin_force_transition` (0/1, default 1) - force `level.zombie_total` to zero so round counters advance immediately.
   - `gg_shopping_free_secs` (float, default 60.0) - Shopping Free timer duration (seconds).
   - `gg_shopping_free_temp_points` (int, default 50000) - temporary credit granted while Shopping Free is active.
+  - `gg_gift_card_points` (int, default 30000) - points awarded to the activating player when Gift Card fires.
   - `gg_perkaholic_grant_delay_ms` (int, default 250) - delay between individual perk grants for Perkaholic (milliseconds).
 
 ---
