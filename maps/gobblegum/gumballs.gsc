@@ -835,15 +835,15 @@ gg_selection_close(player, reason, hide_ui, reset_state)
 gg_init_dvars()
 {
     gg_ensure_dvar_int("gg_enable", 1);
-    gg_ensure_dvar_int("gg_debug", 0);
-    gg_ensure_dvar_int("gg_debug_hud", 0);
+    gg_ensure_dvar_int("gg_debug", 1);
+    gg_ensure_dvar_int("gg_debug_hud", 1);
     gg_ensure_dvar_float("gg_round1_delay", 10.0);
     gg_ensure_dvar_int("gg_select_cadence_ms", 250);
     gg_ensure_dvar_string("gg_force_gum", "");
     gg_ensure_dvar_int("gg_debug_select", 0);
     gg_ensure_dvar_int("gg_input_enable", 1);
     gg_ensure_dvar_int("gg_debounce_ms", 200);
-    gg_ensure_dvar_int("gg_log_dispatch", 0);
+    gg_ensure_dvar_int("gg_log_dispatch", 1);
     gg_ensure_dvar_int("gg_auto_on_select", 1);
     gg_ensure_dvar_int("gg_simulate_effects", 0);
 
@@ -852,7 +852,7 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_default_rounds", 3);
     gg_ensure_dvar_float("gg_default_timer_secs", 60.0);
     gg_ensure_dvar_int("gg_timer_tick_ms", 100);
-    gg_ensure_dvar_int("gg_consume_logs", 0);
+    gg_ensure_dvar_int("gg_consume_logs", 1);
 
     // Build 6 power-up knobs
     gg_ensure_dvar_float("gg_drop_forward_units", 70.0);
@@ -1000,6 +1000,90 @@ gg_init_powerup_tables()
         labels["bonus_points_player"] = "Bonus Points";
         level.gg_powerup_labels = labels;
     }
+
+    gg_require_powerup("bonus_points_player");
+}
+
+gg_require_powerup(code)
+{
+    success = gg_require_powerup_now(code);
+    if (success)
+        return true;
+
+    gg_queue_powerup_retry(code);
+    return false;
+}
+
+gg_require_powerup_now(code)
+{
+    if (!isdefined(code) || code == "")
+        return false;
+
+    if (!isdefined(level))
+        return false;
+
+    if (!isdefined(level.zombie_powerups))
+        return false;
+
+    if (!isdefined(level.zombie_powerup_array))
+        return false;
+
+    if (!isdefined(level.zombie_special_drop_array))
+        return false;
+
+    if (isdefined(level.zombie_powerups[code]))
+        return true;
+
+    ensured = false;
+
+    switch (code)
+    {
+    case "bonus_points_player":
+        if (isdefined(maps\_zombiemode_powerups::add_zombie_powerup))
+            maps\_zombiemode_powerups::add_zombie_powerup("bonus_points_player", "zombie_z_money_icon", &"ZOMBIE_POWERUP_BONUS_POINTS", true, false, false);
+        ensured = isdefined(level.zombie_powerups) && isdefined(level.zombie_powerups["bonus_points_player"]);
+        break;
+    default:
+        break;
+    }
+
+    if (ensured && gg_debug_enabled() && isdefined(level.gb_helpers) && isdefined(level.gb_helpers.gg_log))
+        [[ level.gb_helpers.gg_log ]]("powerup ensured: " + code);
+
+    return ensured;
+}
+
+gg_queue_powerup_retry(code)
+{
+    if (!isdefined(code) || code == "")
+        return;
+
+    if (!isdefined(level))
+        return;
+
+    if (!isdefined(level.gg_pending_powerup_checks))
+        level.gg_pending_powerup_checks = spawnstruct();
+
+    if (isdefined(level.gg_pending_powerup_checks[code]) && level.gg_pending_powerup_checks[code])
+        return;
+
+    level.gg_pending_powerup_checks[code] = true;
+    level thread gg_require_powerup_retry(code);
+}
+
+gg_require_powerup_retry(code)
+{
+    attempts = 0;
+    while (attempts < 20)
+    {
+        wait(0.05);
+        if (gg_require_powerup_now(code))
+            break;
+        attempts++;
+    }
+
+    if (isdefined(level.gg_pending_powerup_checks))
+        level.gg_pending_powerup_checks[code] = false;
 }
 
 gg_powerup_code_for_gum(gum)
@@ -1041,6 +1125,7 @@ gg_powerup_code_for_id(id)
     case "immolation": code = "fire_sale"; break;
     case "on_the_house": code = "free_perk"; break;
     case "fatal_contraption": code = "minigun"; break;
+    case "extra_credit": code = "bonus_points_player"; break;
     }
 
     if (isdefined(code) && code != "")
@@ -1328,6 +1413,32 @@ gg_spawn_powerup_for_gum(player, gum, code)
 {
     if (!isdefined(code) || code == "")
         return false;
+
+    if (code == "bonus_points_player")
+    {
+        ensured = gg_require_powerup("bonus_points_player");
+        if (!ensured)
+        {
+            attempts = 0;
+            while (attempts < 3)
+            {
+                wait(0.05);
+                if (gg_require_powerup_now("bonus_points_player"))
+                {
+                    ensured = true;
+                    break;
+                }
+                attempts++;
+            }
+
+            if (!ensured)
+            {
+                if (gg_should_log_dispatch())
+                    [[ level.gb_helpers.gg_log ]]("dispatch: power-up registration pending for bonus_points_player");
+                return false;
+            }
+        }
+    }
 
     gum_id = "<unknown>";
     if (isdefined(gum) && isdefined(gum.id))
@@ -4461,7 +4572,7 @@ gg_round_robbin_kill_remaining()
 
 gg_fx_extra_credit(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Economy/Round");
+    gg_powerup_single_drop(player, gum);
 }
 
 gg_fx_round_robbin(player, gum)

@@ -205,6 +205,7 @@ Usage from `gumballs.gsc`:
 * **Delayed show**: fade in BR after ~1.5s if needed
 * Anchors respect safe area
 * Accessibility: text is primary, colors secondary
+* Uses-based user gums (e.g., Extra Credit) show the TC uses line and decrement the BR uses bar on each activation until all uses are consumed.
 
 ---
 
@@ -285,8 +286,10 @@ Usage from `gumballs.gsc`:
 * On the House (Free Perk)
   * On Cosmodrome, picking up the drop sets `level.perk_bought` and calls `flag_set("perk_bought")` once through the new helper.
 * Fatal Contraption (Death Machine) - filtered out on maps where `helpers::map_allows_death_machine()` is false (dev overrides still honoured and logged)
-* Extra Credit (Bonus Points)
+* Extra Credit (Bonus Points) - spawns a Bonus Points power-up on activation using the same single-drop path as Dead of Nuclear Winter (forward offset, dispatcher log, hint pipeline).
 * Reign Drops - spawns the full bundle (Double Points, Insta-Kill, optional Fire Sale, Nuke, Carpenter, Max Ammo, Free Perk, Bonus Points, and Death Machine when allowed) sequentially on a forward-offset circle; uses consume once the sequence finishes.
+
+Bonus Points is registered at init through the alias/include path so `maps\_zombiemode_powerups::specific_powerup_drop("bonus_points_player", pos)` can spawn both forced and natural drops on supported maps.
 
 ### Weapons / Perks
 
@@ -316,6 +319,30 @@ Usage from `gumballs.gsc`:
   * Fire monitor + expiry monitor.
 
 #### Testing
+
+Preparation:
+
+```
+set gg_enable 1
+set gg_debug 1
+```
+
+* **Extra Credit -> Bonus Points**
+  1. Force the gum:
+     ```
+     set gg_force_gum extra_credit
+     ```
+  2. Load a supported map and wait for selection. TC should show Extra Credit with the uses line.
+  3. Press D-Pad Right (`+actionslot 4`).
+     - Expect a `bonus_points_player` drop to spawn in front of the player with the normal forward offset.
+     - BR uses decrements by one; the slot hides once all four uses are spent.
+     - If `gg_powerup_hints` is enabled, the BR hint briefly shows the Bonus Points label.
+     - With `gg_debug` or `gg_log_dispatch` on, a concise log line confirms the dispatcher fired.
+
+* **Bonus Points availability**
+  1. Clear any forced gum (`set gg_force_gum ""`) and play a session on a map that normally allows the drop.
+  2. Kill zombies until natural drops appear; Bonus Points can now spawn via the standard tables.
+  3. Optional: developers can call `specific_powerup_drop("bonus_points_player", <pos>)` in a debug build to validate visuals and pickup behavior (do not ship custom commands).
 
 * **Round Robbin**
   ```
