@@ -835,15 +835,15 @@ gg_selection_close(player, reason, hide_ui, reset_state)
 gg_init_dvars()
 {
     gg_ensure_dvar_int("gg_enable", 1);
-    gg_ensure_dvar_int("gg_debug", 1);
-    gg_ensure_dvar_int("gg_debug_hud", 1);
+    gg_ensure_dvar_int("gg_debug", 0);
+    gg_ensure_dvar_int("gg_debug_hud", 0);
     gg_ensure_dvar_float("gg_round1_delay", 10.0);
     gg_ensure_dvar_int("gg_select_cadence_ms", 250);
     gg_ensure_dvar_string("gg_force_gum", "");
     gg_ensure_dvar_int("gg_debug_select", 0);
     gg_ensure_dvar_int("gg_input_enable", 1);
     gg_ensure_dvar_int("gg_debounce_ms", 200);
-    gg_ensure_dvar_int("gg_log_dispatch", 1);
+    gg_ensure_dvar_int("gg_log_dispatch", 0);
     gg_ensure_dvar_int("gg_auto_on_select", 1);
     gg_ensure_dvar_int("gg_simulate_effects", 0);
 
@@ -852,7 +852,7 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_default_rounds", 3);
     gg_ensure_dvar_float("gg_default_timer_secs", 60.0);
     gg_ensure_dvar_int("gg_timer_tick_ms", 100);
-    gg_ensure_dvar_int("gg_consume_logs", 1);
+    gg_ensure_dvar_int("gg_consume_logs", 0);
 
     // Build 6 power-up knobs
     gg_ensure_dvar_float("gg_drop_forward_units", 70.0);
