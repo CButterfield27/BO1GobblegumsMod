@@ -276,6 +276,20 @@ include_powerups()
 	include_powerup( "full_ammo" );
 	include_powerup( "carpenter" );
 	include_powerup( "fire_sale" );
+	
+	// WW (02-04-11): Added minigun
+	PreCacheItem( "minigun_zm" );
+	include_powerup( "minigun" );
+	
+	include_powerup( "free_perk" );
+
+	// for quantum bomb
+	// include_powerup( "random_weapon" );
+	include_powerup( "bonus_points_player" );
+	include_powerup( "bonus_points_team" );
+	// include_powerup( "lose_points_team" );
+	// include_powerup( "lose_perk" );
+	// include_powerup( "empty_clip" );
 }
 
 add_powerups_after_round_1()
