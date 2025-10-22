@@ -26,7 +26,7 @@ gumballs_init()
 
     if (gg_debug_enabled())
     {
-        iprintlnbold("^3Gumballs: init (registry ready, watcher live)");
+        [[ level.gb_helpers.gg_log ]]("init: registry ready, watchers live");
     }
 }
 
@@ -47,6 +47,7 @@ gg_registry_init()
     gum.name = "Perkaholic";
     gum.shader = "bo6_perkaholic";
     gum.desc = "All map perks";
+    gum.uses_description = "Active";
     gum.activation = 1; // ACT_AUTO
     gum.consumption = 3; // CONS_USES (uses-based)
     gum.base_uses = 1;
@@ -67,6 +68,7 @@ gg_registry_init()
     gum.name = "Wall Power";
     gum.shader = "bo6_wall_power";
     gum.desc = "Next wall-buy is PaP";
+    gum.uses_description = "Active";
     gum.activation = 1; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 1;
@@ -86,6 +88,7 @@ gg_registry_init()
     gum.name = "Cache Back";
     gum.shader = "bo6_cache_back";
     gum.desc = "Spawns a Max Ammo Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 1;
@@ -104,6 +107,7 @@ gg_registry_init()
     gum.name = "Crate Power";
     gum.shader = "bo6_crate_power";
     gum.desc = "Next Mystery Box gun is PaP";
+    gum.uses_description = "Active";
     gum.activation = 1; // AUTO
     gum.consumption = 3; // USES
     gum.base_uses = 1;
@@ -123,6 +127,7 @@ gg_registry_init()
     gum.name = "Dead of Nuclear Winter";
     gum.shader = "t7_hud_zm_bgb_dead_of_nuclear_winter";
     gum.desc = "Spawns a Nuke Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 2;
@@ -141,6 +146,7 @@ gg_registry_init()
     gum.name = "Extra Credit";
     gum.shader = "t7_hud_zm_bgb_extra_credit";
     gum.desc = "Spawns a Bonus Points Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (4 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 4;
@@ -153,12 +159,33 @@ gg_registry_init()
     gum.rarity_weight = 1;
     gg_register_gum(gum.id, gum);
 
+    // Gift Card - Uses
+    gum = spawnstruct();
+    gum.id = "gift_card";
+    gum.name = "Gift Card";
+    gum.shader = "bo7_gift_card";
+    gum.desc = "Adds 30,000 points to your score.";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
+    gum.activate_func = "gg_logic_gift_card_start";
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.tags[0] = "economy";
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    gg_register_gum(gum.id, gum);
+
     // Fatal Contraption (Death Machine) - Uses (map-allowed)
     gum = spawnstruct();
     gum.id = "fatal_contraption";
     gum.name = "Fatal Contraption";
     gum.shader = "t7_hud_zm_bgb_fatal_contraption";
     gum.desc = "Spawns a Death Machine Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 2;
@@ -176,18 +203,20 @@ gg_registry_init()
     gum.id = "hidden_power";
     gum.name = "Hidden Power";
     gum.shader = "bo6_hidden_power";
-    gum.desc = "PaP current weapon";
+    gum.desc = "Pack-a-Punch your current weapon instantly.";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 1;
-    gum.activate_func = "gg_fx_hidden_power";
+    gum.activate_func = "hidden_power";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
+    gum.tags[0] = "weapon";
     gum.whitelist = [];
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
+    gg_register_gum(gum.id, gum);
 
     // Immolation Liquidation (Fire Sale) - Uses
     gum = spawnstruct();
@@ -195,6 +224,7 @@ gg_registry_init()
     gum.name = "Immolation Liquidation";
     gum.shader = "bo6_immolation_liquidation";
     gum.desc = "Spawns a Fire Sale Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (3 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 3;
@@ -213,6 +243,7 @@ gg_registry_init()
     gum.name = "Kill Joy";
     gum.shader = "bo6_kill_joy";
     gum.desc = "Spawns an Insta-Kill Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 2;
@@ -231,6 +262,7 @@ gg_registry_init()
     gum.name = "Licensed Contractor";
     gum.shader = "t7_hud_zm_bgb_licensed_contractor";
     gum.desc = "Spawns a Carpenter Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (3 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 3;
@@ -249,6 +281,7 @@ gg_registry_init()
     gum.name = "On the House";
     gum.shader = "bo6_on_the_house";
     gum.desc = "Spawns a free perk Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 1;
@@ -267,6 +300,7 @@ gg_registry_init()
     gum.name = "Reign Drops";
     gum.shader = "bo6_reign_drops";
     gum.desc = "Spawns all core Power-Ups at once";
+    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 2;
@@ -285,6 +319,7 @@ gg_registry_init()
     gum.name = "Round Robbin";
     gum.shader = "t7_hud_zm_bgb_round_robbin";
     gum.desc = "Ends the current round. All players gain 1600 points";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 1;
@@ -305,6 +340,7 @@ gg_registry_init()
     gum.name = "Shopping Free";
     gum.shader = "t7_hud_zm_bgb_shopping_free";
     gum.desc = "All purchases are free";
+    gum.uses_description = "Lasts 1 minute";
     gum.activation = 1; // AUTO
     gum.consumption = 1; // TIMED
     gum.base_duration_secs = gg_get_shopping_free_secs();
@@ -316,7 +352,7 @@ gg_registry_init()
     gum.blacklist = [];
     gum.exclusion_groups = [];
     gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
+    // gg_register_gum(gum.id, gum);
 
     // Stock Option - Timed
     gum = spawnstruct();
@@ -324,6 +360,7 @@ gg_registry_init()
     gum.name = "Stock Option";
     gum.shader = "bo6_stock_option";
     gum.desc = "Ammo is taken from the player's stockpile";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 1; // TIMED
     gum.base_duration_secs = 60;
@@ -342,6 +379,7 @@ gg_registry_init()
     gum.name = "Who's Keeping Score";
     gum.shader = "bo6_who_keeping_score";
     gum.desc = "Spawns a Double Points Power-Up";
+    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
     gum.base_uses = 2;
@@ -360,6 +398,7 @@ gg_registry_init()
     gum.name = "Wonderbar";
     gum.shader = "bo6_wonderbar";
     gum.desc = "Next box gun is Wonder Weapon";
+    gum.uses_description = "Active";
     gum.activation = 1; // AUTO
     gum.consumption = 3; // USES
     gum.base_uses = 1;
@@ -638,7 +677,7 @@ gg_apply_selected_gum(player)
 {
     if (gg_debug_enabled())
     {
-        iprintlnbold("^3Gumballs: apply selected gum (no-op, Step 2)");
+        [[ level.gb_helpers.gg_log ]]("apply selected gum placeholder (step 2)");
     }
 }
 
@@ -667,7 +706,7 @@ gg_show_gum_selection(player, gum, round_number)
     player.gg.br_pending_gum = gum;
     player.gg.br_pending_gum_id = gum.id;
 
-    msg = "Gumballs: selected " + gum.id;
+    msg = "selected " + gum.id;
     if (isdefined(round_number))
     {
         msg = msg + " (round " + round_number + ")";
@@ -790,13 +829,14 @@ gg_selection_close(player, reason, hide_ui, reset_state)
     }
 
     if (gg_debug_select_enabled() && isdefined(reason))
-        gg_log_select("Gumballs: selection closed (" + reason + ")");
+        gg_log_select("selection closed (" + reason + ")");
 }
 
 gg_init_dvars()
 {
     gg_ensure_dvar_int("gg_enable", 1);
     gg_ensure_dvar_int("gg_debug", 0);
+    gg_ensure_dvar_int("gg_debug_hud", 0);
     gg_ensure_dvar_float("gg_round1_delay", 10.0);
     gg_ensure_dvar_int("gg_select_cadence_ms", 250);
     gg_ensure_dvar_string("gg_force_gum", "");
@@ -834,6 +874,7 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_round_robbin_force_transition", 1);
     gg_ensure_dvar_float("gg_shopping_free_secs", 60.0);
     gg_ensure_dvar_int("gg_shopping_free_temp_points", 50000);
+    gg_ensure_dvar_int("gg_gift_card_points", 30000);
     gg_ensure_dvar_int("gg_perkaholic_grant_delay_ms", 250);
 
     // Cache commonly used defaults for quick access
@@ -919,6 +960,10 @@ gg_cache_config()
     if (level.gg_config.shopping_free_temp_points < 0)
         level.gg_config.shopping_free_temp_points = 0;
 
+    level.gg_config.gift_card_points = GetDvarInt("gg_gift_card_points");
+    if (level.gg_config.gift_card_points < 0)
+        level.gg_config.gift_card_points = 0;
+
     level.gg_config.perkaholic_grant_delay_ms = GetDvarInt("gg_perkaholic_grant_delay_ms");
     if (level.gg_config.perkaholic_grant_delay_ms < 0)
         level.gg_config.perkaholic_grant_delay_ms = 0;
@@ -955,6 +1000,90 @@ gg_init_powerup_tables()
         labels["bonus_points_player"] = "Bonus Points";
         level.gg_powerup_labels = labels;
     }
+
+    gg_require_powerup("bonus_points_player");
+}
+
+gg_require_powerup(code)
+{
+    success = gg_require_powerup_now(code);
+    if (success)
+        return true;
+
+    gg_queue_powerup_retry(code);
+    return false;
+}
+
+gg_require_powerup_now(code)
+{
+    if (!isdefined(code) || code == "")
+        return false;
+
+    if (!isdefined(level))
+        return false;
+
+    if (!isdefined(level.zombie_powerups))
+        return false;
+
+    if (!isdefined(level.zombie_powerup_array))
+        return false;
+
+    if (!isdefined(level.zombie_special_drop_array))
+        return false;
+
+    if (isdefined(level.zombie_powerups[code]))
+        return true;
+
+    ensured = false;
+
+    switch (code)
+    {
+    case "bonus_points_player":
+        if (isdefined(maps\_zombiemode_powerups::add_zombie_powerup))
+            maps\_zombiemode_powerups::add_zombie_powerup("bonus_points_player", "zombie_z_money_icon", &"ZOMBIE_POWERUP_BONUS_POINTS", true, false, false);
+        ensured = isdefined(level.zombie_powerups) && isdefined(level.zombie_powerups["bonus_points_player"]);
+        break;
+    default:
+        break;
+    }
+
+    if (ensured && gg_debug_enabled() && isdefined(level.gb_helpers) && isdefined(level.gb_helpers.gg_log))
+        [[ level.gb_helpers.gg_log ]]("powerup ensured: " + code);
+
+    return ensured;
+}
+
+gg_queue_powerup_retry(code)
+{
+    if (!isdefined(code) || code == "")
+        return;
+
+    if (!isdefined(level))
+        return;
+
+    if (!isdefined(level.gg_pending_powerup_checks))
+        level.gg_pending_powerup_checks = spawnstruct();
+
+    if (isdefined(level.gg_pending_powerup_checks[code]) && level.gg_pending_powerup_checks[code])
+        return;
+
+    level.gg_pending_powerup_checks[code] = true;
+    level thread gg_require_powerup_retry(code);
+}
+
+gg_require_powerup_retry(code)
+{
+    attempts = 0;
+    while (attempts < 20)
+    {
+        wait(0.05);
+        if (gg_require_powerup_now(code))
+            break;
+        attempts++;
+    }
+
+    if (isdefined(level.gg_pending_powerup_checks))
+        level.gg_pending_powerup_checks[code] = false;
 }
 
 gg_powerup_code_for_gum(gum)
@@ -996,6 +1125,7 @@ gg_powerup_code_for_id(id)
     case "immolation": code = "fire_sale"; break;
     case "on_the_house": code = "free_perk"; break;
     case "fatal_contraption": code = "minigun"; break;
+    case "extra_credit": code = "bonus_points_player"; break;
     }
 
     if (isdefined(code) && code != "")
@@ -1151,7 +1281,7 @@ gg_spawn_firesale_test_drop(player)
     if (gg_spawn_powerup_drop(player, "fire_sale", 0))
     {
         if (gg_debug_enabled())
-            iprintln("^3Gumballs: Test Fire Sale dropped");
+            [[ level.gb_helpers.gg_log ]]("test fire sale drop spawned");
     }
 }
 
@@ -1187,7 +1317,7 @@ gg_log_powerup_spawn(gum_id, code)
     if (!isdefined(code_label) || code_label == "")
         code_label = "<none>";
 
-    iprintln("^3Gumballs: power-up " + id_label + " -> " + code_label);
+    [[ level.gb_helpers.gg_log ]]("power-up request: " + id_label + " -> " + code_label);
 }
 
 gg_can_spawn_death_machine()
@@ -1226,7 +1356,7 @@ gg_wonderbar_suppress_label(player, duration)
         [[ level.gb_hud.suppress_hint ]](player, suppress_ms);
 
     if (gg_debug_enabled())
-        iprintln("^3Gumballs: Wonderbar label suppressed (" + suppress_secs + "s)");
+        [[ level.gb_helpers.gg_log ]]("wonderbar label suppressed for " + suppress_secs + "s");
 }
 
 gg_spawn_powerup_drop(player, code, fan_offset)
@@ -1284,6 +1414,32 @@ gg_spawn_powerup_for_gum(player, gum, code)
     if (!isdefined(code) || code == "")
         return false;
 
+    if (code == "bonus_points_player")
+    {
+        ensured = gg_require_powerup("bonus_points_player");
+        if (!ensured)
+        {
+            attempts = 0;
+            while (attempts < 3)
+            {
+                wait(0.05);
+                if (gg_require_powerup_now("bonus_points_player"))
+                {
+                    ensured = true;
+                    break;
+                }
+                attempts++;
+            }
+
+            if (!ensured)
+            {
+                if (gg_should_log_dispatch())
+                    [[ level.gb_helpers.gg_log ]]("dispatch: power-up registration pending for bonus_points_player");
+                return false;
+            }
+        }
+    }
+
     gum_id = "<unknown>";
     if (isdefined(gum) && isdefined(gum.id))
         gum_id = gum.id;
@@ -1301,7 +1457,7 @@ gg_powerup_single_drop(player, gum)
     if (!isdefined(code) || code == "")
     {
         if (gg_should_log_dispatch())
-            iprintln("^3Gumballs: missing power-up alias for " + gum_id);
+            [[ level.gb_helpers.gg_log ]]("dispatch: power-up alias missing for " + gum_id);
 
         gg_mark_activation_skip(player);
         return false;
@@ -1310,7 +1466,7 @@ gg_powerup_single_drop(player, gum)
     if (!gg_spawn_powerup_for_gum(player, gum, code))
     {
         if (gg_should_log_dispatch())
-            iprintln("^3Gumballs: failed to spawn power-up for " + gum_id);
+            [[ level.gb_helpers.gg_log ]]("dispatch: power-up spawn failed for " + gum_id);
 
         gg_mark_activation_skip(player);
         return false;
@@ -1356,7 +1512,7 @@ gg_collect_reign_drop_codes()
         if (!isdefined(code) || code == "")
         {
             if (gg_should_log_dispatch())
-                iprintln("^3Gumballs: missing Reign Drops alias for " + alias_id);
+                [[ level.gb_helpers.gg_log ]]("dispatch: reign drops alias missing for " + alias_id);
             continue;
         }
 
@@ -1460,7 +1616,7 @@ gg_reign_drop_sequence_thread(gum_id, codes, spacing, expected_token)
         gg_log_powerup_spawn(gum_id, drop_code);
 
         if (gg_debug_enabled())
-            iprintln("^3Gumballs: Reign Drops [" + (i + 1) + "/" + total + "] " + drop_code + " @ " + gg_vector_to_string(drop_pos));
+            [[ level.gb_helpers.gg_log ]]("reign drops drop [" + (i + 1) + "/" + total + "] " + drop_code + " @ " + gg_vector_to_string(drop_pos));
 
         spawned_any = true;
 
@@ -1493,9 +1649,9 @@ gg_reign_drops_consume_activation(gum_id, expected_token)
     }
 
     if (gg_consume_logs_enabled())
-        iprintln("^3Gumballs: Reign Drops consumed -> remaining=" + self.gg.uses_remaining);
+        [[ level.gb_helpers.gg_log ]]("reign drops use consumed (remaining=" + self.gg.uses_remaining + ")");
     else if (gg_debug_enabled())
-        iprintln("^3Gumballs: Reign Drops remaining=" + self.gg.uses_remaining);
+        [[ level.gb_helpers.gg_log ]]("reign drops uses remaining=" + self.gg.uses_remaining);
 
     gg_set_effect_state(self, undefined, false);
     gg_on_gum_used();
@@ -1812,7 +1968,7 @@ gg_handle_round_start(round_number)
                 gg_selection_close(player, "round_change_unused", true, true);
                 player notify("gg_gum_cleared");
                 if (gg_debug_select_enabled())
-                    gg_log_select("Gumballs: unused gum discarded on round change");
+                    gg_log_select("unused gum discarded on round change");
             }
         }
         else if (selection_active)
@@ -1865,7 +2021,7 @@ gg_assign_gum_for_round(player, round_number)
     gum = gg_pull_next_gum(player);
     if (!isdefined(gum))
     {
-        gg_log_select("Gumballs: no gum available for selection");
+        gg_log_select("no gum available for selection");
         return;
     }
 
@@ -1906,12 +2062,12 @@ gg_refresh_player_pools(player)
     }
 
     gg_build_player_full_pool(player);
-    gg_log_select("Gumballs: pool_full size=" + player.gg.pool_full.size);
+    gg_log_select("pool_full size=" + player.gg.pool_full.size);
 
     if (!isdefined(player.gg.pool_remaining) || player.gg.pool_remaining.size == 0)
     {
         gg_reset_player_remaining_pool(player);
-        gg_log_select("Gumballs: reset selection pool");
+        gg_log_select("reset selection pool");
     }
 }
 
@@ -1937,7 +2093,7 @@ gg_build_player_full_pool(player)
 
         if (player.gg.pool_full.size == 0)
         {
-            gg_log_select("Gumballs: pool_full empty after build");
+            gg_log_select("pool_full empty after build");
             gg_log_registry_state("pool_build");
         }
     }
@@ -1976,7 +2132,7 @@ gg_try_force_gum(player)
     gum = gg_find_gum_by_id(forced_id);
     if (!isdefined(gum))
     {
-        gg_log_select("Gumballs: forced gum '" + forced_id + "' not found");
+        gg_log_select("forced gum '" + forced_id + "' not found");
         gg_log_registry_state("force_missing");
         return undefined;
     }
@@ -1990,7 +2146,7 @@ gg_try_force_gum(player)
             {
                 if ([[ level.gb_helpers.player_has_all_map_perks ]](player))
                 {
-                    gg_log_select("Gumballs: forced gum '" + forced_id + "' blocked (perks)");
+                    gg_log_select("forced gum '" + forced_id + "' blocked (perks)");
                     return undefined;
                 }
             }
@@ -1999,21 +2155,21 @@ gg_try_force_gum(player)
         if (gg_debug_enabled())
         {
             mapname = gg_get_current_mapname();
-            message = "[gg] forced gated gum " + forced_id;
+            message = "forced gated gum " + forced_id;
             if (isdefined(mapname) && mapname != "")
                 message = message + " (" + mapname + ")";
-            iprintln("^3" + message);
+            [[ level.gb_helpers.gg_log ]](message);
         }
     }
     else if (!gg_is_gum_selectable_for_player(player, gum))
     {
-        gg_log_select("Gumballs: forced gum '" + forced_id + "' not allowed");
+        gg_log_select("forced gum '" + forced_id + "' not allowed");
         return undefined;
     }
 
     gg_remove_gum_from_remaining(player, forced_id);
     gg_clear_force_gum();
-    gg_log_select("Gumballs: forced selection -> " + forced_id);
+    gg_log_select("forced selection -> " + forced_id);
     return gum;
 }
 
@@ -2127,7 +2283,7 @@ gg_is_gum_allowed_on_map(gum)
         {
             if (gg_debug_select_enabled())
             {
-                note = "Gumballs: gate fatal_contraption for map";
+                note = "gate fatal_contraption for map";
                 if (isdefined(mapname) && mapname != "")
                     note = note + " " + mapname;
                 gg_log_select(note);
@@ -2175,10 +2331,10 @@ gg_log_select(message)
     if (!gg_debug_select_enabled())
         return;
 
-    if (!isdefined(message))
+    if (!isdefined(message) || message == "")
         return;
 
-    iprintln("^3" + message);
+    [[ level.gb_helpers.gg_log ]]("select: " + message);
 }
 
 gg_log_registry_state(tag)
@@ -2186,20 +2342,20 @@ gg_log_registry_state(tag)
     if (!gg_debug_select_enabled())
         return;
 
-    prefix = "Gumballs: registry";
-    if (isdefined(tag))
-        prefix = prefix + " (" + tag + ")";
+    label = "registry";
+    if (isdefined(tag) && tag != "")
+        label = label + " (" + tag + ")";
 
     if (!isdefined(level.gg_registry))
     {
-        iprintln("^3" + prefix + " missing");
+        [[ level.gb_helpers.gg_log ]](label + ": missing");
         return;
     }
 
     size = 0;
     if (isdefined(level.gg_registry.gums))
         size = level.gg_registry.gums.size;
-    iprintln("^3" + prefix + " size=" + size);
+    [[ level.gb_helpers.gg_log ]](label + ": size=" + size);
 
     if (!isdefined(level.gg_registry.gums))
         return;
@@ -2210,7 +2366,7 @@ gg_log_registry_state(tag)
         id = "<undefined>";
         if (isdefined(gum) && isdefined(gum.id))
             id = gum.id;
-        iprintln("^3Gumballs:   [" + i + "] " + id);
+        [[ level.gb_helpers.gg_log ]](label + ": [" + i + "] " + id);
     }
 }
 
@@ -2439,15 +2595,15 @@ gg_try_activate(player, source)
     {
         if (gg_should_log_dispatch())
         {
-            iprintln("^3Gumballs: dispatch failed for " + func_name);
+            [[ level.gb_helpers.gg_log ]]("dispatch failed for " + func_name);
         }
         return false;
     }
 
     if (gg_should_log_dispatch())
     {
-        msg = "Gumballs: activated " + gum.id + " via " + gg_dispatch_source_label(source) + " (" + path + ")";
-        iprintln("^3" + msg);
+        label = "dispatch activated " + gum.id + " via " + gg_dispatch_source_label(source) + " (" + path + ")";
+        [[ level.gb_helpers.gg_log ]](label);
     }
 
     // After successful dispatch, apply consumption model hooks
@@ -2488,8 +2644,12 @@ gg_init_dispatcher()
     gg_register_dispatcher_entry("gg_fx_on_the_house", ::gg_fx_on_the_house);
     gg_register_dispatcher_entry("gg_fx_fatal_contraption", ::gg_fx_fatal_contraption);
     gg_register_dispatcher_entry("gg_fx_extra_credit", ::gg_fx_extra_credit);
+    gg_register_dispatcher_entry("gift_card", ::gg_logic_gift_card_start);
+    gg_register_dispatcher_entry("gg_logic_gift_card_start", ::gg_logic_gift_card_start);
+    gg_register_dispatcher_entry("gg_fx_gift_card", ::gg_logic_gift_card_start);
     gg_register_dispatcher_entry("gg_fx_reign_drops", ::gg_fx_reign_drops);
-    gg_register_dispatcher_entry("gg_fx_hidden_power", ::gg_fx_hidden_power);
+    gg_register_dispatcher_entry("hidden_power", ::gg_logic_hidden_power_start);
+    gg_register_dispatcher_entry("gg_fx_hidden_power", ::gg_logic_hidden_power_start);
     gg_register_dispatcher_entry("gg_fx_crate_power", ::gg_fx_crate_power);
     gg_register_dispatcher_entry("gg_fx_wonderbar", ::gg_fx_wonderbar);
     gg_register_dispatcher_entry("gg_fx_round_robbin", ::gg_fx_round_robbin);
@@ -2502,7 +2662,7 @@ gg_init_dispatcher()
         size = 0;
         if (isdefined(level.gg_dispatcher.handlers))
             size = level.gg_dispatcher.handlers.size;
-        iprintln("^3Gumballs: dispatcher ready (size=" + size + ")");
+        [[ level.gb_helpers.gg_log ]]("dispatch registry ready (size=" + size + ")");
     }
 }
 
@@ -2581,7 +2741,7 @@ gg_dispatch_effect(player, gum, func_name)
         {
             if (gg_should_log_dispatch())
             {
-                iprintln("^3Gumballs: dispatch -> " + func_name + " (map)");
+                [[ level.gb_helpers.gg_log ]]("dispatch route: " + func_name + " (map)");
             }
             [[ handler ]](player, gum);
             return "map";
@@ -2589,7 +2749,7 @@ gg_dispatch_effect(player, gum, func_name)
 
         if (gg_debug_enabled())
         {
-            iprintln("^3Gumballs: dispatch map entry missing handler for '" + func_name + "'");
+            [[ level.gb_helpers.gg_log ]]("dispatch: map entry missing handler for " + func_name);
         }
     }
     else
@@ -2606,7 +2766,7 @@ gg_dispatch_effect(player, gum, func_name)
                     {
                         if (gg_should_log_dispatch())
                         {
-                            iprintln("^3Gumballs: dispatch -> " + func_name + " (map)");
+                            [[ level.gb_helpers.gg_log ]]("dispatch route: " + func_name + " (map)");
                         }
                         [[ handler ]](player, gum);
                         return "map";
@@ -2620,7 +2780,7 @@ gg_dispatch_effect(player, gum, func_name)
             size = 0;
             if (isdefined(level.gg_dispatcher.handlers))
                 size = level.gg_dispatcher.handlers.size;
-            iprintln("^3Gumballs: dispatcher lookup miss for " + func_name + ", registered=" + size);
+            [[ level.gb_helpers.gg_log ]]("dispatch lookup miss for " + func_name + " (registered=" + size + ")");
         }
     }
 
@@ -2629,7 +2789,7 @@ gg_dispatch_effect(player, gum, func_name)
     {
         if (gg_should_log_dispatch())
         {
-            iprintln("^3Gumballs: dispatch -> " + func_name + " (fallback)");
+            [[ level.gb_helpers.gg_log ]]("dispatch route: " + func_name + " (fallback)");
         }
         [[ handler ]](player, gum);
         return "fallback";
@@ -2637,7 +2797,7 @@ gg_dispatch_effect(player, gum, func_name)
 
     if (gg_should_log_dispatch())
     {
-        iprintln("^3Gumballs: missing dispatch handler for '" + func_name + "'");
+        [[ level.gb_helpers.gg_log ]]("dispatch handler missing for " + func_name);
     }
 
     return "";
@@ -2670,10 +2830,14 @@ gg_dispatch_string_fallback(func_name)
         return ::gg_fx_fatal_contraption;
     if (func_name == "gg_fx_extra_credit")
         return ::gg_fx_extra_credit;
+    if (func_name == "gg_fx_gift_card")
+        return ::gg_logic_gift_card_start;
     if (func_name == "gg_fx_reign_drops")
         return ::gg_fx_reign_drops;
+    if (func_name == "hidden_power")
+        return ::gg_logic_hidden_power_start;
     if (func_name == "gg_fx_hidden_power")
-        return ::gg_fx_hidden_power;
+        return ::gg_logic_hidden_power_start;
     if (func_name == "gg_fx_crate_power")
         return ::gg_fx_crate_power;
     if (func_name == "gg_fx_wonderbar")
@@ -2707,7 +2871,7 @@ gg_effect_stub_common(player, gum, category)
 
     if (gg_log_dispatch_enabled())
     {
-        iprintln("^3Gumballs: effect stub [" + category + "] -> " + gum_id);
+        [[ level.gb_helpers.gg_log ]]("dispatch: effect stub [" + category + "] -> " + gum_id);
     }
 
     if (!gg_simulate_effects_enabled())
@@ -3025,7 +3189,7 @@ gg_model_can_activate(player, gum)
         if (isdefined(player.gg.uses_remaining) && player.gg.uses_remaining <= 0)
         {
             if (gg_debug_enabled())
-                iprintln("^3Gumballs: cannot activate, no uses left");
+                [[ level.gb_helpers.gg_log ]]("activation blocked: no uses left");
             return false;
         }
     }
@@ -3034,7 +3198,7 @@ gg_model_can_activate(player, gum)
         if (isdefined(player.gg.rounds_remaining) && player.gg.rounds_remaining <= 0)
         {
             if (gg_debug_enabled())
-                iprintln("^3Gumballs: cannot activate, no rounds left");
+                [[ level.gb_helpers.gg_log ]]("activation blocked: no rounds left");
             return false;
         }
     }
@@ -3043,7 +3207,7 @@ gg_model_can_activate(player, gum)
         if (isdefined(player.gg.is_active) && player.gg.is_active && isdefined(player.gg.timer_endtime) && player.gg.timer_endtime > gettime())
         {
             if (gg_debug_enabled())
-                iprintln("^3Gumballs: timer already active; activation ignored");
+                [[ level.gb_helpers.gg_log ]]("activation blocked: timer already active");
             return false;
         }
     }
@@ -3060,7 +3224,7 @@ gg_on_activation(player, gum)
     {
         player.gg.skip_activation_consume_once = false;
         if (gg_consume_logs_enabled())
-            iprintln("^3Gumballs: activation consumption skipped");
+            [[ level.gb_helpers.gg_log ]]("consumption: activation skipped");
         return;
     }
 
@@ -3076,7 +3240,7 @@ gg_on_activation(player, gum)
             if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_consume_use))
                 [[ level.gb_hud.br_consume_use ]](player);
             if (gg_consume_logs_enabled())
-                iprintln("^3Gumballs: use consumed -> remaining=" + player.gg.uses_remaining);
+                [[ level.gb_helpers.gg_log ]]("consumption: use consumed (remaining=" + player.gg.uses_remaining + ")");
         }
         if (player.gg.uses_remaining <= 0)
         {
@@ -3090,7 +3254,7 @@ gg_on_activation(player, gum)
             player.gg.is_active = true;
             player.gg.active_token += 1;
             if (gg_consume_logs_enabled())
-                iprintln("^3Gumballs: rounds model activated");
+                [[ level.gb_helpers.gg_log ]]("consumption: rounds model activated");
         }
     }
     else // TIMED
@@ -3107,7 +3271,7 @@ gg_on_activation(player, gum)
 
         player thread gg_timer_monitor_thread(token);
         if (gg_consume_logs_enabled())
-            iprintln("^3Gumballs: timer started for " + dur + "s");
+            [[ level.gb_helpers.gg_log ]]("consumption: timer started (" + dur + "s)");
     }
 }
 
@@ -3159,7 +3323,7 @@ gg_timer_monitor_thread(expected_token)
     if (isdefined(self.gg) && isdefined(self.gg.active_token) && self.gg.active_token == expected_token)
     {
         if (gg_consume_logs_enabled())
-            iprintln("^3Gumballs: timer expired");
+            [[ level.gb_helpers.gg_log ]]("consumption: timer expired");
         gg_end_current_gum(self, "timer_expired");
     }
 }
@@ -3186,7 +3350,7 @@ gg_round_tick(player, round_number)
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_consume_round))
         [[ level.gb_hud.br_consume_round ]](player);
     if (gg_consume_logs_enabled())
-        iprintln("^3Gumballs: round consumed -> remaining=" + player.gg.rounds_remaining);
+        [[ level.gb_helpers.gg_log ]]("consumption: round consumed (remaining=" + player.gg.rounds_remaining + ")");
 
     if (player.gg.rounds_remaining <= 0)
     {
@@ -3201,7 +3365,7 @@ gg_end_current_gum(player, reason)
         return;
 
     if (gg_consume_logs_enabled() && isdefined(reason))
-        iprintln("^3Gumballs: ending gum (" + reason + ")");
+        [[ level.gb_helpers.gg_log ]]("consumption: ending gum (" + reason + ")");
 
     // keep TC autohide window
     gg_selection_close(player, reason, false, true);
@@ -3294,7 +3458,7 @@ gg_fx_fatal_contraption(player, gum)
     if (!gg_can_spawn_death_machine())
     {
         if (gg_debug_enabled())
-            iprintln("^3Gumballs: Fatal Contraption blocked (map)");
+            [[ level.gb_helpers.gg_log ]]("fatal contraption blocked (map)");
         gg_mark_activation_skip(player);
         return;
     }
@@ -3309,7 +3473,7 @@ gg_fx_reign_drops(player, gum)
     if (!isdefined(codes) || codes.size <= 0)
     {
         if (gg_should_log_dispatch())
-            iprintln("^3Gumballs: Reign Drops has no valid power-ups");
+            [[ level.gb_helpers.gg_log ]]("dispatch: reign drops missing power-ups");
         gg_mark_activation_skip(player);
         return;
     }
@@ -3420,7 +3584,7 @@ gg_fx_perkaholic(player, gum)
     {
         gg_mark_activation_skip(player);
         if (gg_debug_enabled())
-            iprintln("^3Gumballs: Perkaholic skipped (no missing perks)");
+            [[ level.gb_helpers.gg_log ]]("perkaholic skipped: no missing perks");
         gg_show_hint_if_enabled(player, "Perkaholic: all perks acquired");
         return;
     }
@@ -3430,7 +3594,7 @@ gg_fx_perkaholic(player, gum)
     {
         gg_mark_activation_skip(player);
         if (gg_debug_enabled())
-            iprintln("^3Gumballs: Perkaholic skipped (perk cap reached)");
+            [[ level.gb_helpers.gg_log ]]("perkaholic skipped: perk cap reached");
         gg_show_hint_if_enabled(player, "Perkaholic: perk slots capped");
         return;
     }
@@ -3450,13 +3614,13 @@ gg_fx_perkaholic(player, gum)
     {
         gg_mark_activation_skip(player);
         if (gg_debug_enabled())
-            iprintln("^3Gumballs: Perkaholic skipped (no eligible perks)");
+            [[ level.gb_helpers.gg_log ]]("perkaholic skipped: no eligible perks");
         gg_show_hint_if_enabled(player, "Perkaholic: all perks acquired");
         return;
     }
 
     if (gg_debug_enabled() && missing.size > grant_list.size)
-    iprintln("^3Gumballs: Perkaholic limited to " + grant_list.size + " perks (cap " + slots + ")");
+        [[ level.gb_helpers.gg_log ]]("perkaholic limited to " + grant_list.size + " perks (cap " + slots + ")");
 
     delay = gg_get_perkaholic_grant_delay_secs();
 
@@ -3475,7 +3639,7 @@ gg_fx_perkaholic(player, gum)
         gg_perkaholic_trigger_vo_helper(player, perk);
 
         if (gg_debug_enabled())
-            iprintln("^3Gumballs: Perkaholic granted " + perk);
+            [[ level.gb_helpers.gg_log ]]("perkaholic granted " + perk);
 
         granted++;
 
@@ -3487,7 +3651,7 @@ gg_fx_perkaholic(player, gum)
     {
         gg_mark_activation_skip(player);
         if (gg_debug_enabled())
-            iprintln("^3Gumballs: Perkaholic skipped (grant blocked)");
+            [[ level.gb_helpers.gg_log ]]("perkaholic skipped: grant blocked");
         gg_show_hint_if_enabled(player, "Perkaholic: perk slots capped");
         return;
     }
@@ -3528,7 +3692,7 @@ gg_wall_power_arm(player, gum)
     player thread gg_wall_power_monitor_thread(gum, token, grace_end, snapshot);
 
     if (gg_debug_enabled())
-    iprintln("^3Gumballs: Wall Power armed");
+        [[ level.gb_helpers.gg_log ]]("wall power armed");
 }
 
 gg_wall_power_monitor_thread(gum, expected_token, grace_end, snapshot)
@@ -3587,10 +3751,10 @@ gg_wall_power_debug(player, reason, weapon)
 
     player.gg.wall_power_last_debug = key;
 
-    msg = "Gumballs: Wall Power " + reason;
+    msg = "wall power " + reason;
     if (isdefined(weapon) && weapon != "")
         msg = msg + " (" + weapon + ")";
-    iprintln("^3" + msg);
+    [[ level.gb_helpers.gg_log ]](msg);
 }
 
 gg_wall_power_should_upgrade(player, weapon, grace_end)
@@ -3652,7 +3816,7 @@ gg_wall_power_on_success(player, gum, weapon)
         player.gg.wall_power_last_debug = undefined;
 
     if (gg_debug_enabled())
-        iprintln("^3Gumballs: Wall Power upgraded " + weapon);
+        [[ level.gb_helpers.gg_log ]]("wall power upgraded " + weapon);
 
     wait(0.25);
     if (isdefined(player.gg))
@@ -3669,7 +3833,146 @@ gg_fx_on_the_house(player, gum)
 
 gg_fx_hidden_power(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Weapons/Perks");
+    gg_logic_hidden_power_start(player, gum);
+}
+
+gg_logic_hidden_power_start(player, gum)
+{
+    if (!isdefined(player))
+        return;
+
+    gg_mark_activation_skip(player);
+
+    if (!isdefined(player.gg))
+        build_player_state(player);
+
+    weapon = player GetCurrentWeapon();
+
+    if (!isdefined(weapon) || weapon == "" || weapon == "none")
+    {
+        gg_hidden_power_fail(player, gum, "skip: invalid weapon", weapon, "Hidden Power: weapon unavailable");
+        return;
+    }
+
+    if (!player HasWeapon(weapon))
+    {
+        gg_hidden_power_fail(player, gum, "skip: weapon mismatch", weapon, "Hidden Power: weapon unavailable");
+        return;
+    }
+
+    if (!gg_weapon_has_upgrade(weapon))
+    {
+        gg_hidden_power_fail(player, gum, "skip: no upgrade", weapon, "Hidden Power: no upgrade available");
+        return;
+    }
+
+    if (player maps\_zombiemode_weapons::is_weapon_upgraded(weapon))
+    {
+        gg_hidden_power_fail(player, gum, "skip: already upgraded", weapon, "Hidden Power: already upgraded");
+        return;
+    }
+
+    if (!gg_hidden_power_packapunch_ready())
+    {
+        gg_hidden_power_fail(player, gum, "skip: pack-a-punch offline", weapon, "Hidden Power: Pack-a-Punch unavailable");
+        return;
+    }
+
+    if (!gg_apply_upgrade_for_weapon(player, weapon))
+    {
+        gg_hidden_power_fail(player, gum, "skip: upgrade helper failed", weapon, "Hidden Power: upgrade failed");
+        return;
+    }
+
+    gg_hidden_power_on_success(player, gum, weapon);
+}
+
+gg_hidden_power_on_success(player, gum, weapon)
+{
+    if (!isdefined(player))
+        return;
+
+    if (gg_debug_enabled())
+        [[ level.gb_helpers.gg_log ]]("hidden power upgraded " + weapon);
+
+    gg_show_hint_if_enabled(player, "Applied: Hidden Power");
+
+    wait(0.05);
+
+    if (isdefined(player.gg))
+    {
+        player.gg.hidden_power_last_debug = undefined;
+        player.gg.uses_remaining = 0;
+        player.gg.used_this_round = true;
+    }
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_consume_use))
+        [[ level.gb_hud.br_consume_use ]](player);
+
+    gg_on_gum_used();
+    gg_end_current_gum(player, "hidden_power_applied");
+}
+
+gg_hidden_power_fail(player, gum, reason, weapon, hint)
+{
+    gg_hidden_power_debug(player, reason, weapon);
+
+    if (isdefined(hint) && hint != "")
+        gg_show_hint_if_enabled(player, hint);
+
+    gg_hidden_power_refresh_hud(player, gum);
+}
+
+gg_hidden_power_refresh_hud(player, gum)
+{
+    if (!isdefined(player))
+        return;
+    if (!isdefined(level.gb_hud))
+        return;
+
+    if (isdefined(level.gb_hud.show_tc))
+        [[ level.gb_hud.show_tc ]](player, gum);
+    else if (isdefined(level.gb_hud.update_tc))
+        [[ level.gb_hud.update_tc ]](player, gum);
+
+    if (isdefined(level.gb_hud.show_br))
+        [[ level.gb_hud.show_br ]](player, gum);
+}
+
+gg_hidden_power_debug(player, reason, weapon)
+{
+    if (!gg_debug_enabled())
+        return;
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg))
+        build_player_state(player);
+
+    key = reason;
+    if (isdefined(weapon) && weapon != "")
+        key = key + ":" + weapon;
+
+    if (isdefined(player.gg.hidden_power_last_debug) && player.gg.hidden_power_last_debug == key)
+        return;
+
+    player.gg.hidden_power_last_debug = key;
+
+    msg = "hidden power " + reason;
+    if (isdefined(weapon) && weapon != "")
+        msg = msg + " (" + weapon + ")";
+    [[ level.gb_helpers.gg_log ]](msg);
+}
+
+gg_hidden_power_packapunch_ready()
+{
+    if (isdefined(level.has_pack_a_punch) && !level.has_pack_a_punch)
+        return false;
+
+    if (isdefined(level.packapunch_active) && !level.packapunch_active)
+        return false;
+
+    return true;
 }
 
 gg_fx_crate_power(player, gum)
@@ -3729,7 +4032,7 @@ gg_crate_power_arm(player, gum)
     player thread gg_crate_power_monitor_thread(gum, token, armed_time, snapshot);
 
     if (gg_debug_enabled())
-        iprintln("^3Gumballs: Crate Power armed");
+        [[ level.gb_helpers.gg_log ]]("crate power armed");
 }
 
 gg_crate_power_monitor_thread(gum, expected_token, armed_time, snapshot)
@@ -3806,7 +4109,7 @@ gg_crate_power_on_success(player, gum, weapon)
     player.gg.armed_flags.crate_power_active = false;
 
     if (gg_debug_enabled())
-        iprintln("^3Gumballs: Crate Power upgraded " + weapon);
+        [[ level.gb_helpers.gg_log ]]("crate power upgraded " + weapon);
 
     wait(0.25);
     if (isdefined(player.gg))
@@ -3877,10 +4180,10 @@ gg_wonderbar_arm(player, gum)
 
     if (gg_debug_enabled())
     {
-        msg = "Gumballs: Wonderbar armed";
+        msg = "wonderbar armed";
         if (isdefined(choice) && choice != "")
             msg = msg + " (" + choice + ")";
-        iprintln("^3" + msg);
+        [[ level.gb_helpers.gg_log ]](msg);
     }
 }
 
@@ -3899,7 +4202,7 @@ gg_wonderbar_select_choice(player)
     if (!isdefined(pool) || pool.size <= 0)
     {
         if (gg_debug_enabled())
-            iprintln("^3Gumballs: Wonderbar has no wonder weapons available");
+            [[ level.gb_helpers.gg_log ]]("wonderbar has no wonder weapons available");
         return undefined;
     }
 
@@ -3984,14 +4287,14 @@ gg_wonderbar_apply_choice(player, acquired_weapon)
     if (!isdefined(wonder) || wonder == "")
     {
         if (gg_debug_enabled())
-            iprintln("^3Gumballs: Wonderbar has no cached choice");
+            [[ level.gb_helpers.gg_log ]]("wonderbar has no cached choice");
         return false;
     }
 
     if (!isdefined(level.zombie_weapons) || !isdefined(level.zombie_weapons[wonder]))
     {
         if (gg_debug_enabled())
-            iprintln("^3Gumballs: Wonderbar choice invalid (" + wonder + ")");
+            [[ level.gb_helpers.gg_log ]]("wonderbar choice invalid (" + wonder + ")");
         return false;
     }
 
@@ -4030,7 +4333,7 @@ gg_wonderbar_on_success(player, gum, weapon)
     player.gg.armed_flags.wonderbar_active = false;
 
     if (gg_debug_enabled())
-    iprintln("^3Gumballs: Wonderbar granted " + player.gg.wonderbar_choice);
+        [[ level.gb_helpers.gg_log ]]("wonderbar granted " + player.gg.wonderbar_choice);
 
     if (isdefined(player.gg))
         player.gg.uses_remaining = 0;
@@ -4159,11 +4462,44 @@ gg_get_shopping_free_temp_points()
     return 50000;
 }
 
+gg_get_gift_card_points()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.gift_card_points))
+        return level.gg_config.gift_card_points;
+    return 30000;
+}
+
 gg_get_perkaholic_grant_delay_secs()
 {
     if (isdefined(level.gg_config) && isdefined(level.gg_config.perkaholic_grant_delay_ms))
         return level.gg_config.perkaholic_grant_delay_ms / 1000.0;
     return 0.25;
+}
+
+gg_logic_gift_card_start(player, gum)
+{
+    if (!isdefined(player))
+        return;
+
+    amount = gg_get_gift_card_points();
+    amount = int(amount);
+    if (amount < 0)
+        amount = 0;
+
+    player maps\_zombiemode_score::add_to_player_score(amount);
+
+    hint = "Gift Card: +" + amount + " points";
+    gg_show_hint_if_enabled(player, hint);
+
+    if (gg_debug_enabled())
+        [[ level.gb_helpers.gg_log ]]("gift card activated (points=" + amount + ")");
+
+    gg_on_gum_used();
+}
+
+gg_fx_gift_card(player, gum)
+{
+    gg_logic_gift_card_start(player, gum);
 }
 
 gg_round_robbin_award_points()
@@ -4189,7 +4525,7 @@ gg_round_robbin_award_points()
     }
 
     if (gg_debug_enabled())
-        iprintln("^3Gumballs: Round Robbin +" + bonus + " -> players=" + awarded);
+        [[ level.gb_helpers.gg_log ]]("round robbin bonus +" + bonus + " to " + awarded + " players");
 
     return awarded;
 }
@@ -4231,12 +4567,12 @@ gg_round_robbin_kill_remaining()
     }
 
     if (gg_debug_enabled())
-        iprintln("^3Gumballs: Round Robbin cleared zombies=" + killed);
+        [[ level.gb_helpers.gg_log ]]("round robbin cleared zombies=" + killed);
 }
 
 gg_fx_extra_credit(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Economy/Round");
+    gg_powerup_single_drop(player, gum);
 }
 
 gg_fx_round_robbin(player, gum)
@@ -4441,7 +4777,7 @@ gg_shopping_free_finalize_credit()
         used = 0;
         if (isdefined(self.shopping_free.credit_used))
             used = self.shopping_free.credit_used;
-        iprintln("^3Gumballs: Shopping Free cleanup (used=" + used + ", removed=" + remove + ")");
+        [[ level.gb_helpers.gg_log ]]("shopping free cleanup (used=" + used + ", removed=" + remove + ")");
     }
 }
 
@@ -4479,7 +4815,7 @@ gg_fx_shopping_free(player, gum)
     player thread gg_shopping_free_cleanup_thread(token);
 
     if (gg_debug_enabled())
-        iprintln("^3Gumballs: Shopping Free activated (token=" + token + ", secs=" + secs + ", credit=" + temp_points + ")");
+        [[ level.gb_helpers.gg_log ]]("shopping free activated (token=" + token + ", secs=" + secs + ", credit=" + temp_points + ")");
 }
 
 gg_fx_stock_option(player, gum)
@@ -4505,6 +4841,13 @@ gg_round_monitor() {}
 gg_assign_gum_for_new_round() {}
 gg_on_round_flow() {}
 gg_on_match_end() {}
+
+
+
+
+
+
+
 
 
 

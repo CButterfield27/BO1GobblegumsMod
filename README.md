@@ -1,4 +1,4 @@
-﻿# BO1 GobbleGum MOD
+# BO1 GobbleGum MOD
 
 ---
 
@@ -58,7 +58,7 @@ level thread maps\gobblegum\gumballs::gumballs_init();
 * HUD assets must be precached before any player HUD is built.
 * Core threads last so they can call both helpers and HUD safely.
 
-All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to the base round or perk systems.
+All wiring stays inside the existing `_zombiemode.gsc` lifecycle - no changes to the base round or perk systems.
 
 ---
 
@@ -66,19 +66,20 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to
 
 ### Gum Definition
 
-* `id` ? internal identifier
-* `name` ? display/loc string
-* `shader` ? HUD icon material
-* `description` ? display/loc string
-* `activation_type` ? AUTO or USER
-* `consumption_type` ? timed / rounds / uses
-* `activate_func` ? string key ? dispatcher
+* `id` - internal identifier
+* `name` - display/loc string
+* `shader` - HUD icon material
+* `description` - display/loc string
+* `uses_description` - optional activation/uses copy rendered between the name and description in the TC HUD
+* `activation_type` - AUTO or USER
+* `consumption_type` - timed / rounds / uses
+* `activate_func` - string key -> dispatcher
 * **Metadata**
 
-  * `tags` ? categories (powerup, perk, economy, weapon)
-  * `map_whitelist`/`blacklist` ? enforce availability (e.g., Fatal Contraption on Ascension/Coast/Moon only)
-  * `exclusion_groups` ? gums that cannot overlap
-  * `rarity_weight` ? pool weighting
+  * `tags` - categories (powerup, perk, economy, weapon)
+  * `map_whitelist`/`blacklist` - enforce availability (e.g., Fatal Contraption on Ascension/Coast/Moon only)
+  * `exclusion_groups` - gums that cannot overlap
+  * `rarity_weight` - pool weighting
 
 ### Player State
 
@@ -105,9 +106,9 @@ All wiring stays inside the existing `_zombiemode.gsc` lifecycle ? no changes to
 
 #### Top Center (TC)
 
-* Icon (56×56)
+* Icon (56x56)
 * Gum Name (scale 1.5)
-* Uses/Activation line (scale 1.15)
+* Uses/Activation line (scale 1.15; text sourced from `gum.uses_description`)
 * Description (scale 1.15)
 
 Positioning
@@ -121,9 +122,21 @@ Positioning
 **Behavior**
 
 * Fade in on selection (token-based)
+* Uses line hides automatically when `gum.uses_description` is empty and shares the same fade/autohide tokens as the rest of the block
+* Gift Card uses line: "Press D-Pad Right to activate. (1 use)"
+* Hidden Power uses line: "Press D-Pad Right to activate. (1 use)"
 * Auto-hide after `GG_TC_AUTOHIDE_SECS` (default 7.5s) using a guarded token; newer shows invalidate pending hides.
 * Hides immediately on selection change, round cleanup, `gg_gum_cleared`, death, or disconnect.
 * Refresh on state change
+
+**Example Layout**
+
+```
+[Icon]
+[Name]
+[Uses Description]
+[Description]
+```
 
 ---
 
@@ -132,7 +145,7 @@ Positioning
 * Hint line (scale 1.15) driven by the tokenised pipeline:
   - `set_hint` / `clear_hint` / `update_hint`
   - `suppress_hint(ms)` / `end_suppress_hint()` keep the latest string cached while hidden
-* Icon (48×48)
+* Icon (48x48)
 * Usage bar (shader `"white"`, width 75, height 5) supports uses / rounds / timer modes via `br_set_mode` helpers
 * Wonderbar label now reuses the hint pipeline; no standalone label widget
 
@@ -141,13 +154,13 @@ Positioning
 - Anchor: `setPoint("RIGHT", "BOTTOMRIGHT", x_off, y_off)` for icon, bars, hint
 - Bar consists of two layers at the same point:
   - Background bar (light gray) full width
-  - Foreground bar (yellow) full width initially; drains left→right as the gum consumes
+  - Foreground bar (yellow) full width initially; drains left-to-right as the gum consumes
 
 **Behavior**
 
 * `show_br_after_delay` reveals BR after `gg_br_delayed_show_secs` (default 1.5s); the delay token cancels on gum change, death, round rollover, or explicit hides.
 * Show/hide animate via token-based fades (`GG_HUD_FADE_SECS`, default 0.25s). `hide_br()` clears icon/text once the fade ends.
-* Wonderbar suppression honours `gg_wonder_label_suppress_ms` (default 35 000 ms Fire Sale window). The label thread calls `suppress_hint`/`end_suppress_hint` so the text auto-reasserts when suppression expires.
+* Wonderbar suppression honours `gg_wonder_label_suppress_ms` (default 35,000 ms Fire Sale window). The label thread calls `suppress_hint`/`end_suppress_hint` so the text auto-reasserts when suppression expires.
 * Progress bars clamp to `[0, 1]`; when uses/rounds reach 0 or timers elapse, the bar drains to zero and BR fades out immediately.
 
 ---
@@ -168,12 +181,12 @@ Positioning
 
 #### HUD Polish Highlights
 
-- **Hint text** — `set_hint`, `clear_hint`, `update_hint`, `suppress_hint(ms)`, `end_suppress_hint()`; Wonderbar + Fire Sale uses `gg_wonder_label_suppress_ms` (default 35 000 ms) and reasserts automatically after `end_suppress_hint`.
-- **TC show/hide** — token-based and auto-hides after `GG_TC_AUTOHIDE_SECS` (7.5 s); also hides immediately on selection change, round cleanup, `gg_gum_cleared`, death, or disconnect.
-- **BR delayed show** — token-based and cancelable on gum change, death, round rollover, or disconnect; default delay `gg_br_delayed_show_secs` (1.5 s).
-- **BR progress** — clamps to `[0, 1]`; timers sample using `gg_timer_tick_ms`, and uses/rounds hitting zero drain the bar completely and hide the panel.
-- **Fades** — token-based fades for TC/BR (0.25 s) so newer animations cancel older ones.
-- **Safety** — Every HUD thread `endon("disconnect")` and `endon("gg_gum_cleared")`; tokens guard against overlapping fades or late hint writes.
+- **Hint text**: `set_hint`, `clear_hint`, `update_hint`, `suppress_hint(ms)`, `end_suppress_hint()`; Wonderbar + Fire Sale uses `gg_wonder_label_suppress_ms` (default 35,000 ms) and reasserts automatically after `end_suppress_hint`.
+- **TC show/hide**: token-based and auto-hides after `GG_TC_AUTOHIDE_SECS` (7.5s); also hides immediately on selection change, round cleanup, `gg_gum_cleared`, death, or disconnect.
+- **BR delayed show**: token-based and cancelable on gum change, death, round rollover, or disconnect; default delay `gg_br_delayed_show_secs` (1.5s).
+- **BR progress**: clamps to `[0, 1]`; timers sample using `gg_timer_tick_ms`, and uses/rounds hitting zero drain the bar completely and hide the panel.
+- **Fades**: token-based fades for TC/BR (0.25s) so newer animations cancel older ones.
+- **Safety**: every HUD thread `endon("disconnect")` and `endon("gg_gum_cleared")`; tokens guard against overlapping fades or late hint writes.
 
 Usage from `gumballs.gsc`:
 
@@ -192,12 +205,13 @@ Usage from `gumballs.gsc`:
 * **Delayed show**: fade in BR after ~1.5s if needed
 * Anchors respect safe area
 * Accessibility: text is primary, colors secondary
+* Uses-based user gums (e.g., Extra Credit) show the TC uses line and decrement the BR uses bar on each activation until all uses are consumed.
 
 ---
 
 ## 4. Gum Selection Logic
 
-* Build pool (`pool_full` ? `pool_remaining`)
+* Build pool (`pool_full` -> `pool_remaining`)
 
 * Watch `round_number` (0.25s cadence)
 
@@ -251,8 +265,11 @@ Usage from `gumballs.gsc`:
 
 ### Dispatcher
 
-* Function map: string ? int code (fast path)
+* Function map: string -> int code (fast path)
 * Fallback: string compare (exhaustive list)
+* Dispatch entries now include:
+  * `gift_card -> gg_logic_gift_card_start(self)`
+  * `hidden_power -> gg_logic_hidden_power_start(self)`
 
 ---
 
@@ -261,52 +278,71 @@ Usage from `gumballs.gsc`:
 ### Power-Ups
 
 * Cache Back (Max Ammo)
-* Dead of Nuclear Winter (Nuke) — gated off Kino der Toten (`zombie_theater`, `theater`)
+* Dead of Nuclear Winter (Nuke) - gated off Kino der Toten (`zombie_theater`, `theater`)
 * Kill Joy (Insta Kill)
 * Licensed Contractor (Carpenter)
 * Immolation Liquidation (Fire Sale) - triggers Wonderbar label suppression for 35s via helper
-* Who?s Keeping Score (Double Points)
+* Who's Keeping Score (Double Points)
 * On the House (Free Perk)
   * On Cosmodrome, picking up the drop sets `level.perk_bought` and calls `flag_set("perk_bought")` once through the new helper.
-* Fatal Contraption (Death Machine) — filtered out on maps where `helpers::map_allows_death_machine()` is false (dev overrides still honoured and logged)
-* Extra Credit (Bonus Points)
-* Reign Drops (spawns the full bundle—Double Points, Insta-Kill, optional Fire Sale, Nuke, Carpenter, Max Ammo, Free Perk, Bonus Points, and Death Machine when allowed—sequentially on a forward-offset circle; uses consume once the sequence finishes)
+* Fatal Contraption (Death Machine) - filtered out on maps where `helpers::map_allows_death_machine()` is false (dev overrides still honoured and logged)
+* Extra Credit (Bonus Points) - spawns a Bonus Points power-up on activation using the same single-drop path as Dead of Nuclear Winter (forward offset, dispatcher log, hint pipeline).
+* Reign Drops - spawns the full bundle (Double Points, Insta-Kill, optional Fire Sale, Nuke, Carpenter, Max Ammo, Free Perk, Bonus Points, and Death Machine when allowed) sequentially on a forward-offset circle; uses consume once the sequence finishes.
+
+Bonus Points is registered at init through the alias/include path so `maps\_zombiemode_powerups::specific_powerup_drop("bonus_points_player", pos)` can spawn both forced and natural drops on supported maps.
 
 ### Weapons / Perks
 
-* Hidden Power (PaP current weapon)
-
-* Wall Power (next wall buy only—never box—upgraded after a 3s grace window with a forced Pack-a-Punch swap)
-
-* Crate Power (next box gun upgraded, 3s grace)
-
-* Wonderbar (next box gun is WW)
-  * Removes the box result before granting the cached Wonder Weapon, restores start ammo, and auto-switches to the reward
-  * Mystery Box spin temporarily displays the Wonder Weapon model for the armed player
-  * Label shows WW name
-  * Label reasserts visibility every 0.25s until gum ends
-  * Optional Gersh/Quantum specials via `gg_wonder_include_specials` (default 0)
-  * Suppression triggered by Wonderbar helper calls (e.g., Immolation)
-
-* **Perkaholic**
-  * Auto, single-use gum that grants every perk available on the current map to players missing them.
+* Hidden Power - Instantly Pack-a-Punches your currently held weapon.
+* Wall Power - Next wall buy only (never box); upgrades after a 3s grace window with a forced Pack-a-Punch swap.
+* Crate Power - Next box gun upgraded (3s grace).
+* Wonderbar - Next box gun is a Wonder Weapon.
+  * Removes the box result before granting the cached Wonder Weapon, restores start ammo, and auto-switches to the reward.
+  * Mystery Box spin temporarily displays the Wonder Weapon model for the armed player.
+  * Label shows WW name.
+  * Label reasserts visibility every 0.25s until gum ends.
+  * Optional Gersh/Quantum specials via `gg_wonder_include_specials` (default 0).
+  * Suppression triggered by Wonderbar helper calls (e.g., Immolation).
+* Perkaholic - Auto, single-use gum that grants every perk available on the current map to players missing them.
   * Uses the helper perk cache so map-specific machines are respected and skips consumption when nothing is left to grant.
   * On Cosmodrome, asserts the perk VO flag once per activation by setting `level.perk_bought` and calling `flag_set("perk_bought")` via the helper after perks are granted.
   * Grant cadence is configurable with `gg_perkaholic_grant_delay_ms` (default 250ms) to keep HUD updates readable.
 
 ### Economy / Round Control
 
-* **Round Robbin**
-  * Uses-based instant gum that wipes remaining zombies, optionally zeroes round counters, and lets the next round begin immediately.
+* Gift Card - Adds 30,000 points to the activating player immediately.
+* Round Robbin - Uses-based instant gum that wipes remaining zombies, optionally zeroes round counters, and lets the next round begin immediately.
   * Awards every player the configurable `gg_round_robbin_bonus` (default +1600) and consumes one BR use; `gg_round_robbin_force_transition` (default 1) ensures round trackers stay in sync on scripted maps.
-* **Shopping Free**
-  * Auto-activates on selection. Timed gum controlled by `gg_shopping_free_secs` (default 60s); it grants `gg_shopping_free_temp_points` (default 50000) in temporary credit and keeps the player's visible score from falling while credit remains.
+* Shopping Free - Auto-activates on selection. Timed gum controlled by `gg_shopping_free_secs` (default 60s); it grants `gg_shopping_free_temp_points` (default 50000) in temporary credit and keeps the player's visible score from falling while credit remains.
   * Re-shows the BR HUD in timer mode, debounces purchases through a refund monitor, and removes any leftover credit automatically when the timer expires.
-* Stock Option (ammo taken from stockpile for 60s)
-
-  * Fire monitor + expiry monitor
+* Stock Option - Ammo taken from stockpile for 60s.
+  * Fire monitor + expiry monitor.
 
 #### Testing
+
+Preparation:
+
+```
+set gg_enable 1
+set gg_debug 1
+```
+
+* **Extra Credit -> Bonus Points**
+  1. Force the gum:
+     ```
+     set gg_force_gum extra_credit
+     ```
+  2. Load a supported map and wait for selection. TC should show Extra Credit with the uses line.
+  3. Press D-Pad Right (`+actionslot 4`).
+     - Expect a `bonus_points_player` drop to spawn in front of the player with the normal forward offset.
+     - BR uses decrements by one; the slot hides once all four uses are spent.
+     - If `gg_powerup_hints` is enabled, the BR hint briefly shows the Bonus Points label.
+     - With `gg_debug` or `gg_log_dispatch` on, a concise log line confirms the dispatcher fired.
+
+* **Bonus Points availability**
+  1. Clear any forced gum (`set gg_force_gum ""`) and play a session on a map that normally allows the drop.
+  2. Kill zombies until natural drops appear; Bonus Points can now spawn via the standard tables.
+  3. Optional: developers can call `specific_powerup_drop("bonus_points_player", <pos>)` in a debug build to validate visuals and pickup behavior (do not ship custom commands).
 
 * **Round Robbin**
   ```
@@ -316,6 +352,14 @@ Usage from `gumballs.gsc`:
   bind 8 "+actionslot 4"
   ```
   Press the bound key to verify all remaining zombies die, every player receives the bonus, and the next round starts cleanly.
+* **Gift Card**
+  ```
+  set gg_enable 1
+  set gg_debug 1
+  set gg_force_gum gift_card
+  bind 8 "+actionslot 4"
+  ```
+  Activate to add +30000 points instantly, confirm the score updates, and the BR HUD hides after the single use.
 * **Shopping Free**
   ```
   set gg_enable 1
@@ -354,18 +398,17 @@ Usage from `gumballs.gsc`:
 
 ## 8. API Surfaces
 
-### Core ? HUD
+### Core / HUD
 
 * All HUD functions above: TC/BR show-hide with token-based fades, consumption bar helpers, delayed BR reveal, and the hint pipeline (`set`/`clear`/`update`/`suppress`/`end_suppress`)
 
-### Core ? Helpers
+### Core / Helpers
 
 * `helpers.map_allows("death_machine")`
 * `helpers.is_cosmodrome()` / `helpers.get_current_mapname()`
 * `helpers.get_wonder_pool(map)` (respects `gg_wonder_include_specials`)
 * `helpers.get_weapon_display_name(weapon)`
 * `helpers.upgrade_weapon(player, base)`
-* `helpers.drop_powerup(player, code, pos|dist)`
 * `helpers.player_has_all_map_perks(player)`
 
 ### Legacy Stubs (no-op, for compatibility)
@@ -388,7 +431,9 @@ Usage from `gumballs.gsc`:
 * BR delayed show (default 1.5s)
 * Selection cadence (round-based vs. alternative)
 * Override policy for manual gums
-* Dev toggles: `gg_enable`, `gg_debug`, `gg_debug_hud`, and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.
+* Dev toggles: `gg_enable` and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.
+* `gg_debug` (0/1, default 0) - enables console logging.
+* `gg_debug_hud` (0/1, default 0) - shows log messages in yellow debug HUD.
 * Build 5 consumption DVARs (safe fallbacks):
   - `gg_default_uses` (int, default 3)
   - `gg_default_rounds` (int, default 3)
@@ -403,20 +448,20 @@ Usage from `gumballs.gsc`:
   - `gg_reigndrops_include_firesale` (0/1, default 1) - include Fire Sale in the Reign Drops bundle.
   - `gg_powerup_hints` (0/1, default 1) - allow HUD hint text after spawning a drop.
   - `gg_log_dispatch` (0/1, default 0) - optional dispatch logging (otherwise `set gg_debug 1` surfaces the same feed).
-  - `gg_debug_hud` (0/1, default 0) - toggles the on-screen debug HUD text overlay (now yellow for clarity).
 * Build 7 armed-gum knobs:
   - `gg_armed_grace_secs` (float, default 3.0) - grace window before armed gums can trigger.
   - `gg_armed_poll_ms` (int, default 150) - polling cadence when watching weapon changes.
   - `gg_wonder_label_reassert_ms` (int, default 250) - Wonderbar BR label reassert cadence.
   - `gg_br_delayed_show_secs` (float, default 1.5) - default delay before the BR HUD fades in; cancelable token guards gum switches, deaths, and hides.
   - `gg_wonder_label_suppress_ms` (int, default 35000) - Wonderbar/Fire Sale hint suppression duration (milliseconds) before auto-reassert.
-  - `gg_test_drop_firesale_on_arm` (0/1, default 1 while testing) - spawn a Fire Sale when an armed gum activates (Wall/Crate/Wonderbar); disable after validation.
+  - `gg_test_drop_firesale_on_arm` (0/1, default 0) - spawn a Fire Sale when an armed gum activates (Wall/Crate/Wonderbar); disable after validation.
   - `gg_wonder_include_specials` (0/1, default 0) - optionally include Gersh Device (`zombie_black_hole_bomb`) and Quantum Bomb (`zombie_quantum_bomb`) in the Wonderbar weapon pool.
 * Build 8 economy knobs:
   - `gg_round_robbin_bonus` (int, default 1600) - bonus points granted to every player when Round Robbin fires.
   - `gg_round_robbin_force_transition` (0/1, default 1) - force `level.zombie_total` to zero so round counters advance immediately.
   - `gg_shopping_free_secs` (float, default 60.0) - Shopping Free timer duration (seconds).
   - `gg_shopping_free_temp_points` (int, default 50000) - temporary credit granted while Shopping Free is active.
+  - `gg_gift_card_points` (int, default 30000) - points awarded to the activating player when Gift Card fires.
   - `gg_perkaholic_grant_delay_ms` (int, default 250) - delay between individual perk grants for Perkaholic (milliseconds).
 
 ---
@@ -424,7 +469,7 @@ Usage from `gumballs.gsc`:
 ## 10. Build Order
 
 1. Skeleton registry + HUD stubs
-2. Round watcher + gum selection ? dummy HUD updates
+2. Round watcher + gum selection -> dummy HUD updates
 3. Dispatcher + input + dummy effect stubs
 4. Position Hud Elements
 5. Consumption logic (uses/rounds/timer)
@@ -434,11 +479,6 @@ Usage from `gumballs.gsc`:
 9. Harden map/perk checks + Ascension VO hooks
 10. Refine HUD polish (hint text, delayed show, suppression)
 11. Add placeholders, rarity weights, and debug commands
-
-**Build 9 details**
-* Selection pools normalize map names and re-check `map_whitelist` / `map_blacklist` before filling `pool_remaining`, logging `[gg] forced gated gum` when dev overrides bypass gating.
-* Perkaholic reuses the cached perk list, dedupes missing perks, honours perk caps, and triggers the Cosmodrome VO helper once after grants complete.
-* Free Perk pickups use the same helper so Cosmodrome VO flags (`level.perk_bought` + `flag_set("perk_bought")`) stay consistent.
 
 ---
 
@@ -474,8 +514,8 @@ stateDiagram-v2
     Armed --> Selected: trigger satisfied\nconsume 1 use
     Instant --> Selected: after effect
 
-    Selected --> NoGum: uses == 0 ? hide BR
-    Active --> NoGum: uses == 0 ? hide BR
+    Selected --> NoGum: uses == 0 -> hide BR
+    Active --> NoGum: uses == 0 -> hide BR
 
     %% Global interrupts
     Selected --> NoGum: gg_gum_cleared / death / disconnect
@@ -511,6 +551,16 @@ stateDiagram-v2
 
 ### Debug Logging
 
-When `gg_debug_hud` is enabled, debug HUD text now renders in **yellow** for high-contrast visibility in-game.
+- All debug output routes through `helpers.gg_log("<message>")`.
+- Messages are uniformly prefixed with `[gg]` for easy filtering in console logs.
+- Hidden by default: `gg_debug`, `gg_log_dispatch`, and `gg_consume_logs` all default to `0`.
+- HUD mirroring: the yellow debug HUD auto-enables when any logging flag is on (`gg_debug`, `gg_log_dispatch`, or `gg_consume_logs`) or when `gg_debug_hud` is explicitly set to `1`.
+- HUD overlay: messages now stack up to five lines in the top-left; each new entry pushes older lines upward so nothing overlaps.
+- Fade cadence: every line holds for roughly three seconds, then fades out over 0.5 seconds while keeping the yellow font for continuity.
+- Control: `gg_debug_hud` (0/1) still defaults to `0`, so the overlay only appears when debug flags are intentionally enabled.
+- Legacy ad-hoc `print`/`iprintln` calls were replaced for consistency.
 
 ---
+
+
+

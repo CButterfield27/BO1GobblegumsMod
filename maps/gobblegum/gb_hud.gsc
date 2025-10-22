@@ -464,6 +464,291 @@ __gg_hint_hide_immediate()
     self.gg.hud.br_hint.alpha = 0;
 }
 
+__gg_debug_hud_create()
+{
+    if (isdefined(level.gg_debug_text))
+        return;
+
+    data = spawnstruct();
+    data.base_x = 30;
+    data.base_y = 110;
+    data.line_gap = 20;
+    data.max_lines = 5;
+    data.font = "objective";
+    data.font_scale = 1.0;
+    data.hold_secs = 3.0;
+    data.fade_secs = 0.5;
+    data.next_id = 1;
+
+    level.gg_debug_text = data;
+    if (!isdefined(level.gg_debug_lines))
+        level.gg_debug_lines = [];
+    if (!isdefined(level.gg_debug_queue))
+        level.gg_debug_queue = [];
+    level.gg_debug_text_owner = self;
+
+    self thread __gg_debug_hud_owner_watch();
+}
+
+__gg_debug_hud_owner_watch()
+{
+    self waittill("disconnect");
+
+    if (isdefined(level.gg_debug_text_owner) && level.gg_debug_text_owner == self)
+    {
+        __gg_debug_hud_clear_lines();
+        level.gg_debug_text = undefined;
+        level.gg_debug_text_owner = undefined;
+    }
+}
+
+__gg_debug_hud_clear_lines()
+{
+    if (!isdefined(level.gg_debug_lines))
+        return;
+
+    for (i = 0; i < level.gg_debug_lines.size; i++)
+    {
+        entry = level.gg_debug_lines[i];
+        if (!isdefined(entry))
+            continue;
+        if (isdefined(entry.elem))
+        {
+            entry.elem notify("gg_debug_line_removed");
+            entry.elem destroy();
+        }
+    }
+
+    level.gg_debug_lines = [];
+}
+
+__gg_debug_hud_reflow_lines()
+{
+    if (!isdefined(level.gg_debug_text) || !isdefined(level.gg_debug_lines))
+        return;
+
+    base_x = level.gg_debug_text.base_x;
+    base_y = level.gg_debug_text.base_y;
+    gap = level.gg_debug_text.line_gap;
+
+    count = level.gg_debug_lines.size;
+    for (i = 0; i < count; i++)
+    {
+        entry = level.gg_debug_lines[i];
+        if (!isdefined(entry) || !isdefined(entry.elem))
+            continue;
+
+        target_y = base_y - ((count - 1 - i) * gap);
+        entry.elem.x = base_x;
+        entry.elem.y = target_y;
+    }
+}
+
+__gg_debug_hud_remove_line(elem, line_id)
+{
+    if (!isdefined(level.gg_debug_lines))
+        return;
+
+    removed = false;
+    keep = [];
+    for (i = 0; i < level.gg_debug_lines.size; i++)
+    {
+        entry = level.gg_debug_lines[i];
+        if (!isdefined(entry))
+            continue;
+
+        if (!removed && isdefined(elem) && isdefined(entry.elem) && entry.elem == elem)
+        {
+            removed = true;
+            continue;
+        }
+
+        if (!removed && isdefined(line_id) && isdefined(entry.id) && entry.id == line_id)
+        {
+            if (isdefined(entry.elem) && entry.elem != elem)
+            {
+                entry.elem notify("gg_debug_line_removed");
+                entry.elem destroy();
+            }
+            removed = true;
+            continue;
+        }
+
+        keep[keep.size] = entry;
+    }
+
+    if (removed)
+    {
+        level.gg_debug_lines = keep;
+        __gg_debug_hud_reflow_lines();
+    }
+}
+
+__gg_debug_hud_drop_oldest()
+{
+    if (!isdefined(level.gg_debug_lines) || level.gg_debug_lines.size <= 0)
+        return;
+
+    entry = level.gg_debug_lines[0];
+    if (isdefined(entry) && isdefined(entry.elem))
+    {
+        entry.elem notify("gg_debug_line_removed");
+        entry.elem destroy();
+    }
+
+    next = [];
+    for (i = 1; i < level.gg_debug_lines.size; i++)
+    {
+        next[next.size] = level.gg_debug_lines[i];
+    }
+
+    level.gg_debug_lines = next;
+    __gg_debug_hud_reflow_lines();
+}
+
+__gg_debug_hud_add_line(message)
+{
+    if (!isdefined(level.gg_debug_text))
+        return;
+
+    if (!isdefined(level.gg_debug_lines))
+        level.gg_debug_lines = [];
+
+    mgr = level.gg_debug_text;
+
+    text = createFontString(mgr.font, 1.0);
+    text.foreground = true;
+    text.hidewheninmenu = true;
+    text.alpha = 1;
+    text.color = (1, 1, 0);
+    text.sort = 45;
+    text.alignX = "left";
+    text.alignY = "top";
+    text.horzAlign = "left";
+    text.vertAlign = "top";
+    text.fontScale = mgr.font_scale;
+    text setPoint("LEFT", "TOP", mgr.base_x, mgr.base_y);
+    text SetText(message);
+
+    entry = spawnstruct();
+    entry.elem = text;
+    entry.id = mgr.next_id;
+    entry.created = gettime();
+    mgr.next_id += 1;
+
+    level.gg_debug_lines[level.gg_debug_lines.size] = entry;
+    __gg_debug_hud_reflow_lines();
+
+    text thread __gg_debug_line_fade_thread(entry.id);
+
+    if (level.gg_debug_lines.size > mgr.max_lines)
+    {
+        __gg_debug_hud_drop_oldest();
+    }
+}
+
+__gg_debug_line_fade_thread(line_id)
+{
+    self endon("disconnect");
+    self endon("gg_debug_line_removed");
+
+    hold_secs = 3.0;
+    fade_secs = 0.5;
+    if (isdefined(level.gg_debug_text))
+    {
+        if (isdefined(level.gg_debug_text.hold_secs))
+            hold_secs = level.gg_debug_text.hold_secs;
+        if (isdefined(level.gg_debug_text.fade_secs))
+            fade_secs = level.gg_debug_text.fade_secs;
+    }
+
+    wait(hold_secs);
+
+    if (fade_secs > 0)
+    {
+        self FadeOverTime(fade_secs);
+        wait(fade_secs);
+    }
+
+    self.alpha = 0;
+    __gg_debug_hud_remove_line(self, line_id);
+    self destroy();
+}
+
+__gg_debug_hud_process_queue()
+{
+    if (!isdefined(level.gg_debug_queue) || level.gg_debug_queue.size <= 0)
+        return;
+
+    while (level.gg_debug_queue.size > 0)
+    {
+        msg = __gg_debug_hud_dequeue();
+        if (isdefined(msg))
+        {
+            __gg_debug_hud_add_line(msg);
+        }
+    }
+}
+
+__gg_debug_hud_dequeue()
+{
+    if (!isdefined(level.gg_debug_queue) || level.gg_debug_queue.size <= 0)
+        return undefined;
+
+    msg = level.gg_debug_queue[0];
+
+    if (level.gg_debug_queue.size <= 1)
+    {
+        level.gg_debug_queue = [];
+    }
+    else
+    {
+        next = [];
+        for (i = 1; i < level.gg_debug_queue.size; i++)
+        {
+            next[next.size] = level.gg_debug_queue[i];
+        }
+        level.gg_debug_queue = next;
+    }
+
+    return msg;
+}
+
+__gg_debug_hud_loop()
+{
+    self endon("disconnect");
+
+    while (true)
+    {
+        // Show the debug HUD when explicitly requested, or when any logging mode is active
+        dvar_on = (GetDvarInt("gg_debug_hud") != 0)
+            || (GetDvarInt("gg_debug") != 0)
+            || (GetDvarInt("gg_log_dispatch") != 0)
+            || (GetDvarInt("gg_consume_logs") != 0);
+
+        if (dvar_on)
+        {
+            if (!isdefined(level.gg_debug_text) || !isdefined(level.gg_debug_text_owner))
+            {
+                __gg_debug_hud_create();
+            }
+
+            if (isdefined(level.gg_debug_text_owner) && level.gg_debug_text_owner == self)
+            {
+                __gg_debug_hud_process_queue();
+            }
+        }
+        else if (isdefined(level.gg_debug_text_owner) && level.gg_debug_text_owner == self)
+        {
+            __gg_debug_hud_clear_lines();
+            if (isdefined(level.gg_debug_queue))
+                level.gg_debug_queue = [];
+        }
+
+        wait(0.05);
+    }
+}
+
 ensure_api()
 {
     if (isdefined(level.gb_hud))
@@ -524,6 +809,7 @@ gg_hud_precache()
     PrecacheShader("bo6_wall_power");
     PrecacheShader("bo6_who_keeping_score");
     PrecacheShader("bo6_wonderbar");
+    preCacheShader("bo7_gift_card");
 }
 
 init_player(player)
@@ -541,16 +827,22 @@ __gg_init_player_impl()
 {
     self endon("disconnect");
 
-    // Idempotent: reuse if already built
-    if (isdefined(self.gg) && isdefined(self.gg.hud) && isdefined(self.gg.hud.tc_icon))
-    {
-        self.gg.hud thread __gg_apply_layout_thread();
-        return;
-    }
-
     if (!isdefined(self.gg))
     {
         self.gg = spawnstruct();
+    }
+
+    if (!isdefined(self.gg.debug_hud_thread_started))
+    {
+        self.gg.debug_hud_thread_started = true;
+        self thread __gg_debug_hud_loop();
+    }
+
+    // Idempotent: reuse if already built
+    if (isdefined(self.gg.hud) && isdefined(self.gg.hud.tc_icon))
+    {
+        self.gg.hud thread __gg_apply_layout_thread();
+        return;
     }
 
     hud = spawnstruct();
@@ -728,9 +1020,21 @@ __gg_update_tc_impl(gum)
         __gg_set_shader_if_changed(self, self.gg.hud.tc_icon, "tc_icon", gum.shader, l.tc_icon_w, l.tc_icon_h);
     if (isdefined(gum.name))
         __gg_set_text_if_changed(self, self.gg.hud.tc_name, "tc_name", gum.name);
+
+    if (isdefined(self.gg.hud.tc_uses))
+    {
+        uses_text = "";
+        if (isdefined(gum.uses_description))
+            uses_text = gum.uses_description;
+        __gg_set_text_if_changed(self, self.gg.hud.tc_uses, "tc_uses", uses_text);
+        if (uses_text == "")
+            self.gg.hud.tc_uses.alpha = 0;
+        else
+            self.gg.hud.tc_uses.alpha = __gg_tc_current_alpha();
+    }
+
     if (isdefined(gum.desc))
         __gg_set_text_if_changed(self, self.gg.hud.tc_desc, "tc_desc", gum.desc);
-    // uses line can be filled later
 }
 
 hide_tc_immediate(player)

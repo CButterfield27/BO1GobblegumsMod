@@ -1,6 +1,43 @@
 #include maps\_utility;
 #include common_scripts\utility;
 
+gg_log(msg)
+{
+    // Log when any logging mode is enabled: core debug, dispatch, or consume logs
+    should_log = (GetDvarInt("gg_debug") != 0)
+        || (GetDvarInt("gg_log_dispatch") != 0)
+        || (GetDvarInt("gg_consume_logs") != 0);
+
+    if (!should_log)
+        return;
+
+    if (!isdefined(msg))
+        msg = "";
+
+    message = "[gg] " + msg;
+    print(message);
+
+    if (GetDvarInt("gg_debug_hud") != 0 || should_log)
+    {
+        if (!isdefined(level.gg_debug_queue))
+            level.gg_debug_queue = [];
+
+        level.gg_debug_queue[level.gg_debug_queue.size] = message;
+
+        max_queue = 16;
+        if (level.gg_debug_queue.size > max_queue)
+        {
+            trim = [];
+            start = level.gg_debug_queue.size - max_queue;
+            for (i = start; i < level.gg_debug_queue.size; i++)
+            {
+                trim[trim.size] = level.gg_debug_queue[i];
+            }
+            level.gg_debug_queue = trim;
+        }
+    }
+}
+
 // Literal-return helpers (constants)
 ACT_AUTO() { return 1; }
 ACT_USER() { return 2; }
@@ -339,14 +376,9 @@ helpers_upgrade_debug(msg)
 {
     if (GetDvarInt("gg_debug") != 1)
         return;
-    if (!isdefined(msg))
+    if (!isdefined(msg) || msg == "")
         msg = "upgrade debug";
-    iprintln("^3Gumballs: " + msg);
-}
-
-drop_powerup(player, code, pos_or_dist)
-{
-    // no-op in Step 1
+    gg_log("upgrade: " + msg);
 }
 
 player_has_all_map_perks(player)
@@ -413,8 +445,8 @@ trigger_perk_vo_if_cosmodrome(player, perk)
         if (invoked)
             label = label + ", perk_bought_func invoked";
 
-        iprintln("^3[gg] cosmodrome perk VO: " + label + " (" + name + ")");
-}
+        gg_log("cosmodrome perk vo: " + label + " (" + name + ")");
+    }
 
     return true;
 }
@@ -435,9 +467,9 @@ helpers_init()
     level.gb_helpers.get_wonder_pool = ::get_wonder_pool;
     level.gb_helpers.get_weapon_display_name = ::get_weapon_display_name;
     level.gb_helpers.upgrade_weapon = ::upgrade_weapon;
-    level.gb_helpers.drop_powerup = ::drop_powerup;
     level.gb_helpers.player_has_all_map_perks = ::player_has_all_map_perks;
     level.gb_helpers.trigger_perk_vo_if_cosmodrome = ::trigger_perk_vo_if_cosmodrome;
+    level.gb_helpers.gg_log = ::gg_log;
 
     level.gb_helpers.ACT_AUTO = ::ACT_AUTO;
     level.gb_helpers.ACT_USER = ::ACT_USER;
