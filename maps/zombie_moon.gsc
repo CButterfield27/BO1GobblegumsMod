@@ -1407,11 +1407,16 @@ include_powerups()
 	include_powerup( "full_ammo" );
 	include_powerup( "carpenter" );
 	include_powerup( "fire_sale" );
+	// include_powerup( "bonfire_sale" );
 	
-	// WW (02-04-11): Added minigun
+	WW (02-04-11): Added minigun
 	PreCacheItem( "minigun_zm" );
 	include_powerup( "minigun" );
 	
+	// WW (03-14-11): Added Tesla
+	// PreCacheItem( "tesla_gun_zm" );
+	// include_powerup( "tesla" );
+
 	include_powerup( "free_perk" );
 
 	// for quantum bomb
