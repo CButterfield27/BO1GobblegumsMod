@@ -874,7 +874,7 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_round_robbin_force_transition", 1);
     gg_ensure_dvar_float("gg_shopping_free_secs", 60.0);
     gg_ensure_dvar_int("gg_shopping_free_temp_points", 50000);
-    gg_ensure_dvar_int("gg_gift_card_points", 30000);
+    gg_ensure_dvar_int("gg_gift_card_points", 15000);
     gg_ensure_dvar_int("gg_perkaholic_grant_delay_ms", 250);
 
     // Cache commonly used defaults for quick access
