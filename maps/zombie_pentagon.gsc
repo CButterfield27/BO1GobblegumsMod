@@ -312,7 +312,7 @@ include_powerups()
 	include_powerup( "fire_sale" );
 	include_powerup( "bonfire_sale" );
 	
-	WW (02-04-11): Added minigun
+	// WW (02-04-11): Added minigun
 	PreCacheItem( "minigun_zm" );
 	include_powerup( "minigun" );
 	
