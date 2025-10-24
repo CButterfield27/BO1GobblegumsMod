@@ -2,6 +2,44 @@
 
 ---
 
+## Solo Easter Mods
+
+I did not make the Solo Easter mods, but have merged them with the gobblegum code.
+
+These are the modified steps:
+
+### Ascension
+
+1. All four monkey-round buttons must be pressed within roughly a minute and a half (~100 seconds) of the first button press
+2. LUNA step auto completes
+3. Final step requires a Gersh device to be thrown at the light sphere and a Pack-a-Punched Thundergun to be shot into it (Ray Gun does not work)
+
+### Call of the Dead
+
+1. Nothing is changed from the original solo easter egg. Solo egg can be completed as normal with this mod active
+
+### Shangri-La
+
+1. Activate all four of the stone switches in spawn in quick succession to activate eclipse mode
+2. Stone matching step will auto-complete a short period of time after interacting with the switch that starts the dialogue with the explorers
+3. Waterslide pressure plate step requires only one player to stand on the pressure plate after pulling the switch on the slide
+
+### Moon
+
+1. IMPORTANT: Restart the game until you spawn as Richtofen. He will have the golden rod show up on screen in the bottom right-hand corner
+2. The rest of the egg is the same as co-op once you are playing as Richtofen
+   ** Note: Playing with a mod that alters the '.\pluto_t5_full_game\zone\Common\common_zombie_patch.ff' in combination with this mod may cause the player to be unable to collect the P.E.S. on moon**
+
+### Implementation Notes
+
+- Ascension logic lives in `maps/zombie_cosmodrome_eggs.gsc`: `switch_watcher()` boosts the monkey-round button window to roughly 100 seconds (~1m40s) whenever there are three or fewer players, `lander_monitor()` flags the LUNA passkey immediately for solo games, and `wait_for_combo()` pre-satisfies the Ray Gun and doll hits so only a Gersh device and Pack-a-Punched Thundergun are required alongside the black hole.
+- Call of the Dead retains the stock solo script (`maps/zombie_coast.gsc` plus the stage handlers under `maps/levels/zombie_coast/`), and the merge does not alter its step order; GobbleGum hooks coexist with the shipped Easter Egg flow.
+- Shangri-La adjustments trigger in `maps/zombie_temple_sq_oafc.gsc`, where solo games wait 20 seconds after the story switch before auto-raising the crystal, and the pressure-plate stage (`maps/levels/zombie_temple/maps/zombie_temple_pack_a_punch.gsc`) treats a single occupant as sufficient once the slide switch is pulled.
+- Moon sidequest gating remains in `maps/zombie_moon_sq.gsc`: `init_sidequest()` grants the VRIL Generator icon (golden rod HUD) only when the player slot corresponds to Richtofen, while downstream steps reuse the co-op scripts unchanged.
+- Each altered routine keeps its original `endon` guards (for example `level endon("between_round_over")` in the Ascension switch watcher and `self endon("death")` in the Moon soul release path), so existing GobbleGum threads, HUD timers, and helper DVARs remain stable.
+
+---
+
 ## 1. Module Structure
 
 * **`gumballs.gsc` (Core logic)**
@@ -561,6 +599,3 @@ stateDiagram-v2
 - Legacy ad-hoc `print`/`iprintln` calls were replaced for consistency.
 
 ---
-
-
-

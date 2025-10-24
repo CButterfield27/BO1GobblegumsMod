@@ -127,10 +127,10 @@ gg_registry_init()
     gum.name = "Dead of Nuclear Winter";
     gum.shader = "t7_hud_zm_bgb_dead_of_nuclear_winter";
     gum.desc = "Spawns a Nuke Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
-    gum.base_uses = 2;
+    gum.base_uses = 1;
     gum.activate_func = "gg_fx_dead_of_nuclear_winter";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -146,10 +146,10 @@ gg_registry_init()
     gum.name = "Extra Credit";
     gum.shader = "t7_hud_zm_bgb_extra_credit";
     gum.desc = "Spawns a Bonus Points Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (4 uses)";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
-    gum.base_uses = 4;
+    gum.base_uses = 1;
     gum.activate_func = "gg_fx_extra_credit";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -185,10 +185,10 @@ gg_registry_init()
     gum.name = "Fatal Contraption";
     gum.shader = "t7_hud_zm_bgb_fatal_contraption";
     gum.desc = "Spawns a Death Machine Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
-    gum.base_uses = 2;
+    gum.base_uses = 1;
     gum.activate_func = "gg_fx_fatal_contraption";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -224,10 +224,10 @@ gg_registry_init()
     gum.name = "Immolation Liquidation";
     gum.shader = "bo6_immolation_liquidation";
     gum.desc = "Spawns a Fire Sale Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (3 uses)";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
-    gum.base_uses = 3;
+    gum.base_uses = 1;
     gum.activate_func = "gg_fx_immolation";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -243,10 +243,10 @@ gg_registry_init()
     gum.name = "Kill Joy";
     gum.shader = "bo6_kill_joy";
     gum.desc = "Spawns an Insta-Kill Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
-    gum.base_uses = 2;
+    gum.base_uses = 1;
     gum.activate_func = "gg_fx_kill_joy";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -262,10 +262,10 @@ gg_registry_init()
     gum.name = "Licensed Contractor";
     gum.shader = "t7_hud_zm_bgb_licensed_contractor";
     gum.desc = "Spawns a Carpenter Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (3 uses)";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
-    gum.base_uses = 3;
+    gum.base_uses = 1;
     gum.activate_func = "gg_fx_licensed_contractor";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -300,10 +300,10 @@ gg_registry_init()
     gum.name = "Reign Drops";
     gum.shader = "bo6_reign_drops";
     gum.desc = "Spawns all core Power-Ups at once";
-    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
-    gum.base_uses = 2;
+    gum.base_uses = 1;
     gum.activate_func = "gg_fx_reign_drops";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -379,10 +379,10 @@ gg_registry_init()
     gum.name = "Who's Keeping Score";
     gum.shader = "bo6_who_keeping_score";
     gum.desc = "Spawns a Double Points Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
-    gum.base_uses = 2;
+    gum.base_uses = 1;
     gum.activate_func = "gg_fx_whos_keeping_score";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -874,7 +874,7 @@ gg_init_dvars()
     gg_ensure_dvar_int("gg_round_robbin_force_transition", 1);
     gg_ensure_dvar_float("gg_shopping_free_secs", 60.0);
     gg_ensure_dvar_int("gg_shopping_free_temp_points", 50000);
-    gg_ensure_dvar_int("gg_gift_card_points", 30000);
+    gg_ensure_dvar_int("gg_gift_card_points", 15000);
     gg_ensure_dvar_int("gg_perkaholic_grant_delay_ms", 250);
 
     // Cache commonly used defaults for quick access
