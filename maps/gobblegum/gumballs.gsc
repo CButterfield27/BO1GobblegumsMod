@@ -834,50 +834,65 @@ gg_selection_close(player, reason, hide_ui, reset_state)
 
 gg_init_dvars()
 {
+    // CORE CONTROL & DEBUG
     gg_ensure_dvar_int("gg_enable", 1);
     gg_ensure_dvar_int("gg_debug", 1);
     gg_ensure_dvar_int("gg_debug_hud", 1);
-    gg_ensure_dvar_float("gg_round1_delay", 10.0);
-    gg_ensure_dvar_int("gg_select_cadence_ms", 250);
-    gg_ensure_dvar_string("gg_force_gum", "");
-    gg_ensure_dvar_int("gg_debug_select", 0);
-    gg_ensure_dvar_int("gg_input_enable", 1);
-    gg_ensure_dvar_int("gg_debounce_ms", 200);
     gg_ensure_dvar_int("gg_log_dispatch", 1);
-    gg_ensure_dvar_int("gg_auto_on_select", 1);
+    gg_ensure_dvar_int("gg_consume_logs", 1);
     gg_ensure_dvar_int("gg_simulate_effects", 0);
 
-    // Build 5 consumption defaults
+    // INPUT & SELECTION
+    gg_ensure_dvar_int("gg_input_enable", 1);
+    gg_ensure_dvar_int("gg_select_cadence_ms", 250);
+    gg_ensure_dvar_int("gg_debounce_ms", 200);
+    gg_ensure_dvar_int("gg_auto_on_select", 1);
+    gg_ensure_dvar_int("gg_debug_select", 0);
+    gg_ensure_dvar_string("gg_force_gum", "");
+
+    // TIMING & BASE BEHAVIOR
+    gg_ensure_dvar_float("gg_round1_delay", 10.0);
+    gg_ensure_dvar_int("gg_timer_tick_ms", 100);
+
+    // DEFAULT GUM CONSUMPTION
     gg_ensure_dvar_int("gg_default_uses", 3);
     gg_ensure_dvar_int("gg_default_rounds", 3);
     gg_ensure_dvar_float("gg_default_timer_secs", 60.0);
-    gg_ensure_dvar_int("gg_timer_tick_ms", 100);
-    gg_ensure_dvar_int("gg_consume_logs", 1);
 
-    // Build 6 power-up knobs
+    // GENERIC POWER-UP CONTROL
     gg_ensure_dvar_float("gg_drop_forward_units", 70.0);
-    gg_ensure_dvar_float("gg_reigndrops_forward_units", 145.0);
-    gg_ensure_dvar_float("gg_reigndrops_radius", 70.0);
-    gg_ensure_dvar_int("gg_reigndrops_spacing_ms", 150);
-    gg_ensure_dvar_int("gg_reigndrops_include_firesale", 1);
     gg_ensure_dvar_int("gg_powerup_hints", 1);
     gg_ensure_dvar_float("gg_armed_grace_secs", 3.0);
     gg_ensure_dvar_int("gg_armed_poll_ms", 150);
     gg_ensure_dvar_int("gg_test_drop_firesale_on_arm", 0);
+
+    // REIGN DROPS SETTINGS
+    gg_ensure_dvar_float("gg_reigndrops_forward_units", 145.0);
+    gg_ensure_dvar_float("gg_reigndrops_radius", 70.0);
+    gg_ensure_dvar_int("gg_reigndrops_spacing_ms", 150);
+    gg_ensure_dvar_int("gg_reigndrops_include_firesale", 1);
+
+    // WONDER GUM LABEL / HUD BEHAVIOR
     gg_ensure_dvar_int("gg_wonder_label_reassert_ms", 250);
     gg_ensure_dvar_int("gg_wonder_include_specials", 0);
     gg_ensure_dvar_float("gg_br_delayed_show_secs", 1.5);
     gg_ensure_dvar_int("gg_wonder_label_suppress_ms", 35000);
 
-    // Build 8 round/economy knobs
+    // ROUND ROBBIN SETTINGS
     gg_ensure_dvar_int("gg_round_robbin_bonus", 1600);
     gg_ensure_dvar_int("gg_round_robbin_force_transition", 1);
+
+    // SHOPPING FREE SETTINGS
     gg_ensure_dvar_float("gg_shopping_free_secs", 60.0);
     gg_ensure_dvar_int("gg_shopping_free_temp_points", 50000);
+
+    // GIFT CARD SETTINGS
     gg_ensure_dvar_int("gg_gift_card_points", 15000);
+
+    // PERKAHOLIC SETTINGS
     gg_ensure_dvar_int("gg_perkaholic_grant_delay_ms", 250);
 
-    // Cache commonly used defaults for quick access
+    // CACHE COMMON DEFAULTS
     gg_cache_config();
 }
 
