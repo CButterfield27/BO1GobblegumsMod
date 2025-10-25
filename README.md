@@ -245,6 +245,12 @@ Usage from `gumballs.gsc`:
 * Accessibility: text is primary, colors secondary
 * Uses-based user gums (e.g., Extra Credit) show the TC uses line and decrement the BR uses bar on each activation until all uses are consumed.
 
+#### Debug HUD Positioning
+
+- All debug text elements anchor with `setPoint("LEFTTOP", "LEFTTOP", x, y)` so the stack stays pinned to the top-left safe area across maps and aspect ratios.
+- Standard offsets: 32px from the left edge, bottom line baseline at 96px with 18px vertical spacing; new messages land at the bottom while older lines slide upward.
+- Layout shares the same safe-area origin as gameplay HUD so debug output never overlaps core widgets.
+
 ---
 
 ## 4. Gum Selection Logic
@@ -472,7 +478,7 @@ set gg_debug 1
 * Override policy for manual gums
 * Dev toggles: `gg_enable` and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.
 * `gg_debug` (0/1, default 0) - enables console logging.
-* `gg_debug_hud` (0/1, default 0) - shows log messages in yellow debug HUD.
+* `gg_debug_hud` (0/1, default 0) - toggles all debug visual output; when enabled, messages render in the fixed top-left debug HUD position.
 * Build 5 consumption DVARs (safe fallbacks):
   - `gg_default_uses` (int, default 3)
   - `gg_default_rounds` (int, default 3)
@@ -602,6 +608,7 @@ stateDiagram-v2
 
 ### Troubleshooting
 
-- Perkaholic: if the gum stops after four perks, ensure `_zombiemode_perks.gsc` only blocks purchases when `self.gg_perk_cap_bypass` is undefined or false—this flag must stay set for the bypass to work.
+- Perkaholic: if the gum stops after four perks, ensure `_zombiemode_perks.gsc` only blocks purchases when `self.gg_perk_cap_bypass` is undefined or false-this flag must stay set for the bypass to work.
+- Debug HUD alignment: if yellow debug text appears away from the top-left corner, confirm `gb_hud.gsc` creates the overlay with matching `setPoint("LEFTTOP", "LEFTTOP", ...)` anchors and the standard offsets above.
 
 ---
