@@ -343,6 +343,7 @@ Bonus Points is registered at init through the alias/include path so `maps\_zomb
   * Suppression triggered by Wonderbar helper calls (e.g., Immolation).
 * Perkaholic - Auto, single-use gum that grants every perk available on the current map to players missing them.
   * Uses the helper perk cache so map-specific machines are respected and skips consumption when nothing is left to grant.
+  * Temporarily bypasses the four-perk cap by setting `self.gg_perk_cap_bypass`, then clears the flag once grants finish so the normal limit returns.
   * On Cosmodrome, asserts the perk VO flag once per activation by setting `level.perk_bought` and calling `flag_set("perk_bought")` via the helper after perks are granted.
   * Grant cadence is configurable with `gg_perkaholic_grant_delay_ms` (default 250ms) to keep HUD updates readable.
 
@@ -501,6 +502,7 @@ set gg_debug 1
   - `gg_shopping_free_temp_points` (int, default 50000) - temporary credit granted while Shopping Free is active.
   - `gg_gift_card_points` (int, default 30000) - points awarded to the activating player when Gift Card fires.
   - `gg_perkaholic_grant_delay_ms` (int, default 250) - delay between individual perk grants for Perkaholic (milliseconds).
+  - Perkaholic automatically clears its temporary perk-cap bypass flag when the grant loop ends; once the gum finishes, standard perk limits apply again.
 
 ---
 
@@ -597,5 +599,9 @@ stateDiagram-v2
 - Fade cadence: every line holds for roughly three seconds, then fades out over 0.5 seconds while keeping the yellow font for continuity.
 - Control: `gg_debug_hud` (0/1) still defaults to `0`, so the overlay only appears when debug flags are intentionally enabled.
 - Legacy ad-hoc `print`/`iprintln` calls were replaced for consistency.
+
+### Troubleshooting
+
+- Perkaholic: if the gum stops after four perks, ensure `_zombiemode_perks.gsc` only blocks purchases when `self.gg_perk_cap_bypass` is undefined or false—this flag must stay set for the bypass to work.
 
 ---

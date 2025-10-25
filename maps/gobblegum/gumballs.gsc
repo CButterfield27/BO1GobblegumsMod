@@ -3565,6 +3565,40 @@ gg_perkaholic_slots_available(player)
     return room;
 }
 
+gg_perkaholic_begin_bypass(player)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg_perk_cap_bypass_depth))
+        player.gg_perk_cap_bypass_depth = 0;
+
+    player.gg_perk_cap_bypass_depth += 1;
+    player.gg_perk_cap_bypass = true;
+
+    if (gg_debug_enabled() && player.gg_perk_cap_bypass_depth == 1)
+        [[ level.gb_helpers.gg_log ]]("perkaholic: perk cap bypass enabled");
+}
+
+gg_perkaholic_end_bypass(player)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg_perk_cap_bypass_depth))
+        player.gg_perk_cap_bypass_depth = 0;
+
+    player.gg_perk_cap_bypass_depth -= 1;
+    if (player.gg_perk_cap_bypass_depth > 0)
+        return;
+
+    player.gg_perk_cap_bypass = undefined;
+    player.gg_perk_cap_bypass_depth = undefined;
+
+    if (gg_debug_enabled())
+        [[ level.gb_helpers.gg_log ]]("perkaholic: perk cap bypass cleared");
+}
+
 gg_perkaholic_trigger_vo_helper(player, perk)
 {
     if (!isdefined(level.gb_helpers) || !isdefined(level.gb_helpers.trigger_perk_vo_if_cosmodrome))
@@ -3589,18 +3623,8 @@ gg_fx_perkaholic(player, gum)
         return;
     }
 
-    slots = gg_perkaholic_slots_available(player);
-    if (slots <= 0)
-    {
-        gg_mark_activation_skip(player);
-        if (gg_debug_enabled())
-            [[ level.gb_helpers.gg_log ]]("perkaholic skipped: perk cap reached");
-        gg_show_hint_if_enabled(player, "Perkaholic: perk slots capped");
-        return;
-    }
-
     grant_list = [];
-    for (i = 0; i < missing.size && grant_list.size < slots; i++)
+    for (i = 0; i < missing.size; i++)
     {
         perk = missing[i];
         if (!isdefined(perk) || perk == "")
@@ -3619,8 +3643,10 @@ gg_fx_perkaholic(player, gum)
         return;
     }
 
-    if (gg_debug_enabled() && missing.size > grant_list.size)
-        [[ level.gb_helpers.gg_log ]]("perkaholic limited to " + grant_list.size + " perks (cap " + slots + ")");
+    gg_perkaholic_begin_bypass(player);
+
+    if (gg_debug_enabled())
+        [[ level.gb_helpers.gg_log ]]("perkaholic granting " + grant_list.size + " perks (missing=" + missing.size + ")");
 
     delay = gg_get_perkaholic_grant_delay_secs();
 
@@ -3647,12 +3673,14 @@ gg_fx_perkaholic(player, gum)
             wait(delay);
     }
 
+    gg_perkaholic_end_bypass(player);
+
     if (granted <= 0)
     {
         gg_mark_activation_skip(player);
         if (gg_debug_enabled())
             [[ level.gb_helpers.gg_log ]]("perkaholic skipped: grant blocked");
-        gg_show_hint_if_enabled(player, "Perkaholic: perk slots capped");
+        gg_show_hint_if_enabled(player, "Perkaholic: perk grant failed");
         return;
     }
 

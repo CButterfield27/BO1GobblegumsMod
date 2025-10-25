@@ -1312,7 +1312,7 @@ vending_trigger_think()
 			continue;
 		}
 
-		if ( player.num_perks >= 4 )
+		if ( player.num_perks >= 4 && (!isdefined(player.gg_perk_cap_bypass) || !player.gg_perk_cap_bypass) )
 		{
 			//player iprintln( "Too many perks already to buy Perk: " + perk );
 			self playsound("evt_perk_deny");
