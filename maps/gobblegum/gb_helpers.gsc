@@ -278,6 +278,47 @@ get_map_perk_list()
     return perks;
 }
 
+get_all_perk_list()
+{
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.all_perk_cache))
+        return level.gb_helpers.all_perk_cache;
+
+    perks = [];
+    perks[perks.size] = "specialty_armorvest";
+    perks[perks.size] = "specialty_quickrevive";
+    perks[perks.size] = "specialty_fastreload";
+    perks[perks.size] = "specialty_rof";
+    perks[perks.size] = "specialty_longersprint";
+    perks[perks.size] = "specialty_flakjacket";
+    perks[perks.size] = "specialty_deadshot";
+    perks[perks.size] = "specialty_additionalprimaryweapon";
+
+    if (isdefined(level.gb_helpers))
+        level.gb_helpers.all_perk_cache = perks;
+
+    return perks;
+}
+
+map_has_mulekick_machine()
+{
+    perks = get_map_perk_list();
+    return helpers_array_contains(perks, "specialty_additionalprimaryweapon");
+}
+
+mulekick_safe_without_machine()
+{
+    if (!isdefined(level))
+        return false;
+
+    if (isdefined(level.zombiemode_using_additionalprimaryweapon_perk) && is_true(level.zombiemode_using_additionalprimaryweapon_perk))
+        return true;
+
+    if (isdefined(level.zombie_additionalprimaryweapon_machine_origin))
+        return true;
+
+    return false;
+}
+
 // Stubs (Step 1)
 get_wonder_pool(map)
 {
@@ -571,6 +612,9 @@ helpers_init()
     level.gb_helpers.normalize_mapname = ::normalize_mapname;
     level.gb_helpers.get_current_mapname = ::get_current_mapname;
     level.gb_helpers.get_map_perk_list = ::get_map_perk_list;
+    level.gb_helpers.get_all_perk_list = ::get_all_perk_list;
+    level.gb_helpers.map_has_mulekick_machine = ::map_has_mulekick_machine;
+    level.gb_helpers.mulekick_safe_without_machine = ::mulekick_safe_without_machine;
     level.gb_helpers.get_wonder_pool = ::get_wonder_pool;
     level.gb_helpers.get_weapon_display_name = ::get_weapon_display_name;
     level.gb_helpers.upgrade_weapon = ::upgrade_weapon;

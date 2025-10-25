@@ -347,11 +347,14 @@ Bonus Points is registered at init through the alias/include path so `maps\_zomb
   * Label reasserts visibility every 0.25s until gum ends.
   * Optional Gersh/Quantum specials via `gg_wonder_include_specials` (default 0).
   * Suppression triggered by Wonderbar helper calls (e.g., Immolation).
-* Perkaholic - Auto, single-use gum that grants every perk available on the current map to players missing them.
+* Perkaholic - Auto, single-use gum that grants every missing perk to the activating player.
+  * `gg_perkaholic_grant_all_perks` toggles between the canonical perk catalogue (1) and the current-map perk cache (0) so map-only runs stay accurate.
+  * `gg_perkaholic_include_mulekick` keeps Mule Kick in the resolved set whenever the map hosts a machine or the token is otherwise safe; if not, the gum logs a debug warning (when enabled) and skips it.
   * Uses the helper perk cache so map-specific machines are respected and skips consumption when nothing is left to grant.
   * Temporarily bypasses the four-perk cap by setting `self.gg_perk_cap_bypass`, then clears the flag once grants finish so the normal limit returns.
   * On Cosmodrome, asserts the perk VO flag once per activation by setting `level.perk_bought` and calling `flag_set("perk_bought")` via the helper after perks are granted.
   * Grant cadence is configurable with `gg_perkaholic_grant_delay_ms` (default 250ms) to keep HUD updates readable.
+  * When `gg_debug == 1`, Perkaholic logs the resolved perk list, final grant set, Mule Kick decision, and the temporary cap bypass status; no debug output is emitted when `gg_debug == 0`.
 
 ### Economy / Round Control
 
@@ -508,8 +511,29 @@ set gg_debug 1
   - `gg_shopping_free_secs` (float, default 60.0) - Shopping Free timer duration (seconds).
   - `gg_shopping_free_temp_points` (int, default 50000) - temporary credit granted while Shopping Free is active.
   - `gg_gift_card_points` (int, default 30000) - points awarded to the activating player when Gift Card fires.
+  - `gg_perkaholic_include_mulekick` (int, default 1) - include Mule Kick whenever it is safe to grant; set to 0 to suppress it.
+  - `gg_perkaholic_grant_all_perks` (int, default 1) - when 1, grant the full supported perk catalogue (honors the Mule Kick toggle); when 0, limit the list to perks available on the current map.
   - `gg_perkaholic_grant_delay_ms` (int, default 250) - delay between individual perk grants for Perkaholic (milliseconds).
   - Perkaholic automatically clears its temporary perk-cap bypass flag when the grant loop ends; once the gum finishes, standard perk limits apply again.
+
+Examples:
+
+```
+set gg_perkaholic_include_mulekick 1
+set gg_perkaholic_grant_all_perks 1
+```
+
+---
+
+## Changelog
+
+### Snapshot — What Changed (Build XX — Perkaholic DVARs)
+
+- Added DVAR `gg_perkaholic_include_mulekick` (int, 0/1, default 1) to control Mule Kick inclusion for Perkaholic.
+- Added DVAR `gg_perkaholic_grant_all_perks` (int, 0/1, default 1) to switch between all-perks vs map-only grant modes; honors Mule Kick setting.
+- Updated Perkaholic grant logic to compute target perk list, remove duplicates, and bypass the 4-perk cap during application.
+- Added defensive handling for Mule Kick on maps without a machine; grant only when safe, otherwise skip with debug warning.
+- Updated README: new DVAR entries, Perkaholic effect description, debug/logging notes, and changelog.
 
 ---
 
@@ -601,6 +625,8 @@ stateDiagram-v2
 - All debug output routes through `helpers.gg_log("<message>")`.
 - Messages are uniformly prefixed with `[gg]` for easy filtering in console logs.
 - `gg_debug` is the single runtime switch. The helpers watcher mirrors legacy DVARs, rebuilds debug sinks when enabled, and flushes queues (HUD refs + log buffers) when disabled.
+- When `gg_debug` is set to `0`, all GobbleGum debug logging (including the Perkaholic resolution/grant summaries) is suppressed; set it to `1` to see the new Perkaholic trace lines.
+- With `gg_debug == 1`, Perkaholic logs the resolved perk list, Mule Kick decision, and cap-bypass completion summary exactly once per activation.
 - The yellow debug HUD anchors at the top-left using `level.gg_debug_hud_refs`; toggling `gg_debug` off immediately destroys every element and clears queued lines and hints.
 - HUD overlay: messages now stack up to five lines in the top-left; each new entry pushes older lines upward so nothing overlaps.
 - Fade cadence: every line holds for roughly three seconds, then fades out over 0.5 seconds while keeping the yellow font for continuity.
