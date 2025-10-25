@@ -470,9 +470,10 @@ __gg_debug_hud_create()
         return;
 
     data = spawnstruct();
-    data.base_x = 30;
-    data.base_y = 110;
-    data.line_gap = 20;
+    data.anchor = "LEFTTOP";
+    data.base_x = 32;
+    data.base_y = 96;
+    data.line_gap = 18;
     data.max_lines = 5;
     data.font = "objective";
     data.font_scale = 1.0;
@@ -485,7 +486,13 @@ __gg_debug_hud_create()
         level.gg_debug_lines = [];
     if (!isdefined(level.gg_debug_queue))
         level.gg_debug_queue = [];
+    level.gg_debug_hud_refs = [];
     level.gg_debug_text_owner = self;
+
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.gg_log))
+    {
+        [[ level.gb_helpers.gg_log ]]("debug hud anchor=" + data.anchor + " offset=(" + data.base_x + ", " + data.base_y + ") gap=" + data.line_gap);
+    }
 
     self thread __gg_debug_hud_owner_watch();
 }
@@ -520,6 +527,7 @@ __gg_debug_hud_clear_lines()
     }
 
     level.gg_debug_lines = [];
+    level.gg_debug_hud_refs = [];
 }
 
 __gg_debug_hud_reflow_lines()
@@ -530,6 +538,9 @@ __gg_debug_hud_reflow_lines()
     base_x = level.gg_debug_text.base_x;
     base_y = level.gg_debug_text.base_y;
     gap = level.gg_debug_text.line_gap;
+    anchor = "LEFTTOP";
+    if (isdefined(level.gg_debug_text.anchor))
+        anchor = level.gg_debug_text.anchor;
 
     count = level.gg_debug_lines.size;
     for (i = 0; i < count; i++)
@@ -539,9 +550,11 @@ __gg_debug_hud_reflow_lines()
             continue;
 
         target_y = base_y - ((count - 1 - i) * gap);
-        entry.elem.x = base_x;
-        entry.elem.y = target_y;
+        entry.elem setPoint(anchor, anchor, base_x, target_y);
     }
+
+    if (isdefined(level.gg_debug_text))
+        level.gg_debug_text.__last_layout_sig = "" + count + "|" + base_x + "|" + base_y + "|" + gap;
 }
 
 __gg_debug_hud_remove_line(elem, line_id)
@@ -580,6 +593,15 @@ __gg_debug_hud_remove_line(elem, line_id)
     if (removed)
     {
         level.gg_debug_lines = keep;
+        level.gg_debug_hud_refs = [];
+        for (i = 0; i < level.gg_debug_lines.size; i++)
+        {
+            entry = level.gg_debug_lines[i];
+            if (!isdefined(entry))
+                continue;
+            if (isdefined(entry.elem))
+                level.gg_debug_hud_refs[level.gg_debug_hud_refs.size] = entry.elem;
+        }
         __gg_debug_hud_reflow_lines();
     }
 }
@@ -603,6 +625,15 @@ __gg_debug_hud_drop_oldest()
     }
 
     level.gg_debug_lines = next;
+    level.gg_debug_hud_refs = [];
+    for (i = 0; i < level.gg_debug_lines.size; i++)
+    {
+        entry = level.gg_debug_lines[i];
+        if (!isdefined(entry))
+            continue;
+        if (isdefined(entry.elem))
+            level.gg_debug_hud_refs[level.gg_debug_hud_refs.size] = entry.elem;
+    }
     __gg_debug_hud_reflow_lines();
 }
 
@@ -627,7 +658,10 @@ __gg_debug_hud_add_line(message)
     text.horzAlign = "left";
     text.vertAlign = "top";
     text.fontScale = mgr.font_scale;
-    text setPoint("LEFT", "TOP", mgr.base_x, mgr.base_y);
+    anchor = "LEFTTOP";
+    if (isdefined(mgr.anchor))
+        anchor = mgr.anchor;
+    text setPoint(anchor, anchor, mgr.base_x, mgr.base_y);
     text SetText(message);
 
     entry = spawnstruct();
@@ -637,6 +671,9 @@ __gg_debug_hud_add_line(message)
     mgr.next_id += 1;
 
     level.gg_debug_lines[level.gg_debug_lines.size] = entry;
+    if (!isdefined(level.gg_debug_hud_refs))
+        level.gg_debug_hud_refs = [];
+    level.gg_debug_hud_refs[level.gg_debug_hud_refs.size] = text;
     __gg_debug_hud_reflow_lines();
 
     text thread __gg_debug_line_fade_thread(entry.id);
@@ -720,13 +757,13 @@ __gg_debug_hud_loop()
 
     while (true)
     {
-        // Show the debug HUD when explicitly requested, or when any logging mode is active
-        dvar_on = (GetDvarInt("gg_debug_hud") != 0)
-            || (GetDvarInt("gg_debug") != 0)
-            || (GetDvarInt("gg_log_dispatch") != 0)
-            || (GetDvarInt("gg_consume_logs") != 0);
+        debug_on = false;
+        if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.gg_debug_on))
+            debug_on = [[ level.gb_helpers.gg_debug_on ]]();
+        else
+            debug_on = (GetDvarInt("gg_debug") != 0);
 
-        if (dvar_on)
+        if (debug_on)
         {
             if (!isdefined(level.gg_debug_text) || !isdefined(level.gg_debug_text_owner))
             {
@@ -740,13 +777,31 @@ __gg_debug_hud_loop()
         }
         else if (isdefined(level.gg_debug_text_owner) && level.gg_debug_text_owner == self)
         {
-            __gg_debug_hud_clear_lines();
-            if (isdefined(level.gg_debug_queue))
-                level.gg_debug_queue = [];
+            gg_debug_teardown();
         }
 
         wait(0.05);
     }
+}
+
+gg_debug_teardown()
+{
+    if (isdefined(level.gg_debug_lines))
+        __gg_debug_hud_clear_lines();
+
+    if (isdefined(level.gg_debug_queue))
+        level.gg_debug_queue = [];
+
+    level.gg_debug_text = undefined;
+    level.gg_debug_text_owner = undefined;
+}
+
+gg_debug_state_changed(enabled)
+{
+    if (enabled)
+        return;
+
+    gg_debug_teardown();
 }
 
 ensure_api()
@@ -780,6 +835,8 @@ ensure_api()
     level.gb_hud.br_set_label = ::br_set_label;
     level.gb_hud.br_clear_label = ::br_clear_label;
     level.gb_hud.precache = ::gg_hud_precache;
+    level.gb_hud.debug_teardown = ::gg_debug_teardown;
+    level.gb_hud.on_debug_state_changed = ::gg_debug_state_changed;
 }
 
 gg_hud_precache()

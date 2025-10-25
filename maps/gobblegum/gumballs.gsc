@@ -164,7 +164,7 @@ gg_registry_init()
     gum.id = "gift_card";
     gum.name = "Gift Card";
     gum.shader = "bo7_gift_card";
-    gum.desc = "Adds 30,000 points to your score.";
+    gum.desc = "Adds 15,000 points to your score.";
     gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
@@ -834,50 +834,64 @@ gg_selection_close(player, reason, hide_ui, reset_state)
 
 gg_init_dvars()
 {
+    // CORE CONTROL & DEBUG
     gg_ensure_dvar_int("gg_enable", 1);
     gg_ensure_dvar_int("gg_debug", 0);
-    gg_ensure_dvar_int("gg_debug_hud", 0);
-    gg_ensure_dvar_float("gg_round1_delay", 10.0);
-    gg_ensure_dvar_int("gg_select_cadence_ms", 250);
-    gg_ensure_dvar_string("gg_force_gum", "");
-    gg_ensure_dvar_int("gg_debug_select", 0);
-    gg_ensure_dvar_int("gg_input_enable", 1);
-    gg_ensure_dvar_int("gg_debounce_ms", 200);
-    gg_ensure_dvar_int("gg_log_dispatch", 0);
-    gg_ensure_dvar_int("gg_auto_on_select", 1);
     gg_ensure_dvar_int("gg_simulate_effects", 0);
 
-    // Build 5 consumption defaults
+    // INPUT & SELECTION
+    gg_ensure_dvar_int("gg_input_enable", 1);
+    gg_ensure_dvar_int("gg_select_cadence_ms", 250);
+    gg_ensure_dvar_int("gg_debounce_ms", 200);
+    gg_ensure_dvar_int("gg_auto_on_select", 1);
+    gg_ensure_dvar_int("gg_debug_select", 0);
+    gg_ensure_dvar_string("gg_force_gum", "");
+
+    // TIMING & BASE BEHAVIOR
+    gg_ensure_dvar_float("gg_round1_delay", 10.0);
+    gg_ensure_dvar_int("gg_timer_tick_ms", 100);
+
+    // DEFAULT GUM CONSUMPTION
     gg_ensure_dvar_int("gg_default_uses", 3);
     gg_ensure_dvar_int("gg_default_rounds", 3);
     gg_ensure_dvar_float("gg_default_timer_secs", 60.0);
-    gg_ensure_dvar_int("gg_timer_tick_ms", 100);
-    gg_ensure_dvar_int("gg_consume_logs", 0);
 
-    // Build 6 power-up knobs
+    // GENERIC POWER-UP CONTROL
     gg_ensure_dvar_float("gg_drop_forward_units", 70.0);
-    gg_ensure_dvar_float("gg_reigndrops_forward_units", 145.0);
-    gg_ensure_dvar_float("gg_reigndrops_radius", 70.0);
-    gg_ensure_dvar_int("gg_reigndrops_spacing_ms", 150);
-    gg_ensure_dvar_int("gg_reigndrops_include_firesale", 1);
     gg_ensure_dvar_int("gg_powerup_hints", 1);
     gg_ensure_dvar_float("gg_armed_grace_secs", 3.0);
     gg_ensure_dvar_int("gg_armed_poll_ms", 150);
     gg_ensure_dvar_int("gg_test_drop_firesale_on_arm", 0);
+
+    // REIGN DROPS SETTINGS
+    gg_ensure_dvar_float("gg_reigndrops_forward_units", 145.0);
+    gg_ensure_dvar_float("gg_reigndrops_radius", 70.0);
+    gg_ensure_dvar_int("gg_reigndrops_spacing_ms", 150);
+    gg_ensure_dvar_int("gg_reigndrops_include_firesale", 1);
+
+    // WONDER GUM LABEL / HUD BEHAVIOR
     gg_ensure_dvar_int("gg_wonder_label_reassert_ms", 250);
     gg_ensure_dvar_int("gg_wonder_include_specials", 0);
     gg_ensure_dvar_float("gg_br_delayed_show_secs", 1.5);
     gg_ensure_dvar_int("gg_wonder_label_suppress_ms", 35000);
 
-    // Build 8 round/economy knobs
+    // ROUND ROBBIN SETTINGS
     gg_ensure_dvar_int("gg_round_robbin_bonus", 1600);
     gg_ensure_dvar_int("gg_round_robbin_force_transition", 1);
+
+    // SHOPPING FREE SETTINGS
     gg_ensure_dvar_float("gg_shopping_free_secs", 60.0);
     gg_ensure_dvar_int("gg_shopping_free_temp_points", 50000);
+
+    // GIFT CARD SETTINGS
     gg_ensure_dvar_int("gg_gift_card_points", 15000);
+
+    // PERKAHOLIC SETTINGS
+    gg_ensure_dvar_int("gg_perkaholic_include_mulekick", 0);
+    gg_ensure_dvar_int("gg_perkaholic_grant_all_perks", 0);
     gg_ensure_dvar_int("gg_perkaholic_grant_delay_ms", 250);
 
-    // Cache commonly used defaults for quick access
+    // CACHE COMMON DEFAULTS
     gg_cache_config();
 }
 
@@ -904,7 +918,10 @@ gg_cache_config()
     if (level.gg_config.timer_tick_ms < 10)
         level.gg_config.timer_tick_ms = 10;
 
-    level.gg_config.consume_logs = (GetDvarInt("gg_consume_logs") != 0);
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.gg_sync_debug_state))
+        level.gg_config.consume_logs = [[ level.gb_helpers.gg_sync_debug_state ]]();
+    else
+        level.gg_config.consume_logs = (GetDvarInt("gg_debug") == 1);
 
     level.gg_config.drop_forward_units = GetDvarFloat("gg_drop_forward_units");
     if (level.gg_config.drop_forward_units <= 0)
@@ -964,6 +981,8 @@ gg_cache_config()
     if (level.gg_config.gift_card_points < 0)
         level.gg_config.gift_card_points = 0;
 
+    level.gg_config.perkaholic_include_mulekick = (GetDvarInt("gg_perkaholic_include_mulekick") != 0);
+    level.gg_config.perkaholic_grant_all_perks = (GetDvarInt("gg_perkaholic_grant_all_perks") != 0);
     level.gg_config.perkaholic_grant_delay_ms = GetDvarInt("gg_perkaholic_grant_delay_ms");
     if (level.gg_config.perkaholic_grant_delay_ms < 0)
         level.gg_config.perkaholic_grant_delay_ms = 0;
@@ -1224,13 +1243,17 @@ gg_show_hint_if_enabled(player, text)
 
     if (!isdefined(text) || text == "")
     {
-        if (gg_debug_enabled() && isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
             [[ level.gb_hud.clear_hint ]](player);
         return;
     }
 
     if (!gg_debug_enabled())
+    {
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+            [[ level.gb_hud.clear_hint ]](player);
         return;
+    }
 
     if (!gg_powerup_hints_enabled())
         return;
@@ -1650,8 +1673,6 @@ gg_reign_drops_consume_activation(gum_id, expected_token)
 
     if (gg_consume_logs_enabled())
         [[ level.gb_helpers.gg_log ]]("reign drops use consumed (remaining=" + self.gg.uses_remaining + ")");
-    else if (gg_debug_enabled())
-        [[ level.gb_helpers.gg_log ]]("reign drops uses remaining=" + self.gg.uses_remaining);
 
     gg_set_effect_state(self, undefined, false);
     gg_on_gum_used();
@@ -1702,6 +1723,8 @@ gg_is_enabled()
 
 gg_debug_enabled()
 {
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.gg_debug_on))
+        return [[ level.gb_helpers.gg_debug_on ]]();
     return (GetDvarInt("gg_debug") == 1);
 }
 
@@ -2388,8 +2411,7 @@ gg_get_debounce_ms()
 
 gg_log_dispatch_enabled()
 {
-    gg_ensure_dvar_int("gg_log_dispatch", 0);
-    return (GetDvarInt("gg_log_dispatch") == 1);
+    return gg_debug_enabled();
 }
 
 gg_auto_on_select_enabled()
@@ -2406,7 +2428,7 @@ gg_simulate_effects_enabled()
 
 gg_should_log_dispatch()
 {
-    return (gg_debug_enabled() || gg_log_dispatch_enabled());
+    return gg_debug_enabled();
 }
 
 gg_act_auto()
@@ -3174,7 +3196,8 @@ gg_consume_logs_enabled()
 {
     if (isdefined(level.gg_config) && isdefined(level.gg_config.consume_logs))
         return level.gg_config.consume_logs;
-    return false;
+
+    return gg_debug_enabled();
 }
 
 // Determine if activation is allowed for the current model/state
@@ -3490,11 +3513,152 @@ gg_fx_reign_drops(player, gum)
 
 // Weapons & Perks
 
-gg_perkaholic_get_perks()
+gg_perkaholic_include_mulekick_enabled()
 {
-    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.get_map_perk_list))
-        return [[ level.gb_helpers.get_map_perk_list ]]();
-    return [];
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.perkaholic_include_mulekick))
+        return level.gg_config.perkaholic_include_mulekick;
+    return true;
+}
+
+gg_perkaholic_grant_all_enabled()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.perkaholic_grant_all_perks))
+        return level.gg_config.perkaholic_grant_all_perks;
+    return true;
+}
+
+gg_perkaholic_normalize_list(perks)
+{
+    normalized = [];
+    if (!isdefined(perks))
+        return normalized;
+
+    for (i = 0; i < perks.size; i++)
+    {
+        perk = perks[i];
+        if (!isdefined(perk) || perk == "")
+            continue;
+        if (!gg_array_contains(normalized, perk))
+            normalized[normalized.size] = perk;
+    }
+
+    return normalized;
+}
+
+gg_perkaholic_remove_perk(perks, perk_name)
+{
+    filtered = [];
+    if (!isdefined(perks))
+        return filtered;
+
+    for (i = 0; i < perks.size; i++)
+    {
+        perk = perks[i];
+        if (!isdefined(perk) || perk == "")
+            continue;
+        if (perk == perk_name)
+            continue;
+        filtered[filtered.size] = perk;
+    }
+
+    return filtered;
+}
+
+gg_perkaholic_ensure_perk(perks, perk_name)
+{
+    if (!isdefined(perks))
+        perks = [];
+
+    if (!gg_array_contains(perks, perk_name))
+        perks[perks.size] = perk_name;
+
+    return perks;
+}
+
+gg_perkaholic_format_list(perks)
+{
+    if (!isdefined(perks) || perks.size <= 0)
+        return "[]";
+
+    label = "[";
+    for (i = 0; i < perks.size; i++)
+    {
+        perk = perks[i];
+        if (i > 0)
+            label = label + ", ";
+        if (!isdefined(perk))
+            perk = "undefined";
+        label = label + perk;
+    }
+
+    label = label + "]";
+    return label;
+}
+
+gg_perkaholic_resolve_targets()
+{
+    context = spawnstruct();
+    context.perks = [];
+    context.grant_all = gg_perkaholic_grant_all_enabled();
+    context.include_mulekick = gg_perkaholic_include_mulekick_enabled();
+    context.map_has_mulekick_machine = false;
+    context.mulekick_safe_without_machine = false;
+    context.mulekick_safe_to_grant = false;
+    context.mulekick_removed_for_safety = false;
+    context.mulekick_present = false;
+
+    base = [];
+    if (context.grant_all)
+    {
+        if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.get_all_perk_list))
+            base = gg_clone_array([[ level.gb_helpers.get_all_perk_list ]]());
+    }
+    else
+    {
+        if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.get_map_perk_list))
+            base = gg_clone_array([[ level.gb_helpers.get_map_perk_list ]]());
+    }
+
+    base = gg_perkaholic_normalize_list(base);
+
+    if (isdefined(level.gb_helpers))
+    {
+        if (isdefined(level.gb_helpers.map_has_mulekick_machine))
+            context.map_has_mulekick_machine = [[ level.gb_helpers.map_has_mulekick_machine ]]();
+        if (isdefined(level.gb_helpers.mulekick_safe_without_machine))
+            context.mulekick_safe_without_machine = [[ level.gb_helpers.mulekick_safe_without_machine ]]();
+    }
+
+    mulekick = "specialty_additionalprimaryweapon";
+
+    if (!context.include_mulekick)
+    {
+        base = gg_perkaholic_remove_perk(base, mulekick);
+    }
+    else
+    {
+        safe = context.map_has_mulekick_machine;
+        if (!safe && context.mulekick_safe_without_machine)
+            safe = true;
+
+        context.mulekick_safe_to_grant = safe;
+
+        if (!safe)
+        {
+            if (gg_array_contains(base, mulekick))
+                base = gg_perkaholic_remove_perk(base, mulekick);
+            context.mulekick_removed_for_safety = true;
+        }
+        else
+        {
+            base = gg_perkaholic_ensure_perk(base, mulekick);
+        }
+    }
+
+    context.perks = base;
+    context.mulekick_present = gg_array_contains(context.perks, mulekick);
+
+    return context;
 }
 
 gg_perkaholic_missing_perks(player, perks)
@@ -3565,6 +3729,40 @@ gg_perkaholic_slots_available(player)
     return room;
 }
 
+gg_perkaholic_begin_bypass(player)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg_perk_cap_bypass_depth))
+        player.gg_perk_cap_bypass_depth = 0;
+
+    player.gg_perk_cap_bypass_depth += 1;
+    player.gg_perk_cap_bypass = true;
+
+    if (gg_debug_enabled() && player.gg_perk_cap_bypass_depth == 1)
+        [[ level.gb_helpers.gg_log ]]("perkaholic: perk cap bypass enabled");
+}
+
+gg_perkaholic_end_bypass(player)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg_perk_cap_bypass_depth))
+        player.gg_perk_cap_bypass_depth = 0;
+
+    player.gg_perk_cap_bypass_depth -= 1;
+    if (player.gg_perk_cap_bypass_depth > 0)
+        return;
+
+    player.gg_perk_cap_bypass = undefined;
+    player.gg_perk_cap_bypass_depth = undefined;
+
+    if (gg_debug_enabled())
+        [[ level.gb_helpers.gg_log ]]("perkaholic: perk cap bypass cleared");
+}
+
 gg_perkaholic_trigger_vo_helper(player, perk)
 {
     if (!isdefined(level.gb_helpers) || !isdefined(level.gb_helpers.trigger_perk_vo_if_cosmodrome))
@@ -3577,7 +3775,8 @@ gg_fx_perkaholic(player, gum)
     if (!isdefined(player))
         return;
 
-    perks = gg_perkaholic_get_perks();
+    context = gg_perkaholic_resolve_targets();
+    perks = context.perks;
     missing = gg_perkaholic_missing_perks(player, perks);
 
     if (!isdefined(missing) || missing.size <= 0)
@@ -3589,26 +3788,7 @@ gg_fx_perkaholic(player, gum)
         return;
     }
 
-    slots = gg_perkaholic_slots_available(player);
-    if (slots <= 0)
-    {
-        gg_mark_activation_skip(player);
-        if (gg_debug_enabled())
-            [[ level.gb_helpers.gg_log ]]("perkaholic skipped: perk cap reached");
-        gg_show_hint_if_enabled(player, "Perkaholic: perk slots capped");
-        return;
-    }
-
-    grant_list = [];
-    for (i = 0; i < missing.size && grant_list.size < slots; i++)
-    {
-        perk = missing[i];
-        if (!isdefined(perk) || perk == "")
-            continue;
-        if (gg_array_contains(grant_list, perk))
-            continue;
-        grant_list[grant_list.size] = perk;
-    }
+    grant_list = gg_perkaholic_normalize_list(missing);
 
     if (grant_list.size <= 0)
     {
@@ -3619,12 +3799,54 @@ gg_fx_perkaholic(player, gum)
         return;
     }
 
-    if (gg_debug_enabled() && missing.size > grant_list.size)
-        [[ level.gb_helpers.gg_log ]]("perkaholic limited to " + grant_list.size + " perks (cap " + slots + ")");
+    if (gg_debug_enabled())
+    {
+        resolved_label = gg_perkaholic_format_list(perks);
+        missing_label = gg_perkaholic_format_list(grant_list);
+        mulekick_state = "off";
+        grant_all_flag = 0;
+        include_flag = 0;
+        has_machine_flag = 0;
+        mulekick_safe_flag = 0;
+        if (context.grant_all)
+            grant_all_flag = 1;
+        if (context.include_mulekick)
+            include_flag = 1;
+        if (context.map_has_mulekick_machine)
+            has_machine_flag = 1;
+        if (context.mulekick_safe_to_grant)
+            mulekick_safe_flag = 1;
+        if (context.include_mulekick)
+        {
+            mulekick_state = "missing";
+            if (context.mulekick_present)
+                mulekick_state = "included";
+            if (context.mulekick_removed_for_safety)
+                mulekick_state = "suppressed";
+        }
+
+        log_msg = "perkaholic resolve: grant_all=" + grant_all_flag;
+        log_msg = log_msg + ", include_mulekick=" + include_flag;
+        log_msg = log_msg + ", map_has_mulekick=" + has_machine_flag;
+        log_msg = log_msg + ", mulekick_safe=" + mulekick_safe_flag;
+        log_msg = log_msg + ", resolved=" + resolved_label;
+        log_msg = log_msg + ", to_grant=" + missing_label;
+        log_msg = log_msg + ", mulekick_state=" + mulekick_state;
+        [[ level.gb_helpers.gg_log ]](log_msg);
+
+        if (context.mulekick_removed_for_safety)
+            [[ level.gb_helpers.gg_log ]]("perkaholic warning: mule kick excluded (no safe machine/token)");
+    }
+
+    gg_perkaholic_begin_bypass(player);
+
+    if (gg_debug_enabled())
+        [[ level.gb_helpers.gg_log ]]("perkaholic granting " + grant_list.size + " perks (missing=" + missing.size + ")");
 
     delay = gg_get_perkaholic_grant_delay_secs();
 
     granted = 0;
+    granted_perks = [];
     for (i = 0; i < grant_list.size; i++)
     {
         perk = grant_list[i];
@@ -3642,9 +3864,18 @@ gg_fx_perkaholic(player, gum)
             [[ level.gb_helpers.gg_log ]]("perkaholic granted " + perk);
 
         granted++;
+        granted_perks[granted_perks.size] = perk;
 
         if (delay > 0 && i < grant_list.size - 1)
             wait(delay);
+    }
+
+    gg_perkaholic_end_bypass(player);
+
+    if (gg_debug_enabled())
+    {
+        granted_label = gg_perkaholic_format_list(granted_perks);
+        [[ level.gb_helpers.gg_log ]]("perkaholic grant complete (granted=" + granted + ", bypass=1, final=" + granted_label + ")");
     }
 
     if (granted <= 0)
@@ -3652,7 +3883,7 @@ gg_fx_perkaholic(player, gum)
         gg_mark_activation_skip(player);
         if (gg_debug_enabled())
             [[ level.gb_helpers.gg_log ]]("perkaholic skipped: grant blocked");
-        gg_show_hint_if_enabled(player, "Perkaholic: perk slots capped");
+        gg_show_hint_if_enabled(player, "Perkaholic: perk grant failed");
         return;
     }
 
@@ -4841,6 +5072,9 @@ gg_round_monitor() {}
 gg_assign_gum_for_new_round() {}
 gg_on_round_flow() {}
 gg_on_match_end() {}
+
+
+
 
 
 

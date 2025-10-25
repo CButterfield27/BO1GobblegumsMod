@@ -1312,7 +1312,7 @@ vending_trigger_think()
 			continue;
 		}
 
-		if ( player.num_perks >= 4 )
+		if ( player.num_perks >= 4 && (!isdefined(player.gg_perk_cap_bypass) || !player.gg_perk_cap_bypass) )
 		{
 			//player iprintln( "Too many perks already to buy Perk: " + perk );
 			self playsound("evt_perk_deny");
@@ -1455,8 +1455,62 @@ unlocked_perk_upgrade( perk )
 
 give_perk( perk, bought )
 {
+	if ( !isdefined( self.num_perks ) )
+	{
+		self.num_perks = 0;
+	}
+
+	already_had = false;
+	if ( isdefined( perk ) && perk != "" )
+	{
+		already_had = self HasPerk( perk );
+	}
+
+	use_bypass = isdefined( self.gg_perk_cap_bypass ) && self.gg_perk_cap_bypass;
+	override_active = false;
+	prior_defined = false;
+	prior_max = undefined;
+
+	// Temporarily lift the perk cap so scripted grants can exceed the normal limit.
+	if ( use_bypass && isdefined( level ) )
+	{
+		prior_defined = isdefined( level.max_perks );
+		if ( prior_defined )
+		{
+			prior_max = level.max_perks;
+		}
+
+		target_total = self.num_perks;
+		if ( !already_had )
+		{
+			target_total += 1;
+		}
+
+		if ( !prior_defined || target_total > level.max_perks )
+		{
+			level.max_perks = target_total;
+			override_active = true;
+		}
+	}
+
 	self SetPerk( perk );
-	self.num_perks++;
+
+	if ( !already_had && self HasPerk( perk ) )
+	{
+		self.num_perks++;
+	}
+
+	if ( override_active )
+	{
+		if ( prior_defined )
+		{
+			level.max_perks = prior_max;
+		}
+		else
+		{
+			level.max_perks = undefined;
+		}
+	}
 
 	if ( is_true( bought ) )
 	{

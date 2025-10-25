@@ -1,14 +1,139 @@
 #include maps\_utility;
 #include common_scripts\utility;
 
+gg_debug_on()
+{
+    return (GetDvarInt("gg_debug") == 1);
+}
+
+gg_debug_set_dvar_if_changed(name, value)
+{
+    if (!isdefined(name) || name == "")
+        return;
+
+    current = GetDvarInt(name);
+    if (current != value)
+        SetDvar(name, value);
+}
+
+gg_debug_clear_overlay_fallback()
+{
+    if (isdefined(level.gg_debug_lines))
+    {
+        for (i = 0; i < level.gg_debug_lines.size; i++)
+        {
+            entry = level.gg_debug_lines[i];
+            if (!isdefined(entry))
+                continue;
+            if (isdefined(entry.elem))
+            {
+                entry.elem notify("gg_debug_line_removed");
+                entry.elem destroy();
+            }
+        }
+        level.gg_debug_lines = [];
+    }
+
+    level.gg_debug_text = undefined;
+    level.gg_debug_text_owner = undefined;
+    level.gg_debug_hud_refs = [];
+}
+
+gg_sync_debug_state()
+{
+    enabled = gg_debug_on();
+
+    if (!isdefined(level.gg_state))
+        level.gg_state = spawnstruct();
+
+    level.gg_state.debug_enabled = enabled;
+
+    if (isdefined(level.gg_config))
+        level.gg_config.consume_logs = enabled;
+
+    return enabled;
+}
+
+gg_debug_apply_state(enabled)
+{
+    value = 0;
+    if (enabled)
+        value = 1;
+
+    gg_debug_set_dvar_if_changed("gg_debug_hud", value);
+    gg_debug_set_dvar_if_changed("gg_log_dispatch", value);
+    gg_debug_set_dvar_if_changed("gg_consume_logs", value);
+
+    gg_sync_debug_state();
+
+    if (!enabled)
+    {
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.debug_teardown))
+            [[ level.gb_hud.debug_teardown ]]();
+        else
+            gg_debug_clear_overlay_fallback();
+
+        if (isdefined(level.gg_debug_queue))
+            level.gg_debug_queue = [];
+
+        if (isdefined(level.players) && isdefined(level.players.size)
+            && isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+        {
+            for (i = 0; i < level.players.size; i++)
+            {
+                player = level.players[i];
+                if (!isdefined(player))
+                    continue;
+                [[ level.gb_hud.clear_hint ]](player);
+            }
+        }
+    }
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.on_debug_state_changed))
+        [[ level.gb_hud.on_debug_state_changed ]](enabled);
+}
+
+gg_debug_watch_thread()
+{
+    last = undefined;
+
+    while (true)
+    {
+        state = gg_debug_on();
+
+        if (!isdefined(last) || state != last)
+        {
+            gg_debug_apply_state(state);
+            last = state;
+        }
+
+        wait(0.1);
+    }
+}
+
+gg_debug_queue_message(message)
+{
+    if (!isdefined(level.gg_debug_queue))
+        level.gg_debug_queue = [];
+
+    level.gg_debug_queue[level.gg_debug_queue.size] = message;
+
+    max_queue = 16;
+    if (level.gg_debug_queue.size > max_queue)
+    {
+        trim = [];
+        start = level.gg_debug_queue.size - max_queue;
+        for (i = start; i < level.gg_debug_queue.size; i++)
+        {
+            trim[trim.size] = level.gg_debug_queue[i];
+        }
+        level.gg_debug_queue = trim;
+    }
+}
+
 gg_log(msg)
 {
-    // Log when any logging mode is enabled: core debug, dispatch, or consume logs
-    should_log = (GetDvarInt("gg_debug") != 0)
-        || (GetDvarInt("gg_log_dispatch") != 0)
-        || (GetDvarInt("gg_consume_logs") != 0);
-
-    if (!should_log)
+    if (!gg_debug_on())
         return;
 
     if (!isdefined(msg))
@@ -17,25 +142,7 @@ gg_log(msg)
     message = "[gg] " + msg;
     print(message);
 
-    if (GetDvarInt("gg_debug_hud") != 0 || should_log)
-    {
-        if (!isdefined(level.gg_debug_queue))
-            level.gg_debug_queue = [];
-
-        level.gg_debug_queue[level.gg_debug_queue.size] = message;
-
-        max_queue = 16;
-        if (level.gg_debug_queue.size > max_queue)
-        {
-            trim = [];
-            start = level.gg_debug_queue.size - max_queue;
-            for (i = start; i < level.gg_debug_queue.size; i++)
-            {
-                trim[trim.size] = level.gg_debug_queue[i];
-            }
-            level.gg_debug_queue = trim;
-        }
-    }
+    gg_debug_queue_message(message);
 }
 
 // Literal-return helpers (constants)
@@ -169,6 +276,47 @@ get_map_perk_list()
         level.gb_helpers.map_perk_cache = perks;
 
     return perks;
+}
+
+get_all_perk_list()
+{
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.all_perk_cache))
+        return level.gb_helpers.all_perk_cache;
+
+    perks = [];
+    perks[perks.size] = "specialty_armorvest";
+    perks[perks.size] = "specialty_quickrevive";
+    perks[perks.size] = "specialty_fastreload";
+    perks[perks.size] = "specialty_rof";
+    perks[perks.size] = "specialty_longersprint";
+    perks[perks.size] = "specialty_flakjacket";
+    perks[perks.size] = "specialty_deadshot";
+    perks[perks.size] = "specialty_additionalprimaryweapon";
+
+    if (isdefined(level.gb_helpers))
+        level.gb_helpers.all_perk_cache = perks;
+
+    return perks;
+}
+
+map_has_mulekick_machine()
+{
+    perks = get_map_perk_list();
+    return helpers_array_contains(perks, "specialty_additionalprimaryweapon");
+}
+
+mulekick_safe_without_machine()
+{
+    if (!isdefined(level))
+        return false;
+
+    if (isdefined(level.zombiemode_using_additionalprimaryweapon_perk) && is_true(level.zombiemode_using_additionalprimaryweapon_perk))
+        return true;
+
+    if (isdefined(level.zombie_additionalprimaryweapon_machine_origin))
+        return true;
+
+    return false;
 }
 
 // Stubs (Step 1)
@@ -374,7 +522,7 @@ upgrade_weapon_fallback(player, base, upgrade)
 
 helpers_upgrade_debug(msg)
 {
-    if (GetDvarInt("gg_debug") != 1)
+    if (!gg_debug_on())
         return;
     if (!isdefined(msg) || msg == "")
         msg = "upgrade debug";
@@ -432,7 +580,7 @@ trigger_perk_vo_if_cosmodrome(player, perk)
         flag_set("perk_bought");
     }
 
-    if (GetDvarInt("gg_debug") == 1)
+    if (gg_debug_on())
     {
         name = get_current_mapname();
         if (!isdefined(name) || name == "")
@@ -464,12 +612,17 @@ helpers_init()
     level.gb_helpers.normalize_mapname = ::normalize_mapname;
     level.gb_helpers.get_current_mapname = ::get_current_mapname;
     level.gb_helpers.get_map_perk_list = ::get_map_perk_list;
+    level.gb_helpers.get_all_perk_list = ::get_all_perk_list;
+    level.gb_helpers.map_has_mulekick_machine = ::map_has_mulekick_machine;
+    level.gb_helpers.mulekick_safe_without_machine = ::mulekick_safe_without_machine;
     level.gb_helpers.get_wonder_pool = ::get_wonder_pool;
     level.gb_helpers.get_weapon_display_name = ::get_weapon_display_name;
     level.gb_helpers.upgrade_weapon = ::upgrade_weapon;
     level.gb_helpers.player_has_all_map_perks = ::player_has_all_map_perks;
     level.gb_helpers.trigger_perk_vo_if_cosmodrome = ::trigger_perk_vo_if_cosmodrome;
     level.gb_helpers.gg_log = ::gg_log;
+    level.gb_helpers.gg_debug_on = ::gg_debug_on;
+    level.gb_helpers.gg_sync_debug_state = ::gg_sync_debug_state;
 
     level.gb_helpers.ACT_AUTO = ::ACT_AUTO;
     level.gb_helpers.ACT_USER = ::ACT_USER;
@@ -482,4 +635,11 @@ helpers_init()
     level.gb_helpers.GG_BR_DELAYED_SHOW_SECS = ::GG_BR_DELAYED_SHOW_SECS;
     level.gb_helpers.GG_ARMED_GRACE_SECS = ::GG_ARMED_GRACE_SECS;
     level.gb_helpers.map_allows_death_machine = ::map_allows_death_machine;
+
+    if (!isdefined(level.gg_debug_watch_started))
+    {
+        level.gg_debug_watch_started = true;
+        gg_debug_apply_state(gg_debug_on());
+        level thread gg_debug_watch_thread();
+    }
 }
