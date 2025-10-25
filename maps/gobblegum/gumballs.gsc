@@ -164,7 +164,7 @@ gg_registry_init()
     gum.id = "gift_card";
     gum.name = "Gift Card";
     gum.shader = "bo7_gift_card";
-    gum.desc = "Adds 30,000 points to your score.";
+    gum.desc = "Adds 15,000 points to your score.";
     gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
