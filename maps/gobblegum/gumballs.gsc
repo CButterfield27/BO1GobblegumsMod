@@ -837,9 +837,6 @@ gg_init_dvars()
     // CORE CONTROL & DEBUG
     gg_ensure_dvar_int("gg_enable", 1);
     gg_ensure_dvar_int("gg_debug", 1);
-    gg_ensure_dvar_int("gg_debug_hud", 1);
-    gg_ensure_dvar_int("gg_log_dispatch", 1);
-    gg_ensure_dvar_int("gg_consume_logs", 1);
     gg_ensure_dvar_int("gg_simulate_effects", 0);
 
     // INPUT & SELECTION
@@ -919,7 +916,10 @@ gg_cache_config()
     if (level.gg_config.timer_tick_ms < 10)
         level.gg_config.timer_tick_ms = 10;
 
-    level.gg_config.consume_logs = (GetDvarInt("gg_consume_logs") != 0);
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.gg_sync_debug_state))
+        level.gg_config.consume_logs = [[ level.gb_helpers.gg_sync_debug_state ]]();
+    else
+        level.gg_config.consume_logs = (GetDvarInt("gg_debug") == 1);
 
     level.gg_config.drop_forward_units = GetDvarFloat("gg_drop_forward_units");
     if (level.gg_config.drop_forward_units <= 0)
@@ -1239,13 +1239,17 @@ gg_show_hint_if_enabled(player, text)
 
     if (!isdefined(text) || text == "")
     {
-        if (gg_debug_enabled() && isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
             [[ level.gb_hud.clear_hint ]](player);
         return;
     }
 
     if (!gg_debug_enabled())
+    {
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+            [[ level.gb_hud.clear_hint ]](player);
         return;
+    }
 
     if (!gg_powerup_hints_enabled())
         return;
@@ -1665,8 +1669,6 @@ gg_reign_drops_consume_activation(gum_id, expected_token)
 
     if (gg_consume_logs_enabled())
         [[ level.gb_helpers.gg_log ]]("reign drops use consumed (remaining=" + self.gg.uses_remaining + ")");
-    else if (gg_debug_enabled())
-        [[ level.gb_helpers.gg_log ]]("reign drops uses remaining=" + self.gg.uses_remaining);
 
     gg_set_effect_state(self, undefined, false);
     gg_on_gum_used();
@@ -1717,6 +1719,8 @@ gg_is_enabled()
 
 gg_debug_enabled()
 {
+    if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.gg_debug_on))
+        return [[ level.gb_helpers.gg_debug_on ]]();
     return (GetDvarInt("gg_debug") == 1);
 }
 
@@ -2403,8 +2407,7 @@ gg_get_debounce_ms()
 
 gg_log_dispatch_enabled()
 {
-    gg_ensure_dvar_int("gg_log_dispatch", 0);
-    return (GetDvarInt("gg_log_dispatch") == 1);
+    return gg_debug_enabled();
 }
 
 gg_auto_on_select_enabled()
@@ -2421,7 +2424,7 @@ gg_simulate_effects_enabled()
 
 gg_should_log_dispatch()
 {
-    return (gg_debug_enabled() || gg_log_dispatch_enabled());
+    return gg_debug_enabled();
 }
 
 gg_act_auto()
@@ -3189,7 +3192,8 @@ gg_consume_logs_enabled()
 {
     if (isdefined(level.gg_config) && isdefined(level.gg_config.consume_logs))
         return level.gg_config.consume_logs;
-    return false;
+
+    return gg_debug_enabled();
 }
 
 // Determine if activation is allowed for the current model/state
@@ -4884,6 +4888,9 @@ gg_round_monitor() {}
 gg_assign_gum_for_new_round() {}
 gg_on_round_flow() {}
 gg_on_match_end() {}
+
+
+
 
 
 

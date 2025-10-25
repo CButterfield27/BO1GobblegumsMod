@@ -1,4 +1,4 @@
-# BO1 GobbleGum MOD
+﻿# BO1 GobbleGum MOD
 
 ---
 
@@ -382,7 +382,7 @@ set gg_debug 1
      - Expect a `bonus_points_player` drop to spawn in front of the player with the normal forward offset.
      - BR uses decrements by one; the slot hides once all four uses are spent.
      - If `gg_powerup_hints` is enabled, the BR hint briefly shows the Bonus Points label.
-     - With `gg_debug` or `gg_log_dispatch` on, a concise log line confirms the dispatcher fired.
+    - With `gg_debug` on, a concise log line confirms the dispatcher fired.
 
 * **Bonus Points availability**
   1. Clear any forced gum (`set gg_force_gum ""`) and play a session on a map that normally allows the drop.
@@ -477,14 +477,16 @@ set gg_debug 1
 * Selection cadence (round-based vs. alternative)
 * Override policy for manual gums
 * Dev toggles: `gg_enable` and `gg_force_gum "<name>"` read at init for fast iteration without touching live flow.
-* `gg_debug` (0/1, default 0) - enables console logging.
-* `gg_debug_hud` (0/1, default 0) - toggles all debug visual output; when enabled, messages render in the fixed top-left debug HUD position.
+* `gg_debug` (0/1, default 0) - master debug switch. When 1, the debug HUD and all logging (dispatch + consumption) are enabled; when 0, visuals and logs are torn down.
+* Legacy mirrors (derived from `gg_debug`; avoid setting manually):
+  - `gg_debug_hud`
+  - `gg_log_dispatch`
+  - `gg_consume_logs`
 * Build 5 consumption DVARs (safe fallbacks):
   - `gg_default_uses` (int, default 3)
   - `gg_default_rounds` (int, default 3)
   - `gg_default_timer_secs` (float, default 60.0)
   - `gg_timer_tick_ms` (int, default 100)
-  - `gg_consume_logs` (0/1, default 0)
 * Build 6 power-up knobs:
   - `gg_drop_forward_units` (float, default 70.0) - base forward offset when spawning drops.
   - `gg_reigndrops_forward_units` (float, default 145.0) - forward offset to the Reign Drops circle center.
@@ -492,7 +494,6 @@ set gg_debug 1
   - `gg_reigndrops_spacing_ms` (int, default 150) - wait between Reign Drops spawns.
   - `gg_reigndrops_include_firesale` (0/1, default 1) - include Fire Sale in the Reign Drops bundle.
   - `gg_powerup_hints` (0/1, default 1) - allow HUD hint text after spawning a drop.
-  - `gg_log_dispatch` (0/1, default 0) - optional dispatch logging (otherwise `set gg_debug 1` surfaces the same feed).
 * Build 7 armed-gum knobs:
   - `gg_armed_grace_secs` (float, default 3.0) - grace window before armed gums can trigger.
   - `gg_armed_poll_ms` (int, default 150) - polling cadence when watching weapon changes.
@@ -599,16 +600,21 @@ stateDiagram-v2
 
 - All debug output routes through `helpers.gg_log("<message>")`.
 - Messages are uniformly prefixed with `[gg]` for easy filtering in console logs.
-- Hidden by default: `gg_debug`, `gg_log_dispatch`, and `gg_consume_logs` all default to `0`.
-- HUD mirroring: the yellow debug HUD auto-enables when any logging flag is on (`gg_debug`, `gg_log_dispatch`, or `gg_consume_logs`) or when `gg_debug_hud` is explicitly set to `1`.
+- `gg_debug` is the single runtime switch. The helpers watcher mirrors legacy DVARs, rebuilds debug sinks when enabled, and flushes queues (HUD refs + log buffers) when disabled.
+- The yellow debug HUD anchors at the top-left using `level.gg_debug_hud_refs`; toggling `gg_debug` off immediately destroys every element and clears queued lines and hints.
 - HUD overlay: messages now stack up to five lines in the top-left; each new entry pushes older lines upward so nothing overlaps.
 - Fade cadence: every line holds for roughly three seconds, then fades out over 0.5 seconds while keeping the yellow font for continuity.
-- Control: `gg_debug_hud` (0/1) still defaults to `0`, so the overlay only appears when debug flags are intentionally enabled.
+- Legacy mirrors (`gg_debug_hud`, `gg_log_dispatch`, `gg_consume_logs`) persist for compatibility but are auto-derived from `gg_debug`.
 - Legacy ad-hoc `print`/`iprintln` calls were replaced for consistency.
 
 ### Troubleshooting
 
 - Perkaholic: if the gum stops after four perks, ensure `_zombiemode_perks.gsc` only blocks purchases when `self.gg_perk_cap_bypass` is undefined or false-this flag must stay set for the bypass to work.
 - Debug HUD alignment: if yellow debug text appears away from the top-left corner, confirm `gb_hud.gsc` creates the overlay with matching `setPoint("LEFTTOP", "LEFTTOP", ...)` anchors and the standard offsets above.
+- Debug teardown: if debug visuals or logs persist with `gg_debug == 0`, verify the helpers watcher is running and that `level.gg_debug_hud_refs` and `level.gg_debug_queue` are cleared.
+
+- Compatibility: earlier builds exposed separate debug toggles (`gg_debug_hud`, `gg_log_dispatch`, `gg_consume_logs`). They now mirror `gg_debug` automatically and are treated as legacy inputs.
 
 ---
+
+
