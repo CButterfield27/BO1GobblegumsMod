@@ -1744,21 +1744,87 @@ flytrap_samantha_vox()
 
 	if( level.flytrap_counter == 1 )
 	{
-		//iprintlnbold( "Samantha Sez: Way to go!" );
 		thread play_sound_2d( "sam_fly_first" );
 	}
 	if( level.flytrap_counter == 2 )
 	{
-		//iprintlnbold( "Samantha Sez: Two? WOW!" );
 		thread play_sound_2d( "sam_fly_second" );
 	}
 	if( level.flytrap_counter == 3 )
 	{
-		//iprintlnbold( "Samantha Sez: And GAME OVER!" );		
 		thread play_sound_2d( "sam_fly_last" );
+		factory_dispatch_perma_perk_rewards();
 		return;
 	}
 	wait(0.05);
+}
+
+factory_dispatch_perma_perk_rewards()
+{
+	players = get_players();
+
+	for( i = 0; i < players.size; i++ )
+	{
+		if( IsDefined( players[i] ) && isplayer( players[i] ) )
+		{
+			players[i] thread factory_perma_perk_reward();
+		}
+	}
+}
+
+factory_perma_perk_reward()
+{
+	self endon( "disconnect" );
+
+	if( IsDefined( self.factory_perma_perk_granted ) && self.factory_perma_perk_granted )
+	{
+		return;
+	}
+
+	self.factory_perma_perk_granted = true;
+
+	if( IsDefined( self._retain_perks ) )
+	{
+		return;
+	}
+
+	if( !IsDefined( level.factory_perk_reward_array ) )
+	{
+		level.factory_perk_reward_array = [];
+
+		machines = GetEntArray( "zombie_vending", "targetname" );
+
+		for( i = 0; i < machines.size; i++ )
+		{
+			level.factory_perk_reward_array[level.factory_perk_reward_array.size] = machines[i].script_noteworthy;
+		}
+	}
+
+	for( i = 0; i < level.factory_perk_reward_array.size; i++ )
+	{
+		if( !self HasPerk( level.factory_perk_reward_array[i] ) )
+		{
+			self playsound( "evt_sq_bag_gain_perks" );
+			self maps\_zombiemode_perks::give_perk( level.factory_perk_reward_array[i] );
+			wait( 0.25 );
+		}
+	}
+
+	self._retain_perks = true;
+	self thread factory_watch_for_respawn();
+}
+
+factory_watch_for_respawn()
+{
+	self endon( "disconnect" );
+
+	while( 1 )
+	{
+		self waittill_either( "spawned_player", "player_revived" );
+		waittillframeend;
+
+		self SetMaxHealth( level.zombie_vars["zombie_perk_juggernaut_health"] );
+	}
 }
 
 play_giant_mythos_lines()
