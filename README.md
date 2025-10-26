@@ -1,4 +1,4 @@
-﻿# BO1 GobbleGum MOD
+# BO1 GobbleGum MOD
 
 ---
 
@@ -37,6 +37,28 @@ These are the modified steps:
 - Shangri-La adjustments trigger in `maps/zombie_temple_sq_oafc.gsc`, where solo games wait 20 seconds after the story switch before auto-raising the crystal, and the pressure-plate stage (`maps/levels/zombie_temple/maps/zombie_temple_pack_a_punch.gsc`) treats a single occupant as sufficient once the slide switch is pulled.
 - Moon sidequest gating remains in `maps/zombie_moon_sq.gsc`: `init_sidequest()` grants the VRIL Generator icon (golden rod HUD) only when the player slot corresponds to Richtofen, while downstream steps reuse the co-op scripts unchanged.
 - Each altered routine keeps its original `endon` guards (for example `level endon("between_round_over")` in the Ascension switch watcher and `self endon("death")` in the Moon soul release path), so existing GobbleGum threads, HUD timers, and helper DVARs remain stable.
+
+### QOL Improvements
+
+**Perma Perk Rewards - Ascension & Der Riese**
+
+To improve consistency and player experience, Ascension and Der Riese now grant permanent perk rewards upon completing their respective Easter Eggs.
+
+- **Ascension (zombie_cosmodrome_eggs.gsc)**  
+  When Gersh's final dialogue concludes (`wait_for_gersh_vox()` triggers `reward_wait()`), all living players receive a permanent perk reward.  
+  The behavior mirrors the reward logic found in Moon SQ and Temple SQ.
+
+- **Der Riese (zombie_cod5_factory.gsc)**  
+  Upon completing the Fly Trap Easter Egg (`level.flytrap_counter == 3` and `play_sound_2d("sam_fly_last")`), all living players are granted a permanent perk reward.  
+  The reward logic is self-contained and does not rely on GobbleGum systems.
+
+These enhancements ensure parity between older and newer maps while preserving original gameplay integrity.
+
+### Map-specific EE Rewards
+
+- `zombie_cod5_factory.gsc`: Grants the perma perk reward at Fly Trap completion once `play_sound_2d("sam_fly_last")` fires with `level.flytrap_counter == 3`; threads stay local to the map script and guard against duplicate grants.
+- `zombie_cosmodrome_eggs.gsc`: Awards the same perma perk set as Gersh's closing VO dispatches `reward_wait()`; threads are local-only and reuse the same guard semantics.
+- Reward cadence and perk persistence match the reference implementations in `zombie_moon_sq.gsc` and `zombie_temple_sq.gsc`, maintaining their keep-on-down behavior without GobbleGum dependencies.
 
 ---
 
@@ -525,18 +547,6 @@ set gg_perkaholic_grant_all_perks 1
 
 ---
 
-## Changelog
-
-### Snapshot — What Changed (Build XX — Perkaholic DVARs)
-
-- Added DVAR `gg_perkaholic_include_mulekick` (int, 0/1, default 1) to control Mule Kick inclusion for Perkaholic.
-- Added DVAR `gg_perkaholic_grant_all_perks` (int, 0/1, default 1) to switch between all-perks vs map-only grant modes; honors Mule Kick setting.
-- Updated Perkaholic grant logic to compute target perk list, remove duplicates, and bypass the 4-perk cap during application.
-- Added defensive handling for Mule Kick on maps without a machine; grant only when safe, otherwise skip with debug warning.
-- Updated README: new DVAR entries, Perkaholic effect description, debug/logging notes, and changelog.
-
----
-
 ## 10. Build Order
 
 1. Skeleton registry + HUD stubs
@@ -642,5 +652,17 @@ stateDiagram-v2
 - Compatibility: earlier builds exposed separate debug toggles (`gg_debug_hud`, `gg_log_dispatch`, `gg_consume_logs`). They now mirror `gg_debug` automatically and are treated as legacy inputs.
 
 ---
+
+## Changelog
+
+### Perma Perk EE Hooks
+
+- `zombie_cod5_factory.gsc`: Added local perma perk reward dispatch at Fly Trap completion (`play_sound_2d("sam_fly_last")` when `level.flytrap_counter == 3`).
+  Includes per-player duplication guard and proper thread lifecycle.
+- `zombie_cosmodrome_eggs.gsc`: Added local perma perk reward dispatch alongside `players[i] thread reward_wait();` in `wait_for_gersh_vox()`.
+  Includes duplication guard and VO-safe sequencing.
+- Kept implementation fully within map scripts - no GobbleGum references, helpers, or dvars.
+- Added new **"QOL Improvements - Perma Perk Rewards (Ascension & Der Riese)"** section beneath "Solo Easter Mods" in README.md.
+- Cleaned formatting and removed unused code from edited regions.
 
 

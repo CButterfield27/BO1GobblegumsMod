@@ -935,11 +935,14 @@ wait_for_gersh_vox()
 {
     wait(12.5);
     
-	// Give reward!
 	players = GetPlayers();
 	for ( i=0; i<players.size; i++ )
 	{
 		players[i] thread reward_wait();
+		if( IsDefined( players[i] ) && isplayer( players[i] ) )
+		{
+			players[i] thread cosmo_perma_perk_reward();
+		}
 	}
 }
 
@@ -957,6 +960,61 @@ reward_wait()
 	level thread maps\_zombiemode_powerups::minigun_weapon_powerup( self, 90 );
 	//self thread maps\_zombiemode_powerups::powerup_vo( "insta_kill" );
 	//playsoundatposition("zmb_powerup_grabbed", self.origin);
+}
+
+cosmo_perma_perk_reward()
+{
+	self endon( "disconnect" );
+
+	if( IsDefined( self.cosmo_perma_perk_granted ) && self.cosmo_perma_perk_granted )
+	{
+		return;
+	}
+
+	self.cosmo_perma_perk_granted = true;
+
+	if( IsDefined( self._retain_perks ) )
+	{
+		return;
+	}
+
+	if( !IsDefined( level.cosmo_perk_reward_array ) )
+	{
+		level.cosmo_perk_reward_array = [];
+
+		machines = GetEntArray( "zombie_vending", "targetname" );
+
+		for( i = 0; i < machines.size; i++ )
+		{
+			level.cosmo_perk_reward_array[level.cosmo_perk_reward_array.size] = machines[i].script_noteworthy;
+		}
+	}
+
+	for( i = 0; i < level.cosmo_perk_reward_array.size; i++ )
+	{
+		if( !self HasPerk( level.cosmo_perk_reward_array[i] ) )
+		{
+			self playsound( "evt_sq_bag_gain_perks" );
+			self maps\_zombiemode_perks::give_perk( level.cosmo_perk_reward_array[i] );
+			wait( 0.25 );
+		}
+	}
+
+	self._retain_perks = true;
+	self thread cosmo_watch_for_respawn();
+}
+
+cosmo_watch_for_respawn()
+{
+	self endon( "disconnect" );
+
+	while( 1 )
+	{
+		self waittill_either( "spawned_player", "player_revived" );
+		waittillframeend;
+
+		self SetMaxHealth( level.zombie_vars["zombie_perk_juggernaut_health"] );
+	}
 }
 
 
