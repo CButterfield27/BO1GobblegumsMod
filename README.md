@@ -40,9 +40,9 @@ These are the modified steps:
 
 ### QOL Improvements
 
-**Perma Perk Rewards - Ascension & Der Riese**
+**Perma Perk Rewards - Ascension, Der Riese & Coast**
 
-To improve consistency and player experience, Ascension and Der Riese now grant permanent perk rewards upon completing their respective Easter Eggs.
+To improve consistency and player experience, Ascension, Der Riese, and Coast now grant permanent perk rewards upon completing their respective Easter Eggs.
 
 - **Ascension (zombie_cosmodrome_eggs.gsc)**  
   When Gersh's final dialogue concludes (`wait_for_gersh_vox()` triggers `reward_wait()`), all living players receive a permanent perk reward.  
@@ -52,12 +52,16 @@ To improve consistency and player experience, Ascension and Der Riese now grant 
   Upon completing the Fly Trap Easter Egg (`level.flytrap_counter == 3` and `play_sound_2d("sam_fly_last")`), all living players are granted a permanent perk reward.  
   The reward logic is self-contained and does not rely on GobbleGum systems.
 
+- **Coast (zombie_coast_eggs.gsc)**  
+  Immediately after `consequences_will_never_be_the_same()` calls `maps\_zombiemode_powerups::specific_powerup_drop("tesla", struct.origin)`, the script threads a map-local perma perk reward for every living player
+
 These enhancements ensure parity between older and newer maps while preserving original gameplay integrity.
 
 ### Map-specific EE Rewards
 
 - `zombie_cod5_factory.gsc`: Grants the perma perk reward at Fly Trap completion once `play_sound_2d("sam_fly_last")` fires with `level.flytrap_counter == 3`; threads stay local to the map script and guard against duplicate grants.
 - `zombie_cosmodrome_eggs.gsc`: Awards the same perma perk set as Gersh's closing VO dispatches `reward_wait()`; threads are local-only and reuse the same guard semantics.
+- `zombie_coast_eggs.gsc`: Upon completion inside `consequences_will_never_be_the_same()`, after `level thread maps\_zombiemode_powerups::specific_powerup_drop("tesla", struct.origin)`, all living players receive a perma perk reward. Behavior mirrors Moon SQ / Temple SQ reward semantics. Implementation is map-local with duplication safety.
 - Reward cadence and perk persistence match the reference implementations in `zombie_moon_sq.gsc` and `zombie_temple_sq.gsc`, maintaining their keep-on-down behavior without GobbleGum dependencies.
 
 ---
@@ -653,16 +657,18 @@ stateDiagram-v2
 
 ---
 
-## Changelog
+### Changelog
 
-### Perma Perk EE Hooks
+### v1.1
 
-- `zombie_cod5_factory.gsc`: Added local perma perk reward dispatch at Fly Trap completion (`play_sound_2d("sam_fly_last")` when `level.flytrap_counter == 3`).
-  Includes per-player duplication guard and proper thread lifecycle.
-- `zombie_cosmodrome_eggs.gsc`: Added local perma perk reward dispatch alongside `players[i] thread reward_wait();` in `wait_for_gersh_vox()`.
-  Includes duplication guard and VO-safe sequencing.
-- Kept implementation fully within map scripts - no GobbleGum references, helpers, or dvars.
-- Added new **"QOL Improvements - Perma Perk Rewards (Ascension & Der Riese)"** section beneath "Solo Easter Mods" in README.md.
-- Cleaned formatting and removed unused code from edited regions.
+## Perma Perk EE Hooks
+
+* Added local perma perk reward dispatch to `maps\zombie_cod5_factory.gsc` at Fly Trap completion (`play_sound_2d("sam_fly_last")` when `level.flytrap_counter == 3`), including per-player duplication guard and proper thread lifecycle.
+* Added local perma perk reward dispatch to `maps\zombie_cosmodrome_eggs.gsc` alongside `players[i] thread reward_wait();` within `wait_for_gersh_vox()`, with VO-safe sequencing and duplication prevention.
+* Added local perma perk reward dispatch to `maps\zombie_coast_eggs.gsc` inside `consequences_will_never_be_the_same()`, immediately following the Tesla powerup drop call (`level thread maps\_zombiemode_powerups::specific_powerup_drop("tesla", struct.origin)`), implemented via `coast_perma_perk_reward()` as a player-threaded routine with `endon("disconnect")` and per-player duplication guard.
+* All implementations remain fully contained within their respective map scripts — no GobbleGum references, helpers, or DVAR usage.
+* Updated `README.md` to include the Coast EE entry under **Map-specific EE Rewards** and added a note under **Solo EE Mod** highlighting perma perk integration.
+* Cleaned up formatting and removed unused or placeholder code from all edited regions across Factory, Cosmodrome, and Coast.
+
 
 

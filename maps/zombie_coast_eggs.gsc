@@ -2578,9 +2578,74 @@ consequences_will_never_be_the_same()
 	
 	if( IsDefined( struct ) )
 	{
-		level thread maps\_zombiemode_powerups::specific_powerup_drop( "tesla", struct.origin );	
+		level thread maps\_zombiemode_powerups::specific_powerup_drop( "tesla", struct.origin );
+		
+		players = get_players();
+		
+		for( i = 0; i < players.size; i++ )
+		{
+			if( IsDefined( players[i] ) && isplayer( players[i] ) && IsAlive( players[i] ) )
+			{
+				players[i] thread coast_perma_perk_reward();
+			}
+		}
 	}
 	
+}
+
+coast_perma_perk_reward()
+{
+	self endon( "disconnect" );
+	
+	if( IsDefined( self.coast_perma_perk_granted ) && self.coast_perma_perk_granted )
+	{
+		return;
+	}
+	
+	self.coast_perma_perk_granted = true;
+	
+	if( IsDefined( self._retain_perks ) )
+	{
+		return;
+	}
+	
+	if( !IsDefined( level.coast_perk_reward_array ) )
+	{
+		level.coast_perk_reward_array = [];
+		
+		machines = GetEntArray( "zombie_vending", "targetname" );
+		
+		for( i = 0; i < machines.size; i++ )
+		{
+			level.coast_perk_reward_array[level.coast_perk_reward_array.size] = machines[i].script_noteworthy;
+		}
+	}
+	
+	for( i = 0; i < level.coast_perk_reward_array.size; i++ )
+	{
+		if( !self HasPerk( level.coast_perk_reward_array[i] ) )
+		{
+			self playsound( "evt_sq_bag_gain_perks" );
+			self maps\_zombiemode_perks::give_perk( level.coast_perk_reward_array[i] );
+			wait( 0.25 );
+		}
+	}
+	
+	self._retain_perks = true;
+	self thread coast_watch_for_respawn();
+}
+
+coast_watch_for_respawn()
+{
+	self endon( "disconnect" );
+	
+	while( 1 )
+	{
+		self waittill_either( "spawned_player", "player_revived" );
+		waittillframeend;
+		
+		self SetMaxHealth( level.zombie_vars["zombie_perk_juggernaut_health"] );
+	}
 }
 
 // -- DAMN MACHINES -- //
