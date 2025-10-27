@@ -40,7 +40,7 @@ These are the modified steps:
 
 ### QOL Improvements
 
-**Perma Perk Rewards - Ascension, Der Riese & Coast**
+**Perma Perk Rewards - Ascension, Der Riese & Call of the Dead**
 
 To improve consistency and player experience, Ascension, Der Riese, and Coast now grant permanent perk rewards upon completing their respective Easter Eggs.
 
