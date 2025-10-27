@@ -287,13 +287,4 @@ set gg_perkaholic_include_mulekick 1  // Include Mule Kick for Perkaholic (defau
   * `zombie_cod5_factory.gsc` (Fly Trap completion)
   * `zombie_cosmodrome_eggs.gsc` (Gersh’s final dialogue)
   * `zombie_coast_eggs.gsc` (post-Tesla drop)
-* Each implementation includes:
-
-  * Per-player duplication guard
-  * Proper thread lifecycle with `endon("disconnect")`
-  * No GobbleGum or helper dependencies
-* Updated README with Coast entry under **Map-specific EE Rewards**
-* Added Solo EE section highlighting perma perk integration
-* Cleaned and reformatted all edited script regions
-
 ---
