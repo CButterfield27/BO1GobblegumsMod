@@ -2,6 +2,15 @@
 
 ---
 
+## Setup
+
+* Tested **only on Plutonium**.
+* Compatibility with **other loaders or Game_Mod** is **unknown**.
+* Place the **'Gumballs v1.0'** folder in the **'C:\Users\User\AppData\Local\Plutonium\storage\t5\mods'** folder and the **'zombie_moon_patch.ff'** file in the **'C:\Users\User\AppData\Local\Plutonium\storage\t5\zone' folder.**
+* Activate gums using "+actionslot 4"
+
+---
+
 ## Solo Easter Mods
 
 This project merges the Solo Easter Egg mods with the GobbleGum system. Only integration and compatibility updates were made here.
