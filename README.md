@@ -260,30 +260,32 @@ No-op compatibility entries for older builds.
 set gg_enable 1                       // Enables the GobbleGum system (default 0)
 set gg_debug 1                        // Shows debug HUD/logs (default 0)
 set gg_force_gum ID                   // Forces a specific gum for testing
-set gg_perkaholic_include_mulekick 1  // Include Mule Kick for Perkaholic (default 0)
+set gg_perkaholic_include_mulekick 1  // Include Mule Kick for Perkaholic (default 1)
 ```
 
 ### Available Gums
 
-| Name                   | ID                     | Description                                   |
-| ---------------------- | ---------------------- | --------------------------------------------- |
-| Perkaholic             | perkaholic             | All map perks                                 |
-| Wall Power             | wall_power             | Next wall-buy is PaP                          |
-| Cache Back             | cache_back             | Spawns a Max Ammo Power-Up                    |
-| Crate Power            | crate_power            | Next Mystery Box gun is PaP                   |
-| Dead of Nuclear Winter | dead_of_nuclear_winter | Spawns a Nuke Power-Up                        |
-| Extra Credit           | extra_credit           | Spawns a Bonus Points Power-Up                |
-| Gift Card              | gift_card              | Adds 15,000 points to your score              |
-| Fatal Contraption      | fatal_contraption      | Spawns a Death Machine Power-Up               |
-| Hidden Power           | hidden_power           | Pack-a-Punch your current weapon instantly    |
-| Immolation Liquidation | immolation             | Spawns a Fire Sale Power-Up                   |
-| Kill Joy               | kill_joy               | Spawns an Insta-Kill Power-Up                 |
-| Licensed Contractor    | licensed_contractor    | Spawns a Carpenter Power-Up                   |
-| On the House           | on_the_house           | Spawns a free perk Power-Up                   |
-| Reign Drops            | reign_drops            | Spawns all core Power-Ups at once             |
-| Round Robbin           | round_robbin           | Ends the current round; all players gain 1600 |
-| Who’s Keeping Score    | whos_keeping_score     | Spawns a Double Points Power-Up               |
-| Wonderbar              | wonderbar              | Next box gun is a Wonder Weapon               |
+| Name                   | ID                     | Active | Description                                   |
+| ---------------------- | ---------------------- | ------ | --------------------------------------------- |
+| Perkaholic             | perkaholic             | 1      | All map perks                                 |
+| Wall Power             | wall_power             | 1      | Next wall-buy is PaP                          |
+| Cache Back             | cache_back             | 1      | Spawns a Max Ammo Power-Up                    |
+| Crate Power            | crate_power            | 1      | Next Mystery Box gun is PaP                   |
+| Dead of Nuclear Winter | dead_of_nuclear_winter | 1      | Spawns a Nuke Power-Up                        |
+| Extra Credit           | extra_credit           | 1      | Spawns a Bonus Points Power-Up                |
+| Gift Card              | gift_card              | 1      | Adds 15,000 points to your score              |
+| Fatal Contraption      | fatal_contraption      | 1      | Spawns a Death Machine Power-Up               |
+| Hidden Power           | hidden_power           | 1      | Pack-a-Punch your current weapon instantly    |
+| Immolation Liquidation | immolation             | 1      | Spawns a Fire Sale Power-Up                   |
+| Kill Joy               | kill_joy               | 1      | Spawns an Insta-Kill Power-Up                 |
+| Licensed Contractor    | licensed_contractor    | 1      | Spawns a Carpenter Power-Up                   |
+| On the House           | on_the_house           | 1      | Spawns a free perk Power-Up                   |
+| Reign Drops            | reign_drops            | 1      | Spawns all core Power-Ups at once             |
+| Round Robbin           | round_robbin           | 1      | Ends the current round; all players gain 1600 |
+| Shopping Free          | shopping_free          | 0      | All purchases are free                        |
+| Stock Option           | stock_option           | 0      | Ammo is taken from the player's stockpile     |
+| Who’s Keeping Score    | whos_keeping_score     | 1      | Spawns a Double Points Power-Up               |
+| Wonderbar              | wonderbar              | 1      | Next box gun is a Wonder Weapon               |
 
 ---
 
@@ -296,4 +298,13 @@ set gg_perkaholic_include_mulekick 1  // Include Mule Kick for Perkaholic (defau
   * `zombie_cod5_factory.gsc` (Fly Trap completion)
   * `zombie_cosmodrome_eggs.gsc` (Gersh’s final dialogue)
   * `zombie_coast_eggs.gsc` (post-Tesla drop)
+
+### v1.2 – Perma Perk Fixes & Documentation
+
+* **Fixed Perma Perk Persistence:** Players now correctly retain Eastern Egg perma-perks after being revived or respawning in matches.
+  * Applied to: `zombie_cod5_factory.gsc`, `zombie_cosmodrome_eggs.gsc`, and `zombie_coast_eggs.gsc`.
+* **README Updates:**
+  * Added `Active` (1/0) column to the **Available Gums** table to clearly distinguish enabled features.
+  * Listed `Shopping Free` and `Stock Option` in the documentation (currently inactive in GSC).
+  * Standardized default value documentation for `gg_perkaholic_include_mulekick`.
 ---

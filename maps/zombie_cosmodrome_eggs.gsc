@@ -1014,6 +1014,14 @@ cosmo_watch_for_respawn()
 		waittillframeend;
 
 		self SetMaxHealth( level.zombie_vars["zombie_perk_juggernaut_health"] );
+		
+		for( i = 0; i < level.cosmo_perk_reward_array.size; i++ )
+		{
+			if( !self HasPerk( level.cosmo_perk_reward_array[i] ) )
+			{
+				self maps\_zombiemode_perks::give_perk( level.cosmo_perk_reward_array[i] );
+			}
+		}
 	}
 }
 
