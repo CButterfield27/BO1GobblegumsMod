@@ -10,6 +10,9 @@
 #include maps\gobblegum\gb_hud;
 #include maps\gobblegum\gumballs;
 
+// QoL
+#include maps\qol\zombie_damage;
+
 #using_animtree( "generic_human" ); 
 
 main()
@@ -114,6 +117,10 @@ main()
 	maps\gobblegum\gb_helpers::helpers_init(); // helpers first (idempotent)
 	maps\gobblegum\gb_hud::gg_hud_precache(); // HUD precache second (idempotent)
 	level thread maps\gobblegum\gumballs::gumballs_init(); // core last, on level thread
+	
+	// QoL
+	zombie_damage_init();
+
 	maps\_zombiemode_user::init();
 	maps\_zombiemode_weap_cymbal_monkey::init();
 	maps\_zombiemode_weap_freezegun::init();

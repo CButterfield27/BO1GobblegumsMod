@@ -1,6 +1,7 @@
 rawfile,maps/gobblegum/gb_helpers.gsc
 rawfile,maps/gobblegum/gb_hud.gsc
 rawfile,maps/gobblegum/gumballs.gsc
+rawfile,maps/qol/zombie_damage.gsc
 rawfile,maps/_zombiemode.gsc
 rawfile,maps/_zombiemode_perks.gsc
 rawfile,maps/_zombiemode_powerups.gsc

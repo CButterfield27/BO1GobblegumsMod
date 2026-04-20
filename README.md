@@ -53,6 +53,14 @@ These Easter Eggs now grant a **permanent perk reward** upon completion.
 | **zombie_cosmodrome_eggs.gsc** | `wait_for_gersh_vox()` → `reward_wait()`                          | Same perma perk logic, guarded threads, no external calls.          |
 | **zombie_coast_eggs.gsc**      | `consequences_will_never_be_the_same()` after Tesla drop          | Local reward dispatch for each player; mirrors Moon SQ / Temple SQ. |
 
+### 3 Hit Down (Configurable)
+
+Changes the standard player health interaction so that players can take 3 hits before being downed (45 damage per hit instead of 50).
+
+| DVAR           | Default | Description                                           |
+| -------------- | ------- | ----------------------------------------------------- |
+| `3hit_enable`  | 0       | Set to 1 to enable 3-hit down; 0 for standard (50 dmg) |
+
 
 ---
 
@@ -240,6 +248,7 @@ No-op compatibility entries for older builds.
 | Economy    | `gg_gift_card_points`            | 30000   | Points for Gift Card         |
 | Perkaholic | `gg_perkaholic_grant_all_perks`  | 1       | Grants full perk set         |
 | Perkaholic | `gg_perkaholic_include_mulekick` | 1       | Includes Mule Kick when safe |
+| QOL        | `3hit_enable`                    | 0       | Enables 3-hit down (45 damage per hit)       |
 
 ---
 
@@ -261,6 +270,7 @@ set gg_enable 1                       // Enables the GobbleGum system (default 0
 set gg_debug 1                        // Shows debug HUD/logs (default 0)
 set gg_force_gum ID                   // Forces a specific gum for testing
 set gg_perkaholic_include_mulekick 1  // Include Mule Kick for Perkaholic (default 1)
+set 3hit_enable 1                     // Enables 3-hit down (default 0)
 ```
 
 ### Available Gums
@@ -303,8 +313,11 @@ set gg_perkaholic_include_mulekick 1  // Include Mule Kick for Perkaholic (defau
 
 * **Fixed Perma Perk Persistence:** Players now correctly retain Eastern Egg perma-perks after being revived or respawning in matches.
   * Applied to: `zombie_cod5_factory.gsc`, `zombie_cosmodrome_eggs.gsc`, and `zombie_coast_eggs.gsc`.
+* **New 3-Hit Down Feature:** Added a configurable QoL option to increase player survivability to 3 hits. This is toggled via the `3hit_enable` console command.
 * **README Updates:**
   * Added `Active` (1/0) column to the **Available Gums** table to clearly distinguish enabled features.
   * Listed `Shopping Free` and `Stock Option` in the documentation (currently inactive in GSC).
   * Standardized default value documentation for `gg_perkaholic_include_mulekick`.
+  * Added documentation and setup instructions for the **3-Hit Down** QoL feature.
+  
 ---
