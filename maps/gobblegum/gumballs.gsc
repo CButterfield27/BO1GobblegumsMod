@@ -146,10 +146,10 @@ gg_registry_init()
     gum.name = "Extra Credit";
     gum.shader = "t7_hud_zm_bgb_extra_credit";
     gum.desc = "Spawns a Bonus Points Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
+    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
-    gum.base_uses = 1;
+    gum.base_uses = 2;
     gum.activate_func = "gg_fx_extra_credit";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -224,10 +224,10 @@ gg_registry_init()
     gum.name = "Immolation Liquidation";
     gum.shader = "bo6_immolation_liquidation";
     gum.desc = "Spawns a Fire Sale Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
+    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
-    gum.base_uses = 1;
+    gum.base_uses = 2;
     gum.activate_func = "gg_fx_immolation";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -243,10 +243,10 @@ gg_registry_init()
     gum.name = "Kill Joy";
     gum.shader = "bo6_kill_joy";
     gum.desc = "Spawns an Insta-Kill Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
+    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
-    gum.base_uses = 1;
+    gum.base_uses = 2;
     gum.activate_func = "gg_fx_kill_joy";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -382,7 +382,7 @@ gg_registry_init()
     gum.uses_description = "Press D-Pad Right to activate. (1 use)";
     gum.activation = 2; // USER
     gum.consumption = 3; // USES
-    gum.base_uses = 1;
+    gum.base_uses = 2;
     gum.activate_func = "gg_fx_whos_keeping_score";
     gum.activate_key = gum.activate_func;
     gum.tags = [];
@@ -5065,6 +5065,7 @@ gg_fx_respin_cycle(player, gum)
 {
     gg_effect_stub_common(player, gum, "Placeholder");
 }
+
 // Compatibility stubs (no-op placeholders)
 
 gg_on_gum_used() {}
