@@ -245,7 +245,7 @@ No-op compatibility entries for older builds.
 | HUD        | `GG_TC_AUTOHIDE_SECS`            | 7.5     | Top-center fade timeout      |
 | Armed Gums | `gg_armed_grace_secs`            | 3.0     | Trigger grace window         |
 | Wonderbar  | `gg_wonder_label_suppress_ms`    | 35000   | Fire Sale label suppression  |
-| Economy    | `gg_gift_card_points`            | 30000   | Points for Gift Card         |
+| Economy    | `gg_gift_card_points`            | 15000   | Points for Gift Card         |
 | Perkaholic | `gg_perkaholic_grant_all_perks`  | 1       | Grants full perk set         |
 | Perkaholic | `gg_perkaholic_include_mulekick` | 1       | Includes Mule Kick when safe |
 | QOL        | `3hit_enable`                    | 0       | Enables 3-hit down (45 damage per hit)       |
