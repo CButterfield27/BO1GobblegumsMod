@@ -5065,6 +5065,7 @@ gg_fx_respin_cycle(player, gum)
 {
     gg_effect_stub_common(player, gum, "Placeholder");
 }
+
 // Compatibility stubs (no-op placeholders)
 
 gg_on_gum_used() {}

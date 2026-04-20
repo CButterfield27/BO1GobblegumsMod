@@ -23,7 +23,7 @@ infected_dmg()
 			{
 				if( is_enabled )
 				{
-					infected[i].meleeDamage = 45; //This value is amount each infected will inflict damage to a player
+					infected[i].meleeDamage = 45;
 				}
 				else
 				{
