@@ -118,12 +118,12 @@ Changes the standard player health interaction so that players can take 3 hits b
 
 ## Adding a New Gumball
 
-The new Phase 2 self-registration model allows new gums to be added with minimal friction.
+The Phase 2 decentralized self-registration model allows new gums to be added with minimal friction.
 
 1. **Duplicate the Template:** Copy `maps/gobblegum/gums/gb_template.gsc` and rename it to your new gum (e.g., `gb_my_gum.gsc`).
-2. **Define Logic:** Open the new file and implement your specific behavior in the `activate()` function.
-3. **Configure Data:** Update the `register()` block in your new file with the correct ID, description, HUD details, and consumption type. Ensure it explicitly registers itself via `maps\gobblegum\gumballs::gg_register_gum(gum.id, gum);`.
-4. **Include and Bootstrap:** Finally, `#include` your new script at the top of `maps/gobblegum/gumballs.gsc` and call its `register()` function inside `gg_registry_init()`.
+2. **Define Logic:** Open the new file and implement your specific behavior in the main activation function (e.g., `gg_fx_my_gum()`).
+3. **Configure Data:** Update the `register_<name>()` block in your new file with the correct ID, description, HUD details, and consumption type. Assign your activation function to the `gum.activate_func` pointer (e.g., `gum.activate_func = ::gg_fx_my_gum;`), and ensure it explicitly registers itself via `maps\gobblegum\gumballs::gg_register_gum(gum.id, gum);`.
+4. **Include and Bootstrap:** Finally, `#include` your new script at the top of `maps/gobblegum/gumballs.gsc` and call its `register_<name>()` function inside `gg_registry_init()`.
 
 ---
 
@@ -138,7 +138,7 @@ The new Phase 2 self-registration model allows new gums to be added with minimal
 * `uses_description`: shown under gum name
 * `activation_type`: AUTO / USER
 * `consumption_type`: timed / rounds / uses
-* `activate_func`: function name key
+* `activate_func`: direct function pointer to activation logic
 * `tags`: categories (perk, powerup, economy, weapon)
 * `map_whitelist` / `blacklist`: enforce availability
 * `exclusion_groups`: prevent conflicts
@@ -204,7 +204,7 @@ State variables:
   * **Rounds:** decrements per round
   * **Timed:** countdown timer
 
-Dispatcher routes each gum’s `activate_func` to a defined logic function.
+The system directly executes the `activate_func` pointer defined during self-registration, bypassing any centralized dispatcher.
 
 ---
 
