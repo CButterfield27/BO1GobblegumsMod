@@ -28,417 +28,62 @@
 
 gumballs_init()
 {
-    gg_init_dvars();
-    gg_init_dispatcher();
-    gg_init_powerup_tables();
+	gg_init_dvars();
+	// gg_init_dispatcher(); // Removed in Phase 2
+	gg_init_powerup_tables();
 
-    if (!gg_is_enabled())
-        return;
+	if (!gg_is_enabled())
+		return;
 
-    gg_registry_init();
-    gg_init_level_state();
-    gg_init_tokens();
+	gg_registry_init();
+	gg_init_level_state();
+	gg_init_tokens();
 
-    if (level.gg_state.core_started)
-        return;
+	if (level.gg_state.core_started)
+		return;
 
-    level.gg_state.core_started = true;
+	level.gg_state.core_started = true;
 
-    level thread gg_player_connect_watcher();
-    level thread gg_round_watcher();
+	level thread gg_player_connect_watcher();
+	level thread gg_round_watcher();
 
-    if (gg_debug_enabled())
-    {
-        [[ level.gb_helpers.gg_log ]]("init: registry ready, watchers live");
-    }
+	if (gg_debug_enabled())
+	{
+		[[ level.gb_helpers.gg_log ]]("init: registry ready, watchers live");
+	}
 }
 
 gg_registry_init()
 {
-    if (isdefined(level.gg_registry_built) && level.gg_registry_built)
-        return;
+	if (isdefined(level.gg_registry_built) && level.gg_registry_built)
+		return;
 
-    level.gg_registry = spawnstruct();
-    level.gg_registry.gums = [];
-    level.gg_registry.index = spawnstruct();
+	level.gg_registry = spawnstruct();
+	level.gg_registry.gums = [];
+	level.gg_registry.index = spawnstruct();
 
-    level.gg_register_gum = ::gg_register_gum;
-    level.gg_find_gum_by_id = ::gg_find_gum_by_id;
+	// Modular registration
+	maps\gobblegum\gums\gb_perkaholic::register_perkaholic();
+	maps\gobblegum\gums\gb_wall_power::register_wall_power();
+	maps\gobblegum\gums\gb_cache_back::register_cache_back();
+	maps\gobblegum\gums\gb_crate_power::register_crate_power();
+	maps\gobblegum\gums\gb_dead_of_nuclear_winter::register_dead_of_nuclear_winter();
+	maps\gobblegum\gums\gb_extra_credit::register_extra_credit();
+	maps\gobblegum\gums\gb_gift_card::register_gift_card();
+	maps\gobblegum\gums\gb_fatal_contraption::register_fatal_contraption();
+	maps\gobblegum\gums\gb_hidden_power::register_hidden_power();
+	maps\gobblegum\gums\gb_immolation_liquidation::register_immolation_liquidation();
+	maps\gobblegum\gums\gb_kill_joy::register_kill_joy();
+	maps\gobblegum\gums\gb_licensed_contractor::register_licensed_contractor();
+	maps\gobblegum\gums\gb_on_the_house::register_on_the_house();
+	maps\gobblegum\gums\gb_reign_drops::register_reign_drops();
+	maps\gobblegum\gums\gb_round_robbin::register_round_robbin();
+	maps\gobblegum\gums\gb_shopping_free::register_shopping_free();
+	maps\gobblegum\gums\gb_stock_option::register_stock_option();
+	maps\gobblegum\gums\gb_whos_keeping_score::register_whos_keeping_score();
+	maps\gobblegum\gums\gb_wonderbar::register_wonderbar();
 
-    gum = spawnstruct();
-    gum.id = "perkaholic";
-    gum.name = "Perkaholic";
-    gum.shader = "bo6_perkaholic";
-    gum.desc = "All map perks";
-    gum.uses_description = "Active";
-    gum.activation = 1; // ACT_AUTO
-    gum.consumption = 3; // CONS_USES (uses-based)
-    gum.base_uses = 1;
-    gum.activate_func = "gg_fx_perkaholic";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.tags[0] = "perk";
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.blacklist[gum.blacklist.size] = "zombie_theater";
-    gum.blacklist[gum.blacklist.size] = "theater";
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    gum = spawnstruct();
-    gum.id = "wall_power";
-    gum.name = "Wall Power";
-    gum.shader = "bo6_wall_power";
-    gum.desc = "Next wall-buy is PaP";
-    gum.uses_description = "Active";
-    gum.activation = 1; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 1;
-    gum.activate_func = "gg_fx_wall_power";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.tags[0] = "weapon";
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-    
-    // Cache Back (Max Ammo) - Uses
-    gum = spawnstruct();
-    gum.id = "cache_back";
-    gum.name = "Cache Back";
-    gum.shader = "bo6_cache_back";
-    gum.desc = "Spawns a Max Ammo Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
-    gum.activation = 2; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 1;
-    gum.activate_func = "gg_fx_cache_back";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Crate Power - Uses (AUTO per prior list)
-    gum = spawnstruct();
-    gum.id = "crate_power";
-    gum.name = "Crate Power";
-    gum.shader = "bo6_crate_power";
-    gum.desc = "Next Mystery Box gun is PaP";
-    gum.uses_description = "Active";
-    gum.activation = 1; // AUTO
-    gum.consumption = 3; // USES
-    gum.base_uses = 1;
-    gum.activate_func = "gg_fx_crate_power";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.tags[0] = "weapon";
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Dead of Nuclear Winter (Nuke) - Uses
-    gum = spawnstruct();
-    gum.id = "dead_of_nuclear_winter";
-    gum.name = "Dead of Nuclear Winter";
-    gum.shader = "t7_hud_zm_bgb_dead_of_nuclear_winter";
-    gum.desc = "Spawns a Nuke Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
-    gum.activation = 2; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 1;
-    gum.activate_func = "gg_fx_dead_of_nuclear_winter";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Extra Credit (Bonus Points) - Uses
-    gum = spawnstruct();
-    gum.id = "extra_credit";
-    gum.name = "Extra Credit";
-    gum.shader = "t7_hud_zm_bgb_extra_credit";
-    gum.desc = "Spawns a Bonus Points Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
-    gum.activation = 2; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 2;
-    gum.activate_func = "gg_fx_extra_credit";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Gift Card - Uses
-    gum = spawnstruct();
-    gum.id = "gift_card";
-    gum.name = "Gift Card";
-    gum.shader = "bo7_gift_card";
-    gum.desc = "Adds 15,000 points to your score.";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
-    gum.activation = 2; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 1;
-    gum.activate_func = "gg_logic_gift_card_start";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.tags[0] = "economy";
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Fatal Contraption (Death Machine) - Uses (map-allowed)
-    gum = spawnstruct();
-    gum.id = "fatal_contraption";
-    gum.name = "Fatal Contraption";
-    gum.shader = "t7_hud_zm_bgb_fatal_contraption";
-    gum.desc = "Spawns a Death Machine Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
-    gum.activation = 2; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 1;
-    gum.activate_func = "gg_fx_fatal_contraption";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Hidden Power - Uses
-    gum = spawnstruct();
-    gum.id = "hidden_power";
-    gum.name = "Hidden Power";
-    gum.shader = "bo6_hidden_power";
-    gum.desc = "Pack-a-Punch your current weapon instantly.";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
-    gum.activation = 2; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 1;
-    gum.activate_func = "hidden_power";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.tags[0] = "weapon";
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Immolation Liquidation (Fire Sale) - Uses
-    gum = spawnstruct();
-    gum.id = "immolation";
-    gum.name = "Immolation Liquidation";
-    gum.shader = "bo6_immolation_liquidation";
-    gum.desc = "Spawns a Fire Sale Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
-    gum.activation = 2; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 2;
-    gum.activate_func = "gg_fx_immolation";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Kill Joy (Insta Kill) - Uses
-    gum = spawnstruct();
-    gum.id = "kill_joy";
-    gum.name = "Kill Joy";
-    gum.shader = "bo6_kill_joy";
-    gum.desc = "Spawns an Insta-Kill Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (2 uses)";
-    gum.activation = 2; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 2;
-    gum.activate_func = "gg_fx_kill_joy";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Licensed Contractor (Carpenter) - Uses
-    gum = spawnstruct();
-    gum.id = "licensed_contractor";
-    gum.name = "Licensed Contractor";
-    gum.shader = "t7_hud_zm_bgb_licensed_contractor";
-    gum.desc = "Spawns a Carpenter Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
-    gum.activation = 2; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 1;
-    gum.activate_func = "gg_fx_licensed_contractor";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // On the House (Free Perk) - Uses
-    gum = spawnstruct();
-    gum.id = "on_the_house";
-    gum.name = "On the House";
-    gum.shader = "bo6_on_the_house";
-    gum.desc = "Spawns a free perk Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
-    gum.activation = 2; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 1;
-    gum.activate_func = "gg_fx_on_the_house";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Reign Drops - Uses (Build 5 test: two activations)
-    gum = spawnstruct();
-    gum.id = "reign_drops";
-    gum.name = "Reign Drops";
-    gum.shader = "bo6_reign_drops";
-    gum.desc = "Spawns all core Power-Ups at once";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
-    gum.activation = 2; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 1;
-    gum.activate_func = "gg_fx_reign_drops";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Round Robbin - Uses (instant)
-    gum = spawnstruct();
-    gum.id = "round_robbin";
-    gum.name = "Round Robbin";
-    gum.shader = "t7_hud_zm_bgb_round_robbin";
-    gum.desc = "Ends the current round. All players gain 1600 points";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
-    gum.activation = 2; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 1;
-    gum.activate_func = "gg_fx_round_robbin";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.tags[0] = "economy";
-    gum.tags[1] = "round";
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Shopping Free - Timed (TEST: timed-based)
-    gum = spawnstruct();
-    gum.id = "shopping_free";
-    gum.name = "Shopping Free";
-    gum.shader = "t7_hud_zm_bgb_shopping_free";
-    gum.desc = "All purchases are free";
-    gum.uses_description = "Lasts 1 minute";
-    gum.activation = 1; // AUTO
-    gum.consumption = 1; // TIMED
-    gum.base_duration_secs = gg_get_shopping_free_secs();
-    gum.activate_func = "gg_fx_shopping_free";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.tags[0] = "economy";
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
-
-    // Stock Option - Timed
-    gum = spawnstruct();
-    gum.id = "stock_option";
-    gum.name = "Stock Option";
-    gum.shader = "bo6_stock_option";
-    gum.desc = "Ammo is taken from the player's stockpile";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
-    gum.activation = 2; // USER
-    gum.consumption = 1; // TIMED
-    gum.base_duration_secs = 60;
-    gum.activate_func = "gg_fx_stock_option";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    // gg_register_gum(gum.id, gum);
-
-    // Who's Keeping Score (Double Points) - Uses
-    gum = spawnstruct();
-    gum.id = "whos_keeping_score";
-    gum.name = "Who's Keeping Score";
-    gum.shader = "bo6_who_keeping_score";
-    gum.desc = "Spawns a Double Points Power-Up";
-    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
-    gum.activation = 2; // USER
-    gum.consumption = 3; // USES
-    gum.base_uses = 2;
-    gum.activate_func = "gg_fx_whos_keeping_score";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    // Wonderbar - Uses (armed)
-    gum = spawnstruct();
-    gum.id = "wonderbar";
-    gum.name = "Wonderbar";
-    gum.shader = "bo6_wonderbar";
-    gum.desc = "Next box gun is Wonder Weapon";
-    gum.uses_description = "Active";
-    gum.activation = 1; // AUTO
-    gum.consumption = 3; // USES
-    gum.base_uses = 1;
-    gum.activate_func = "gg_fx_wonderbar";
-    gum.activate_key = gum.activate_func;
-    gum.tags = [];
-    gum.tags[0] = "weapon";
-    gum.tags[1] = "wonder";
-    gum.whitelist = [];
-    gum.blacklist = [];
-    gum.exclusion_groups = [];
-    gum.rarity_weight = 1;
-    gg_register_gum(gum.id, gum);
-
-    level.gg_registry_built = true;
-
-    gg_log_registry_state("init");
+	level.gg_registry_built = true;
 }
 
 gg_register_gum(id, data)
@@ -1182,7 +827,7 @@ gg_get_armed_grace_secs()
 
 gg_get_armed_grace_ms()
 {
-    return int(gg_get_armed_grace_secs() * 1000);
+    return int(maps\gobblegum\gumballs::gg_get_armed_grace_secs() * 1000);
 }
 
 gg_get_armed_poll_ms()
@@ -1194,7 +839,7 @@ gg_get_armed_poll_ms()
 
 gg_get_armed_poll_secs()
 {
-    ms = gg_get_armed_poll_ms();
+    ms = maps\gobblegum\gumballs::gg_get_armed_poll_ms();
     if (ms < 10)
         ms = 10;
     return ms / 1000.0;
@@ -1209,7 +854,7 @@ gg_get_wonder_label_reassert_ms()
 
 gg_get_wonder_label_reassert_secs()
 {
-    return gg_get_wonder_label_reassert_ms() / 1000.0;
+    return maps\gobblegum\gumballs::gg_get_wonder_label_reassert_ms() / 1000.0;
 }
 
 gg_is_firesale_active()
@@ -1290,12 +935,12 @@ gg_reign_drop_sequence_thread(gum_id, codes, spacing, expected_token)
     forward = AnglesToForward(base_angles);
     if (!isdefined(forward))
         forward = (1, 0, 0);
-    center_offset = gg_get_reigndrops_forward_units();
+    center_offset = maps\gobblegum\gumballs::gg_get_reigndrops_forward_units();
     if (!isdefined(center_offset) || center_offset <= 0)
         center_offset = gg_get_drop_forward_units();
     center = self.origin + (forward * center_offset);
 
-    radius = gg_get_reigndrops_radius();
+    radius = maps\gobblegum\gumballs::gg_get_reigndrops_radius();
     if (!isdefined(radius) || radius <= 0)
         radius = 70.0;
 
@@ -1355,7 +1000,7 @@ gg_reign_drop_sequence_thread(gum_id, codes, spacing, expected_token)
 
     if (spawned_any)
     {
-        gg_reign_drops_consume_activation(gum_id, expected_token);
+        maps\gobblegum\gumballs::gg_reign_drops_consume_activation(gum_id, expected_token);
     }
 }
 
@@ -1379,11 +1024,11 @@ gg_reign_drops_consume_activation(gum_id, expected_token)
         [[ level.gb_helpers.gg_log ]]("reign drops use consumed (remaining=" + self.gg.uses_remaining + ")");
 
     gg_set_effect_state(self, undefined, false);
-    gg_on_gum_used();
+    maps\gobblegum\gb_helpers::gg_on_gum_used();
 
     if (self.gg.uses_remaining <= 0)
     {
-        gg_end_current_gum(self, "reign_drops_complete");
+        maps\gobblegum\gb_helpers::gg_end_current_gum(self, "reign_drops_complete");
     }
 }
 
@@ -1677,7 +1322,7 @@ gg_handle_round_start(round_number)
         {
             if (consumed_last_round)
             {
-                gg_end_current_gum(player, "round_change_after_use");
+                maps\gobblegum\gb_helpers::gg_end_current_gum(player, "round_change_after_use");
             }
             else if (selection_active)
             {
@@ -2282,294 +1927,53 @@ gg_can_activate_now(player)
 
 gg_try_activate(player, source)
 {
-    if (!isdefined(source))
-        source = "USER";
+	if (!isdefined(source))
+		source = "USER";
 
-    if (!gg_can_activate_now(player))
-        return false;
+	if (!gg_can_activate_now(player))
+		return false;
 
-    gum = gg_get_selected_gum(player);
-    if (!isdefined(gum))
-        return false;
+	gum = gg_get_selected_gum(player);
+	if (!isdefined(gum))
+		return false;
 
-    if (source == "USER" && gg_is_auto_activation(gum))
-        return false;
-    if (source == "AUTO" && !gg_is_auto_activation(gum))
-        return false;
+	if (source == "USER" && gg_is_auto_activation(gum))
+		return false;
+	if (source == "AUTO" && !gg_is_auto_activation(gum))
+		return false;
 
-    // Model-aware activation guard
-    if (!gg_model_can_activate(player, gum))
-        return false;
+	// Model-aware activation guard
+	if (!gg_model_can_activate(player, gum))
+		return false;
 
-    func_name = gg_get_gum_activate_func(gum);
-    if (func_name == "")
-        return false;
+	if (!isdefined(gum.activate_func))
+		return false;
 
-    path = gg_dispatch_effect(player, gum, func_name);
-    if (path == "")
-    {
-        if (gg_should_log_dispatch())
-        {
-            [[ level.gb_helpers.gg_log ]]("dispatch failed for " + func_name);
-        }
-        return false;
-    }
+	[[ gum.activate_func ]](player, gum);
 
-    if (gg_should_log_dispatch())
-    {
-        label = "dispatch activated " + gum.id + " via " + gg_dispatch_source_label(source) + " (" + path + ")";
-        [[ level.gb_helpers.gg_log ]](label);
-    }
+	if (gg_should_log_dispatch())
+	{
+		label = "dispatch activated " + gum.id + " via " + gg_dispatch_source_label(source);
+		maps\gobblegum\gb_helpers::gg_log(label);
+	}
 
-    // After successful dispatch, apply consumption model hooks
-    gg_on_activation(player, gum);
-    gg_set_effect_state(player, gum, true);
-    gg_handle_post_activation(player, gum);
+	// After successful dispatch, apply consumption model hooks
+	gg_on_activation(player, gum);
+	gg_set_effect_state(player, gum, true);
+	gg_handle_post_activation(player, gum);
 
-    gg_apply_activation_debounce(player);
-    return true;
+	gg_apply_activation_debounce(player);
+	return true;
 }
 
 gg_dispatch_source_label(source)
 {
-    if (!isdefined(source) || source == "")
-        return "USER";
+	if (!isdefined(source) || source == "")
+		return "USER";
 
-    return source;
+	return source;
 }
 
-gg_init_dispatcher()
-{
-    if (!isdefined(level.gg_dispatcher))
-    {
-        level.gg_dispatcher = spawnstruct();
-        level.gg_dispatcher.map = spawnstruct();
-        level.gg_dispatcher.handlers = [];
-        level.gg_dispatcher.names = [];
-    }
-
-    gg_register_dispatcher_entry("gg_fx_perkaholic", maps\gobblegum\gums\gb_perkaholic::gg_fx_perkaholic);
-    gg_register_dispatcher_entry("gg_fx_wall_power", maps\gobblegum\gums\gb_wall_power::gg_fx_wall_power);
-    gg_register_dispatcher_entry("gg_fx_cache_back", maps\gobblegum\gums\gb_cache_back::gg_fx_cache_back);
-    gg_register_dispatcher_entry("gg_fx_kill_joy", maps\gobblegum\gums\gb_kill_joy::gg_fx_kill_joy);
-    gg_register_dispatcher_entry("gg_fx_dead_of_nuclear_winter", maps\gobblegum\gums\gb_dead_of_nuclear_winter::gg_fx_dead_of_nuclear_winter);
-    gg_register_dispatcher_entry("gg_fx_whos_keeping_score", maps\gobblegum\gums\gb_whos_keeping_score::gg_fx_whos_keeping_score);
-    gg_register_dispatcher_entry("gg_fx_licensed_contractor", maps\gobblegum\gums\gb_licensed_contractor::gg_fx_licensed_contractor);
-    gg_register_dispatcher_entry("gg_fx_immolation", maps\gobblegum\gums\gb_immolation_liquidation::gg_fx_immolation);
-    gg_register_dispatcher_entry("gg_fx_on_the_house", maps\gobblegum\gums\gb_on_the_house::gg_fx_on_the_house);
-    gg_register_dispatcher_entry("gg_fx_fatal_contraption", maps\gobblegum\gums\gb_fatal_contraption::gg_fx_fatal_contraption);
-    gg_register_dispatcher_entry("gg_fx_extra_credit", maps\gobblegum\gums\gb_extra_credit::gg_fx_extra_credit);
-    gg_register_dispatcher_entry("gift_card", maps\gobblegum\gums\gb_gift_card::gg_logic_gift_card_start);
-    gg_register_dispatcher_entry("gg_logic_gift_card_start", maps\gobblegum\gums\gb_gift_card::gg_logic_gift_card_start);
-    gg_register_dispatcher_entry("gg_fx_gift_card", maps\gobblegum\gums\gb_gift_card::gg_logic_gift_card_start);
-    gg_register_dispatcher_entry("gg_fx_reign_drops", maps\gobblegum\gums\gb_reign_drops::gg_fx_reign_drops);
-    gg_register_dispatcher_entry("hidden_power", maps\gobblegum\gums\gb_hidden_power::gg_logic_hidden_power_start);
-    gg_register_dispatcher_entry("gg_fx_hidden_power", maps\gobblegum\gums\gb_hidden_power::gg_logic_hidden_power_start);
-    gg_register_dispatcher_entry("gg_fx_crate_power", maps\gobblegum\gums\gb_crate_power::gg_fx_crate_power);
-    gg_register_dispatcher_entry("gg_fx_wonderbar", maps\gobblegum\gums\gb_wonderbar::gg_fx_wonderbar);
-    gg_register_dispatcher_entry("gg_fx_round_robbin", maps\gobblegum\gums\gb_round_robbin::gg_fx_round_robbin);
-    gg_register_dispatcher_entry("gg_fx_shopping_free", maps\gobblegum\gums\gb_shopping_free::gg_fx_shopping_free);
-    gg_register_dispatcher_entry("gg_fx_stock_option", maps\gobblegum\gums\gb_stock_option::gg_fx_stock_option);
-    gg_register_dispatcher_entry("gg_fx_near_death", ::gg_fx_near_death);
-    gg_register_dispatcher_entry("gg_fx_respin_cycle", ::gg_fx_respin_cycle);
-    if (gg_should_log_dispatch())
-    {
-        size = 0;
-        if (isdefined(level.gg_dispatcher.handlers))
-            size = level.gg_dispatcher.handlers.size;
-        [[ level.gb_helpers.gg_log ]]("dispatch registry ready (size=" + size + ")");
-    }
-}
-
-
-gg_register_dispatcher_entry(name, func)
-{
-    if (!isdefined(level.gg_dispatcher))
-        return;
-
-    if (!isdefined(name) || name == "")
-        return;
-
-    if (!isdefined(level.gg_dispatcher.map))
-        level.gg_dispatcher.map = spawnstruct();
-    if (!isdefined(level.gg_dispatcher.handlers))
-        level.gg_dispatcher.handlers = [];
-    if (!isdefined(level.gg_dispatcher.names))
-        level.gg_dispatcher.names = [];
-
-    if (isdefined(level.gg_dispatcher.map[name]))
-    {
-        code = level.gg_dispatcher.map[name];
-        level.gg_dispatcher.handlers[code] = func;
-        return;
-    }
-
-    code = level.gg_dispatcher.handlers.size;
-    level.gg_dispatcher.map[name] = code;
-    level.gg_dispatcher.handlers[code] = func;
-    level.gg_dispatcher.names[code] = name;
-}
-
-gg_lookup_dispatch_code(name)
-{
-    if (!isdefined(level.gg_dispatcher) || !isdefined(level.gg_dispatcher.map))
-        return -1;
-
-    if (!isdefined(name) || name == "")
-        return -1;
-
-    if (isdefined(level.gg_dispatcher.map[name]))
-        return level.gg_dispatcher.map[name];
-
-    return -1;
-}
-
-gg_get_dispatch_handler(code)
-{
-    if (!isdefined(level.gg_dispatcher) || !isdefined(level.gg_dispatcher.handlers))
-        return undefined;
-
-    if (!isdefined(code))
-        return undefined;
-
-    if (code < 0 || code >= level.gg_dispatcher.handlers.size)
-        return undefined;
-
-    return level.gg_dispatcher.handlers[code];
-}
-
-gg_is_callable(handler)
-{
-    return (isdefined(handler) || handler != undefined);
-}
-
-gg_dispatch_effect(player, gum, func_name)
-{
-    if (!isdefined(func_name) || func_name == "")
-        return "";
-
-    code = gg_lookup_dispatch_code(func_name);
-    if (code != -1)
-    {
-        handler = gg_get_dispatch_handler(code);
-        if (gg_is_callable(handler))
-        {
-            if (gg_should_log_dispatch())
-            {
-                [[ level.gb_helpers.gg_log ]]("dispatch route: " + func_name + " (map)");
-            }
-            [[ handler ]](player, gum);
-            return "map";
-        }
-
-        if (gg_debug_enabled())
-        {
-            [[ level.gb_helpers.gg_log ]]("dispatch: map entry missing handler for " + func_name);
-        }
-    }
-    else
-    {
-        // Try a linear search over registered names as a robustness fallback
-        if (isdefined(level.gg_dispatcher) && isdefined(level.gg_dispatcher.names))
-        {
-            for (i = 0; i < level.gg_dispatcher.names.size; i++)
-            {
-                if (level.gg_dispatcher.names[i] == func_name)
-                {
-                    handler = gg_get_dispatch_handler(i);
-                    if (gg_is_callable(handler))
-                    {
-                        if (gg_should_log_dispatch())
-                        {
-                            [[ level.gb_helpers.gg_log ]]("dispatch route: " + func_name + " (map)");
-                        }
-                        [[ handler ]](player, gum);
-                        return "map";
-                    }
-                }
-            }
-        }
-
-        if (gg_should_log_dispatch())
-        {
-            size = 0;
-            if (isdefined(level.gg_dispatcher.handlers))
-                size = level.gg_dispatcher.handlers.size;
-            [[ level.gb_helpers.gg_log ]]("dispatch lookup miss for " + func_name + " (registered=" + size + ")");
-        }
-    }
-
-    handler = gg_dispatch_string_fallback(func_name);
-    if (gg_is_callable(handler))
-    {
-        if (gg_should_log_dispatch())
-        {
-            [[ level.gb_helpers.gg_log ]]("dispatch route: " + func_name + " (fallback)");
-        }
-        [[ handler ]](player, gum);
-        return "fallback";
-    }
-
-    if (gg_should_log_dispatch())
-    {
-        [[ level.gb_helpers.gg_log ]]("dispatch handler missing for " + func_name);
-    }
-
-    return "";
-}
-
-gg_dispatch_string_fallback(func_name)
-{
-    if (!isdefined(func_name) || func_name == "")
-        return undefined;
-
-    if (func_name == "gg_fx_perkaholic")
-        return maps\gobblegum\gums\gb_perkaholic::gg_fx_perkaholic;
-    if (func_name == "gg_fx_wall_power")
-        return maps\gobblegum\gums\gb_wall_power::gg_fx_wall_power;
-    if (func_name == "gg_fx_cache_back")
-        return maps\gobblegum\gums\gb_cache_back::gg_fx_cache_back;
-    if (func_name == "gg_fx_kill_joy")
-        return maps\gobblegum\gums\gb_kill_joy::gg_fx_kill_joy;
-    if (func_name == "gg_fx_dead_of_nuclear_winter")
-        return maps\gobblegum\gums\gb_dead_of_nuclear_winter::gg_fx_dead_of_nuclear_winter;
-    if (func_name == "gg_fx_whos_keeping_score")
-        return maps\gobblegum\gums\gb_whos_keeping_score::gg_fx_whos_keeping_score;
-    if (func_name == "gg_fx_licensed_contractor")
-        return maps\gobblegum\gums\gb_licensed_contractor::gg_fx_licensed_contractor;
-    if (func_name == "gg_fx_immolation")
-        return maps\gobblegum\gums\gb_immolation_liquidation::gg_fx_immolation;
-    if (func_name == "gg_fx_on_the_house")
-        return maps\gobblegum\gums\gb_on_the_house::gg_fx_on_the_house;
-    if (func_name == "gg_fx_fatal_contraption")
-        return maps\gobblegum\gums\gb_fatal_contraption::gg_fx_fatal_contraption;
-    if (func_name == "gg_fx_extra_credit")
-        return maps\gobblegum\gums\gb_extra_credit::gg_fx_extra_credit;
-    if (func_name == "gg_fx_gift_card")
-        return maps\gobblegum\gums\gb_gift_card::gg_logic_gift_card_start;
-    if (func_name == "gg_fx_reign_drops")
-        return maps\gobblegum\gums\gb_reign_drops::gg_fx_reign_drops;
-    if (func_name == "hidden_power")
-        return maps\gobblegum\gums\gb_hidden_power::gg_logic_hidden_power_start;
-    if (func_name == "gg_fx_hidden_power")
-        return maps\gobblegum\gums\gb_hidden_power::gg_logic_hidden_power_start;
-    if (func_name == "gg_fx_crate_power")
-        return maps\gobblegum\gums\gb_crate_power::gg_fx_crate_power;
-    if (func_name == "gg_fx_wonderbar")
-        return maps\gobblegum\gums\gb_wonderbar::gg_fx_wonderbar;
-    if (func_name == "gg_fx_round_robbin")
-        return maps\gobblegum\gums\gb_round_robbin::gg_fx_round_robbin;
-    if (func_name == "gg_fx_shopping_free")
-        return maps\gobblegum\gums\gb_shopping_free::gg_fx_shopping_free;
-    if (func_name == "gg_fx_stock_option")
-        return maps\gobblegum\gums\gb_stock_option::gg_fx_stock_option;
-    if (func_name == "gg_fx_near_death")
-        return ::gg_fx_near_death;
-    if (func_name == "gg_fx_respin_cycle")
-        return ::gg_fx_respin_cycle;
-
-    return undefined;
-}
 
 // Armed gum shared helpers
 gg_array_contains(arr, value)
@@ -2792,7 +2196,7 @@ gg_on_activation(player, gum)
         }
         if (player.gg.uses_remaining <= 0)
         {
-            gg_end_current_gum(player, "uses_empty");
+            maps\gobblegum\gb_helpers::gg_end_current_gum(player, "uses_empty");
         }
     }
     else if (type == gg_cons_rounds())
@@ -2872,7 +2276,7 @@ gg_timer_monitor_thread(expected_token)
     {
         if (gg_consume_logs_enabled())
             [[ level.gb_helpers.gg_log ]]("consumption: timer expired");
-        gg_end_current_gum(self, "timer_expired");
+        maps\gobblegum\gb_helpers::gg_end_current_gum(self, "timer_expired");
     }
 }
 
@@ -2902,7 +2306,7 @@ gg_round_tick(player, round_number)
 
     if (player.gg.rounds_remaining <= 0)
     {
-        gg_end_current_gum(player, "rounds_empty");
+        maps\gobblegum\gb_helpers::gg_end_current_gum(player, "rounds_empty");
     }
 }
 
@@ -2959,12 +2363,12 @@ gg_get_perkaholic_grant_delay_secs()
 
 gg_fx_near_death(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Placeholder");
+    maps\gobblegum\gb_helpers::gg_effect_stub_common(player, gum, "Placeholder");
 }
 
 gg_fx_respin_cycle(player, gum)
 {
-    gg_effect_stub_common(player, gum, "Placeholder");
+    maps\gobblegum\gb_helpers::gg_effect_stub_common(player, gum, "Placeholder");
 }
 
 // Compatibility stubs (no-op placeholders)

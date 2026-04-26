@@ -15,10 +15,10 @@ gg_fx_perkaholic(player, gum)
 
     if (!isdefined(missing) || missing.size <= 0)
     {
-        gg_mark_activation_skip(player);
-        if (gg_debug_enabled())
+        maps\gobblegum\gb_helpers::gg_mark_activation_skip(player);
+        if (maps\gobblegum\gumballs::gg_debug_enabled())
             [[ level.gb_helpers.gg_log ]]("perkaholic skipped: no missing perks");
-        gg_show_hint_if_enabled(player, "Perkaholic: all perks acquired");
+        maps\gobblegum\gb_helpers::gg_show_hint_if_enabled(player, "Perkaholic: all perks acquired");
         return;
     }
 
@@ -26,14 +26,14 @@ gg_fx_perkaholic(player, gum)
 
     if (grant_list.size <= 0)
     {
-        gg_mark_activation_skip(player);
-        if (gg_debug_enabled())
+        maps\gobblegum\gb_helpers::gg_mark_activation_skip(player);
+        if (maps\gobblegum\gumballs::gg_debug_enabled())
             [[ level.gb_helpers.gg_log ]]("perkaholic skipped: no eligible perks");
-        gg_show_hint_if_enabled(player, "Perkaholic: all perks acquired");
+        maps\gobblegum\gb_helpers::gg_show_hint_if_enabled(player, "Perkaholic: all perks acquired");
         return;
     }
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
     {
         resolved_label = gg_perkaholic_format_list(perks);
         missing_label = gg_perkaholic_format_list(grant_list);
@@ -74,10 +74,10 @@ gg_fx_perkaholic(player, gum)
 
     gg_perkaholic_begin_bypass(player);
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
         [[ level.gb_helpers.gg_log ]]("perkaholic granting " + grant_list.size + " perks (missing=" + missing.size + ")");
 
-    delay = gg_get_perkaholic_grant_delay_secs();
+    delay = maps\gobblegum\gumballs::gg_get_perkaholic_grant_delay_secs();
 
     granted = 0;
     granted_perks = [];
@@ -94,7 +94,7 @@ gg_fx_perkaholic(player, gum)
 
         gg_perkaholic_trigger_vo_helper(player, perk);
 
-        if (gg_debug_enabled())
+        if (maps\gobblegum\gumballs::gg_debug_enabled())
             [[ level.gb_helpers.gg_log ]]("perkaholic granted " + perk);
 
         granted++;
@@ -106,7 +106,7 @@ gg_fx_perkaholic(player, gum)
 
     gg_perkaholic_end_bypass(player);
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
     {
         granted_label = gg_perkaholic_format_list(granted_perks);
         [[ level.gb_helpers.gg_log ]]("perkaholic grant complete (granted=" + granted + ", bypass=1, final=" + granted_label + ")");
@@ -114,14 +114,14 @@ gg_fx_perkaholic(player, gum)
 
     if (granted <= 0)
     {
-        gg_mark_activation_skip(player);
-        if (gg_debug_enabled())
+        maps\gobblegum\gb_helpers::gg_mark_activation_skip(player);
+        if (maps\gobblegum\gumballs::gg_debug_enabled())
             [[ level.gb_helpers.gg_log ]]("perkaholic skipped: grant blocked");
-        gg_show_hint_if_enabled(player, "Perkaholic: perk grant failed");
+        maps\gobblegum\gb_helpers::gg_show_hint_if_enabled(player, "Perkaholic: perk grant failed");
         return;
     }
 
-    gg_show_hint_if_enabled(player, "Applied: Perkaholic");
+    maps\gobblegum\gb_helpers::gg_show_hint_if_enabled(player, "Applied: Perkaholic");
 }
 
 gg_perkaholic_include_mulekick_enabled()
@@ -149,7 +149,7 @@ gg_perkaholic_normalize_list(perks)
         perk = perks[i];
         if (!isdefined(perk) || perk == "")
             continue;
-        if (!gg_array_contains(normalized, perk))
+        if (!maps\gobblegum\gumballs::gg_array_contains(normalized, perk))
             normalized[normalized.size] = perk;
     }
 
@@ -180,7 +180,7 @@ gg_perkaholic_ensure_perk(perks, perk_name)
     if (!isdefined(perks))
         perks = [];
 
-    if (!gg_array_contains(perks, perk_name))
+    if (!maps\gobblegum\gumballs::gg_array_contains(perks, perk_name))
         perks[perks.size] = perk_name;
 
     return perks;
@@ -222,12 +222,12 @@ gg_perkaholic_resolve_targets()
     if (context.grant_all)
     {
         if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.get_all_perk_list))
-            base = gg_clone_array([[ level.gb_helpers.get_all_perk_list ]]());
+            base = maps\gobblegum\gb_helpers::gg_clone_array([[ level.gb_helpers.get_all_perk_list ]]());
     }
     else
     {
         if (isdefined(level.gb_helpers) && isdefined(level.gb_helpers.get_map_perk_list))
-            base = gg_clone_array([[ level.gb_helpers.get_map_perk_list ]]());
+            base = maps\gobblegum\gb_helpers::gg_clone_array([[ level.gb_helpers.get_map_perk_list ]]());
     }
 
     base = gg_perkaholic_normalize_list(base);
@@ -256,7 +256,7 @@ gg_perkaholic_resolve_targets()
 
         if (!safe)
         {
-            if (gg_array_contains(base, mulekick))
+            if (maps\gobblegum\gumballs::gg_array_contains(base, mulekick))
                 base = gg_perkaholic_remove_perk(base, mulekick);
             context.mulekick_removed_for_safety = true;
         }
@@ -267,7 +267,7 @@ gg_perkaholic_resolve_targets()
     }
 
     context.perks = base;
-    context.mulekick_present = gg_array_contains(context.perks, mulekick);
+    context.mulekick_present = maps\gobblegum\gumballs::gg_array_contains(context.perks, mulekick);
 
     return context;
 }
@@ -285,7 +285,7 @@ gg_perkaholic_missing_perks(player, perks)
             continue;
         if (isdefined(player) && (player HasPerk(perk)))
             continue;
-        if (!gg_array_contains(missing, perk))
+        if (!maps\gobblegum\gumballs::gg_array_contains(missing, perk))
             missing[missing.size] = perk;
     }
 
@@ -294,11 +294,11 @@ gg_perkaholic_missing_perks(player, perks)
 
 gg_perkaholic_slots_available(player)
 {
-    cap = gg_get_perk_cap();
+    cap = maps\gobblegum\gumballs::gg_get_perk_cap();
     if (cap <= 0)
         return 12;
 
-    current = gg_get_player_perk_count(player);
+    current = maps\gobblegum\gumballs::gg_get_player_perk_count(player);
     room = cap - current;
     if (room < 0)
         room = 0;
@@ -316,7 +316,7 @@ gg_perkaholic_begin_bypass(player)
     player.gg_perk_cap_bypass_depth += 1;
     player.gg_perk_cap_bypass = true;
 
-    if (gg_debug_enabled() && player.gg_perk_cap_bypass_depth == 1)
+    if (maps\gobblegum\gumballs::gg_debug_enabled() && player.gg_perk_cap_bypass_depth == 1)
         [[ level.gb_helpers.gg_log ]]("perkaholic: perk cap bypass enabled");
 }
 
@@ -335,7 +335,7 @@ gg_perkaholic_end_bypass(player)
     player.gg_perk_cap_bypass = undefined;
     player.gg_perk_cap_bypass_depth = undefined;
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
         [[ level.gb_helpers.gg_log ]]("perkaholic: perk cap bypass cleared");
 }
 
@@ -344,4 +344,28 @@ gg_perkaholic_trigger_vo_helper(player, perk)
     if (!isdefined(level.gb_helpers) || !isdefined(level.gb_helpers.trigger_perk_vo_if_cosmodrome))
         return false;
     return [[ level.gb_helpers.trigger_perk_vo_if_cosmodrome ]](player, perk);
+}
+
+register_perkaholic()
+{
+    gum = spawnstruct();
+    gum.id = "perkaholic";
+    gum.name = "Perkaholic";
+    gum.shader = "bo6_perkaholic";
+    gum.desc = "All map perks";
+    gum.uses_description = "Active";
+    gum.activation = 1; // ACT_AUTO
+    gum.consumption = 3; // maps\gobblegum\gb_helpers::CONS_USES(uses-based)
+    gum.base_uses = 1;
+    gum.activate_func = ::gg_fx_perkaholic;
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.tags[0] = "perk";
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.blacklist[gum.blacklist.size] = "zombie_theater";
+    gum.blacklist[gum.blacklist.size] = "theater";
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    maps\gobblegum\gumballs::gg_register_gum(gum.id, gum);
 }

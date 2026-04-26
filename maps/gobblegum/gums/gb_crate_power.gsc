@@ -9,7 +9,7 @@ gg_fx_crate_power(player, gum)
     if (!isdefined(player))
         return;
 
-    gg_mark_activation_skip(player);
+    maps\gobblegum\gb_helpers::gg_mark_activation_skip(player);
     gg_crate_power_arm(player, gum);
 }
 
@@ -19,7 +19,7 @@ gg_crate_power_arm(player, gum)
         return;
 
     if (!isdefined(player.gg))
-        build_player_state(player);
+        maps\gobblegum\gumballs::build_player_state(player);
 
     player notify("gg_crate_power_cancel");
 
@@ -54,13 +54,13 @@ gg_crate_power_arm(player, gum)
             [[ level.gb_hud.br_set_total_uses ]](player, 1);
     }
 
-    gg_show_hint_if_enabled(player, "Armed: Crate Power");
-    gg_spawn_firesale_test_drop(player);
+    maps\gobblegum\gb_helpers::gg_show_hint_if_enabled(player, "Armed: Crate Power");
+    maps\gobblegum\gb_helpers::gg_spawn_firesale_test_drop(player);
 
-    snapshot = gg_clone_array(gg_get_primary_weapons(player));
+    snapshot = maps\gobblegum\gb_helpers::gg_clone_array(maps\gobblegum\gb_helpers::gg_get_primary_weapons(player));
     player thread gg_crate_power_monitor_thread(gum, token, armed_time, snapshot);
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
         [[ level.gb_helpers.gg_log ]]("crate power armed");
 }
 
@@ -70,8 +70,8 @@ gg_crate_power_monitor_thread(gum, expected_token, armed_time, snapshot)
     self endon("gg_gum_cleared");
     self endon("gg_crate_power_cancel");
 
-    known = gg_clone_array(snapshot);
-    poll_secs = gg_get_armed_poll_secs();
+    known = maps\gobblegum\gb_helpers::gg_clone_array(snapshot);
+    poll_secs = maps\gobblegum\gumballs::gg_get_armed_poll_secs();
     if (poll_secs <= 0)
         poll_secs = 0.1;
 
@@ -82,8 +82,8 @@ gg_crate_power_monitor_thread(gum, expected_token, armed_time, snapshot)
         if (!gg_crate_power_token_active(expected_token))
             return;
 
-        current = gg_clone_array(gg_get_primary_weapons(self));
-        new_weapon = gg_detect_new_weapon(known, current);
+        current = maps\gobblegum\gb_helpers::gg_clone_array(maps\gobblegum\gb_helpers::gg_get_primary_weapons(self));
+        new_weapon = maps\gobblegum\gb_helpers::gg_detect_new_weapon(known, current);
         known = current;
 
         if (!isdefined(new_weapon))
@@ -92,7 +92,7 @@ gg_crate_power_monitor_thread(gum, expected_token, armed_time, snapshot)
         if (!gg_crate_power_should_upgrade(self, new_weapon, armed_time))
             continue;
 
-        if (!gg_apply_upgrade_for_weapon(self, new_weapon))
+        if (!maps\gobblegum\gb_helpers::gg_apply_upgrade_for_weapon(self, new_weapon))
             continue;
 
         gg_crate_power_on_success(self, gum, new_weapon);
@@ -105,20 +105,20 @@ gg_crate_power_should_upgrade(player, weapon, armed_time)
     if (!isdefined(weapon) || weapon == "" || weapon == "none")
         return false;
 
-    grace_ms = gg_get_armed_grace_ms();
+    grace_ms = maps\gobblegum\gumballs::gg_get_armed_grace_ms();
     if (isdefined(armed_time) && armed_time > 0 && (gettime() - armed_time) < grace_ms)
         return false;
 
-    if (gg_weapon_is_spawn_pistol(weapon))
+    if (maps\gobblegum\gb_helpers::gg_weapon_is_spawn_pistol(weapon))
         return false;
 
-    if (!gg_weapon_is_box_weapon(weapon))
+    if (!maps\gobblegum\gb_helpers::gg_weapon_is_box_weapon(weapon))
         return false;
 
-    if (gg_weapon_is_wall_buy(weapon))
+    if (maps\gobblegum\gb_helpers::gg_weapon_is_wall_buy(weapon))
         return false;
 
-    if (!gg_weapon_has_upgrade(weapon))
+    if (!maps\gobblegum\gb_helpers::gg_weapon_has_upgrade(weapon))
         return false;
 
     if (player maps\_zombiemode_weapons::is_weapon_upgraded(weapon))
@@ -132,12 +132,12 @@ gg_crate_power_on_success(player, gum, weapon)
     if (!isdefined(player))
         return;
 
-    gg_show_hint_if_enabled(player, "Applied: Crate Power");
+    maps\gobblegum\gb_helpers::gg_show_hint_if_enabled(player, "Applied: Crate Power");
 
     player.gg.armed_flags.crate = false;
     player.gg.armed_flags.crate_power_active = false;
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
         [[ level.gb_helpers.gg_log ]]("crate power upgraded " + weapon);
 
     wait(0.25);
@@ -145,7 +145,7 @@ gg_crate_power_on_success(player, gum, weapon)
         player.gg.uses_remaining = 0;
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_consume_use))
         [[ level.gb_hud.br_consume_use ]](player);
-    gg_end_current_gum(player, "crate_power_applied");
+    maps\gobblegum\gb_helpers::gg_end_current_gum(player, "crate_power_applied");
 }
 
 gg_crate_power_token_active(expected_token)
@@ -153,4 +153,26 @@ gg_crate_power_token_active(expected_token)
     if (!isdefined(self.gg) || !isdefined(self.gg.crate_power_token))
         return false;
     return (self.gg.crate_power_token == expected_token);
+}
+
+register_crate_power()
+{
+    gum = spawnstruct();
+    gum.id = "crate_power";
+    gum.name = "Crate Power";
+    gum.shader = "bo6_crate_power";
+    gum.desc = "Next Mystery Box gun is PaP";
+    gum.uses_description = "Active";
+    gum.activation = 1; // AUTO
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
+    gum.activate_func = ::gg_fx_crate_power;
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.tags[0] = "weapon";
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    maps\gobblegum\gumballs::gg_register_gum(gum.id, gum);
 }

@@ -9,7 +9,7 @@ gg_fx_wonderbar(player, gum)
     if (!isdefined(player))
         return;
 
-    gg_mark_activation_skip(player);
+    maps\gobblegum\gb_helpers::gg_mark_activation_skip(player);
     gg_wonderbar_arm(player, gum);
 }
 
@@ -19,7 +19,7 @@ gg_wonderbar_arm(player, gum)
         return;
 
     if (!isdefined(player.gg))
-        build_player_state(player);
+        maps\gobblegum\gumballs::build_player_state(player);
 
     player notify("gg_wonderbar_cancel");
 
@@ -65,14 +65,14 @@ gg_wonderbar_arm(player, gum)
             [[ level.gb_hud.set_hint ]](player, label_text);
     }
 
-    gg_show_hint_if_enabled(player, "Armed: Wonderbar");
-    gg_spawn_firesale_test_drop(player);
+    maps\gobblegum\gb_helpers::gg_show_hint_if_enabled(player, "Armed: Wonderbar");
+    maps\gobblegum\gb_helpers::gg_spawn_firesale_test_drop(player);
 
-    snapshot = gg_clone_array(gg_get_primary_weapons(player));
+    snapshot = maps\gobblegum\gb_helpers::gg_clone_array(maps\gobblegum\gb_helpers::gg_get_primary_weapons(player));
     player thread gg_wonderbar_monitor_thread(gum, token, armed_time, snapshot);
     player thread gg_wonderbar_label_thread(label_token);
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
     {
         msg = "wonderbar armed";
         if (isdefined(choice) && choice != "")
@@ -87,8 +87,8 @@ gg_wonderbar_monitor_thread(gum, expected_token, armed_time, snapshot)
     self endon("gg_gum_cleared");
     self endon("gg_wonderbar_cancel");
 
-    known = gg_clone_array(snapshot);
-    poll_secs = gg_get_armed_poll_secs();
+    known = maps\gobblegum\gb_helpers::gg_clone_array(snapshot);
+    poll_secs = maps\gobblegum\gumballs::gg_get_armed_poll_secs();
     if (poll_secs <= 0)
         poll_secs = 0.1;
 
@@ -99,8 +99,8 @@ gg_wonderbar_monitor_thread(gum, expected_token, armed_time, snapshot)
         if (!gg_wonderbar_token_active(expected_token))
             return;
 
-        current = gg_clone_array(gg_get_primary_weapons(self));
-        new_weapon = gg_detect_new_weapon(known, current);
+        current = maps\gobblegum\gb_helpers::gg_clone_array(maps\gobblegum\gb_helpers::gg_get_primary_weapons(self));
+        new_weapon = maps\gobblegum\gb_helpers::gg_detect_new_weapon(known, current);
         known = current;
 
         if (!isdefined(new_weapon))
@@ -122,12 +122,12 @@ gg_wonderbar_on_success(player, gum, weapon)
     if (!isdefined(player))
         return;
 
-    gg_show_hint_if_enabled(player, "Applied: Wonderbar");
+    maps\gobblegum\gb_helpers::gg_show_hint_if_enabled(player, "Applied: Wonderbar");
 
     player.gg.armed_flags.wonder = false;
     player.gg.armed_flags.wonderbar_active = false;
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
         [[ level.gb_helpers.gg_log ]]("wonderbar granted " + player.gg.wonderbar_choice);
 
     if (isdefined(player.gg))
@@ -141,7 +141,7 @@ gg_wonderbar_on_success(player, gum, weapon)
         player.gg.wonderbar_choice = undefined;
         player.gg.wonderbar_label_text = "";
     }
-    gg_end_current_gum(player, "wonderbar_applied");
+    maps\gobblegum\gb_helpers::gg_end_current_gum(player, "wonderbar_applied");
 }
 
 gg_wonderbar_token_active(expected_token)
@@ -173,7 +173,7 @@ gg_wonderbar_select_choice(player)
     pool = [[ level.gb_helpers.get_wonder_pool ]](mapname);
     if (!isdefined(pool) || pool.size <= 0)
     {
-        if (gg_debug_enabled())
+        if (maps\gobblegum\gumballs::gg_debug_enabled())
             [[ level.gb_helpers.gg_log ]]("wonderbar has no wonder weapons available");
         return undefined;
     }
@@ -198,17 +198,17 @@ gg_wonderbar_should_replace(player, weapon, armed_time)
     if (!isdefined(weapon) || weapon == "" || weapon == "none")
         return false;
 
-    grace_ms = gg_get_armed_grace_ms();
+    grace_ms = maps\gobblegum\gumballs::gg_get_armed_grace_ms();
     if (isdefined(armed_time) && armed_time > 0 && (gettime() - armed_time) < grace_ms)
         return false;
 
-    if (!gg_weapon_is_box_weapon(weapon))
+    if (!maps\gobblegum\gb_helpers::gg_weapon_is_box_weapon(weapon))
         return false;
 
-    if (gg_weapon_is_wall_buy(weapon))
+    if (maps\gobblegum\gb_helpers::gg_weapon_is_wall_buy(weapon))
         return false;
 
-    if (gg_weapon_is_spawn_pistol(weapon))
+    if (maps\gobblegum\gb_helpers::gg_weapon_is_spawn_pistol(weapon))
         return false;
 
     return true;
@@ -222,14 +222,14 @@ gg_wonderbar_apply_choice(player, acquired_weapon)
     wonder = player.gg.wonderbar_choice;
     if (!isdefined(wonder) || wonder == "")
     {
-        if (gg_debug_enabled())
+        if (maps\gobblegum\gumballs::gg_debug_enabled())
             [[ level.gb_helpers.gg_log ]]("wonderbar has no cached choice");
         return false;
     }
 
     if (!isdefined(level.zombie_weapons) || !isdefined(level.zombie_weapons[wonder]))
     {
-        if (gg_debug_enabled())
+        if (maps\gobblegum\gumballs::gg_debug_enabled())
             [[ level.gb_helpers.gg_log ]]("wonderbar choice invalid (" + wonder + ")");
         return false;
     }
@@ -328,6 +328,29 @@ gg_wonderbar_label_thread(expected_token)
             }
         }
 
-        wait(gg_get_wonder_label_reassert_secs());
+        wait(maps\gobblegum\gumballs::gg_get_wonder_label_reassert_secs());
     }
+}
+
+register_wonderbar()
+{
+    gum = spawnstruct();
+    gum.id = "wonderbar";
+    gum.name = "Wonderbar";
+    gum.shader = "bo6_wonderbar";
+    gum.desc = "Next box gun is Wonder Weapon";
+    gum.uses_description = "Active";
+    gum.activation = 1; // AUTO
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
+    gum.activate_func = ::gg_fx_wonderbar;
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.tags[0] = "weapon";
+    gum.tags[1] = "wonder";
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    maps\gobblegum\gumballs::gg_register_gum(gum.id, gum);
 }

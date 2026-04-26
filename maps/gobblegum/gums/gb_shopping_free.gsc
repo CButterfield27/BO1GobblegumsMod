@@ -12,7 +12,7 @@ gg_fx_shopping_free(player, gum)
     secs = gg_get_shopping_free_secs();
     temp_points = gg_get_shopping_free_temp_points();
 
-    gg_set_effect_state(player, gum, true);
+    maps\gobblegum\gumballs::gg_set_effect_state(player, gum, true);
 
     token = gg_shopping_free_begin(player, gum, secs, temp_points);
 
@@ -20,12 +20,12 @@ gg_fx_shopping_free(player, gum)
         player.gg.timer_endtime = gettime() + int(secs * 1000);
 
     gg_shopping_free_refresh_hud(player, gum, secs);
-    gg_show_hint_if_enabled(player, "Shopping Free: purchases are free");
+    maps\gobblegum\gb_helpers::gg_show_hint_if_enabled(player, "Shopping Free: purchases are free");
 
     player thread gg_shopping_free_refund_thread(token);
     player thread gg_shopping_free_cleanup_thread(token);
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
         [[ level.gb_helpers.gg_log ]]("shopping free activated (token=" + token + ", secs=" + secs + ", credit=" + temp_points + ")");
 }
 
@@ -178,7 +178,7 @@ gg_shopping_free_refund_thread(expected_token)
 
         self.shopping_free.last_score = current;
 
-        tick = gg_get_timer_tick_ms();
+        tick = maps\gobblegum\gumballs::gg_get_timer_tick_ms();
         if (tick < 10)
             tick = 10;
         wait(tick / 1000.0);
@@ -211,12 +211,12 @@ gg_shopping_free_finalize_credit()
     self.shopping_free.baseline = self.score;
     self.shopping_free.last_score = self.score;
 
-    gg_show_hint_if_enabled(self, "");
+    maps\gobblegum\gb_helpers::gg_show_hint_if_enabled(self, "");
 
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
         [[ level.gb_hud.clear_hint ]](self);
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
     {
         used = 0;
         if (isdefined(self.shopping_free.credit_used))
@@ -249,4 +249,26 @@ gg_get_shopping_free_temp_points()
     if (isdefined(level.gg_config) && isdefined(level.gg_config.shopping_free_temp_points))
         return level.gg_config.shopping_free_temp_points;
     return 50000;
+}
+
+register_shopping_free()
+{
+    gum = spawnstruct();
+    gum.id = "shopping_free";
+    gum.name = "Shopping Free";
+    gum.shader = "t7_hud_zm_bgb_shopping_free";
+    gum.desc = "All purchases are free";
+    gum.uses_description = "Lasts 1 minute";
+    gum.activation = 1; // AUTO
+    gum.consumption = 1; // TIMED
+    gum.base_duration_secs = gg_get_shopping_free_secs();
+    gum.activate_func = ::gg_fx_shopping_free;
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.tags[0] = "economy";
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    maps\gobblegum\gumballs::gg_register_gum(gum.id, gum);
 }

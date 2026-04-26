@@ -1,6 +1,6 @@
 #include maps\_utility;
 #include common_scripts\utility;
-#include maps\gobblegum\gumballs;
+// Removed circular include: maps\gobblegum\gumballs
 
 gg_debug_on()
 {
@@ -655,7 +655,7 @@ gg_powerup_single_drop(player, gum)
     code = gg_powerup_code_for_gum(gum);
     if (!isdefined(code) || code == "")
     {
-        if (gg_should_log_dispatch())
+        if (gg_debug_on())
             [[ level.gb_helpers.gg_log ]]("dispatch: power-up alias missing for " + gum_id);
 
         gg_mark_activation_skip(player);
@@ -664,7 +664,7 @@ gg_powerup_single_drop(player, gum)
 
     if (!gg_spawn_powerup_for_gum(player, gum, code))
     {
-        if (gg_should_log_dispatch())
+        if (gg_debug_on())
             [[ level.gb_helpers.gg_log ]]("dispatch: power-up spawn failed for " + gum_id);
 
         gg_mark_activation_skip(player);
@@ -698,14 +698,14 @@ gg_spawn_powerup_for_gum(player, gum, code)
 
     if (code == "bonus_points_player")
     {
-        ensured = gg_require_powerup("bonus_points_player");
+        ensured = maps\gobblegum\gumballs::gg_require_powerup("bonus_points_player");
         if (!ensured)
         {
             attempts = 0;
             while (attempts < 3)
             {
                 wait(0.05);
-                if (gg_require_powerup_now("bonus_points_player"))
+                if (maps\gobblegum\gumballs::gg_require_powerup_now("bonus_points_player"))
                 {
                     ensured = true;
                     break;
@@ -715,7 +715,7 @@ gg_spawn_powerup_for_gum(player, gum, code)
 
             if (!ensured)
             {
-                if (gg_should_log_dispatch())
+                if (gg_debug_on())
                     [[ level.gb_helpers.gg_log ]]("dispatch: power-up registration pending for bonus_points_player");
                 return false;
             }
@@ -735,7 +735,7 @@ gg_mark_activation_skip(player)
         return;
 
     if (!isdefined(player.gg))
-        build_player_state(player);
+        maps\gobblegum\gumballs::build_player_state(player);
 
     player.gg.skip_activation_consume_once = true;
 }
@@ -744,17 +744,17 @@ gg_spawn_and_track_powerup(player, gum_id, code, fan_offset, show_hint, pos_over
 {
     success = undefined;
     if (isdefined(pos_override))
-        success = gg_spawn_powerup_drop_at(player, code, pos_override);
+        success = maps\gobblegum\gumballs::gg_spawn_powerup_drop_at(player, code, pos_override);
     else
-        success = gg_spawn_powerup_drop(player, code, fan_offset);
+        success = maps\gobblegum\gumballs::gg_spawn_powerup_drop(player, code, fan_offset);
 
     if (!success)
         return false;
 
-    gg_log_powerup_spawn(gum_id, code);
+    maps\gobblegum\gumballs::gg_log_powerup_spawn(gum_id, code);
 
     if (isdefined(show_hint) && show_hint)
-        gg_show_powerup_hint(player, gg_powerup_label_for_code(code));
+        gg_show_powerup_hint(player, maps\gobblegum\gumballs::gg_powerup_label_for_code(code));
 
     return true;
 }
@@ -796,12 +796,12 @@ gg_collect_reign_drop_codes()
         code = gg_powerup_code_for_id(alias_id);
         if (!isdefined(code) || code == "")
         {
-            if (gg_should_log_dispatch())
+            if (gg_debug_on())
                 [[ level.gb_helpers.gg_log ]]("dispatch: reign drops alias missing for " + alias_id);
             continue;
         }
 
-        if (!gg_array_contains(codes, code))
+        if (!maps\gobblegum\gumballs::gg_array_contains(codes, code))
             codes[codes.size] = code;
     }
 
@@ -817,7 +817,7 @@ gg_reigndrops_include_firesale()
 
 gg_powerup_code_for_id(id)
 {
-    gg_init_powerup_tables();
+    maps\gobblegum\gumballs::gg_init_powerup_tables();
     if (!isdefined(id) || id == "")
         return undefined;
 
@@ -857,13 +857,13 @@ gg_spawn_reign_drop_sequence(player, gum, codes)
         return false;
 
     if (!isdefined(player.gg))
-        build_player_state(player);
+        maps\gobblegum\gumballs::build_player_state(player);
 
     gum_id = "<unknown>";
     if (isdefined(gum) && isdefined(gum.id))
         gum_id = gum.id;
 
-    spacing = gg_get_reigndrops_spacing_secs();
+    spacing = maps\gobblegum\gumballs::gg_get_reigndrops_spacing_secs();
     if (spacing < 0)
         spacing = 0;
 
@@ -872,7 +872,7 @@ gg_spawn_reign_drop_sequence(player, gum, codes)
     player.gg.reign_drops_token += 1;
     token = player.gg.reign_drops_token;
 
-    player thread gg_reign_drop_sequence_thread(gum_id, codes, spacing, token);
+    player thread maps\gobblegum\gumballs::gg_reign_drop_sequence_thread(gum_id, codes, spacing, token);
     return true;
 }
 
@@ -882,11 +882,11 @@ gg_wonderbar_suppress_label(player, duration)
         return;
 
     if (!isdefined(player.gg))
-        build_player_state(player);
+        maps\gobblegum\gumballs::build_player_state(player);
 
     suppress_secs = duration;
     if (!isdefined(suppress_secs) || suppress_secs <= 0)
-        suppress_secs = gg_get_wonder_label_suppress_ms() / 1000.0;
+        suppress_secs = maps\gobblegum\gumballs::gg_get_wonder_label_suppress_ms() / 1000.0;
 
     if (!isdefined(player.gg.wonderbar_suppress_until))
         player.gg.wonderbar_suppress_until = 0;
@@ -900,7 +900,7 @@ gg_wonderbar_suppress_label(player, duration)
     if (suppress_ms > 0 && isdefined(level.gb_hud) && isdefined(level.gb_hud.suppress_hint))
         [[ level.gb_hud.suppress_hint ]](player, suppress_ms);
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
         [[ level.gb_helpers.gg_log ]]("wonderbar label suppressed for " + suppress_secs + "s");
 }
 
@@ -1013,7 +1013,7 @@ gg_detect_new_weapon(prev, curr)
         weapon = curr[i];
         if (!isdefined(weapon) || weapon == "" || weapon == "none")
             continue;
-        if (!gg_array_contains(prev, weapon))
+        if (!maps\gobblegum\gumballs::gg_array_contains(prev, weapon))
             return weapon;
     }
 
@@ -1025,7 +1025,7 @@ gg_show_powerup_hint(player, text, raw)
     if (!isdefined(player))
         return;
 
-    if (!gg_powerup_hints_enabled())
+    if (!maps\gobblegum\gumballs::gg_powerup_hints_enabled())
         return;
 
     if (!isdefined(text) || text == "")
@@ -1051,14 +1051,14 @@ gg_show_hint_if_enabled(player, text)
         return;
     }
 
-    if (!gg_debug_enabled())
+    if (!maps\gobblegum\gumballs::gg_debug_enabled())
     {
         if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
             [[ level.gb_hud.clear_hint ]](player);
         return;
     }
 
-    if (!gg_powerup_hints_enabled())
+    if (!maps\gobblegum\gumballs::gg_powerup_hints_enabled())
         return;
 
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.set_hint))
@@ -1070,12 +1070,12 @@ gg_end_current_gum(player, reason)
     if (!isdefined(player) || !isdefined(player.gg))
         return;
 
-    if (gg_consume_logs_enabled() && isdefined(reason))
+    if (maps\gobblegum\gumballs::gg_consume_logs_enabled() && isdefined(reason))
         [[ level.gb_helpers.gg_log ]]("consumption: ending gum (" + reason + ")");
 
     // keep TC autohide window
-    gg_selection_close(player, reason, false, true);
-    gg_set_effect_state(player, undefined, false);
+    maps\gobblegum\gumballs::gg_selection_close(player, reason, false, true);
+    maps\gobblegum\gumballs::gg_set_effect_state(player, undefined, false);
 
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_stop_timer))
         [[ level.gb_hud.br_stop_timer ]](player);
@@ -1139,12 +1139,12 @@ gg_effect_stub_common(player, gum, category)
     if (isdefined(gum.name) && gum.name != "")
         gum_name = gum.name;
 
-    if (gg_log_dispatch_enabled())
+    if (maps\gobblegum\gumballs::gg_log_dispatch_enabled())
     {
         [[ level.gb_helpers.gg_log ]]("dispatch: effect stub [" + category + "] -> " + gum_id);
     }
 
-    if (!gg_simulate_effects_enabled())
+    if (!maps\gobblegum\gumballs::gg_simulate_effects_enabled())
         return;
 
     gg_show_hint_if_enabled(player, "Activated: " + gum_name);
@@ -1168,12 +1168,12 @@ gg_spawn_firesale_test_drop(player)
     if (!isdefined(player.origin) || !isdefined(player.angles))
         return;
 
-    if (!gg_test_drop_firesale_enabled())
+    if (!maps\gobblegum\gumballs::gg_test_drop_firesale_enabled())
         return;
 
-    if (gg_spawn_powerup_drop(player, "fire_sale", 0))
+    if (maps\gobblegum\gumballs::gg_spawn_powerup_drop(player, "fire_sale", 0))
     {
-        if (gg_debug_enabled())
+        if (maps\gobblegum\gumballs::gg_debug_enabled())
             [[ level.gb_helpers.gg_log ]]("test fire sale drop spawned");
     }
 }

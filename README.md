@@ -66,12 +66,13 @@ Changes the standard player health interaction so that players can take 3 hits b
 
 ## 1. Module Structure
 
-### `gumballs.gsc` (Core Dispatcher)
+### `gumballs.gsc` (Core Manager & Bootstrap)
 
-* Centralized registry and activation dispatcher.
+* Core initialization and module bootstrap.
+* Dynamic self-registration registry.
 * Player lifecycle hooks (spawn/death/disconnect).
 * Round and selection watchers.
-* Activation and consumption models.
+* Consumption model enforcement and direct function dispatch.
 * Bootstrapped via:
 
   ```c
@@ -112,6 +113,17 @@ Changes the standard player health interaction so that players can take 3 hits b
 1. Helpers expose functions first.
 2. HUD assets must be precached before any player HUD builds.
 3. Core initializes last, ensuring safe dependency access.
+
+---
+
+## Adding a New Gumball
+
+The new Phase 2 self-registration model allows new gums to be added with minimal friction.
+
+1. **Duplicate the Template:** Copy `maps/gobblegum/gums/gb_template.gsc` and rename it to your new gum (e.g., `gb_my_gum.gsc`).
+2. **Define Logic:** Open the new file and implement your specific behavior in the `activate()` function.
+3. **Configure Data:** Update the `register()` block in your new file with the correct ID, description, HUD details, and consumption type. Ensure it explicitly registers itself via `maps\gobblegum\gumballs::gg_register_gum(gum.id, gum);`.
+4. **Include and Bootstrap:** Finally, `#include` your new script at the top of `maps/gobblegum/gumballs.gsc` and call its `register()` function inside `gg_registry_init()`.
 
 ---
 
@@ -294,8 +306,8 @@ set 3hit_enable 1                     // Enables 3-hit down (default 0)
 | On the House           | on_the_house           | 1      | Spawns a free perk Power-Up                   |
 | Reign Drops            | reign_drops            | 1      | Spawns all core Power-Ups at once             |
 | Round Robbin           | round_robbin           | 1      | Ends the current round; all players gain 1600 |
-| Shopping Free          | shopping_free          | 0      | All purchases are free                        |
-| Stock Option           | stock_option           | 0      | Ammo is taken from the player's stockpile     |
+| Shopping Free          | shopping_free          | 1      | All purchases are free                        |
+| Stock Option           | stock_option           | 1      | Ammo is taken from the player's stockpile     |
 | Who’s Keeping Score    | whos_keeping_score     | 1      | Spawns a Double Points Power-Up               |
 | Wonderbar              | wonderbar              | 1      | Next box gun is a Wonder Weapon               |
 
@@ -325,10 +337,12 @@ set 3hit_enable 1                     // Enables 3-hit down (default 0)
 ### v1.3 – System Refactor & Modularization
 
 * **Decoupled Architecture:** Migrated all gumball-specific logic from the monolithic `gumballs.gsc` into standalone modular files within `maps/gobblegum/gums/`.
+* **Self-Registration Model:** Transitioned from a centralized dispatcher to a decentralized self-registration system. Every gumball now registers itself via a unique `register_gbname()` hook called during bootstrap.
 * **Centralized Helpers:** Relocated shared logic (power-up drops, weapon upgrading, HUD hints) into `gb_helpers.gsc` to eliminate code redundancy.
-* **Namespace Dispatcher:** Re-engineered the gumball dispatcher to route activation calls via namespaces (e.g., `maps\gobblegum\gums\gb_perkaholic::gg_fx_perkaholic`).
-* **Dependency Optimization:** Integrated comprehensive `#include` directives across the mod to ensure seamless cross-module access to configuration getters and utilities.
+* **Namespace Conflict Resolution:** Resolved function naming collisions in the flat T5 global namespace by uniquely prefixing registration hooks (e.g., `register_perkaholic()`).
+* **Circular Dependency Fixes:** Eliminated circular dependency blockers between `gumballs.gsc` and `gb_helpers.gsc` by utilizing explicit namespace qualification (e.g., `maps\gobblegum\gumballs::...`) for cross-file calls.
 * **Mod Config Update:** Updated `mod.csv` to include all new rawfile components for the build system.
+* **Code Integrity:** Sanitized the entire codebase to ensure consistent tab-based indentation and robust cross-module linking across all 23 components.
 
 ---
 

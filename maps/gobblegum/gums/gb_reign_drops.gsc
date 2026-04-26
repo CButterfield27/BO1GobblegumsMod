@@ -6,22 +6,43 @@
 
 gg_fx_reign_drops(player, gum)
 {
-    codes = gg_collect_reign_drop_codes();
+    codes = maps\gobblegum\gb_helpers::gg_collect_reign_drop_codes();
 
     if (!isdefined(codes) || codes.size <= 0)
     {
-        if (gg_should_log_dispatch())
+        if (maps\gobblegum\gumballs::gg_should_log_dispatch())
             [[ level.gb_helpers.gg_log ]]("dispatch: reign drops missing power-ups");
-        gg_mark_activation_skip(player);
+        maps\gobblegum\gb_helpers::gg_mark_activation_skip(player);
         return;
     }
 
-    gg_mark_activation_skip(player);
+    maps\gobblegum\gb_helpers::gg_mark_activation_skip(player);
 
-    if (!gg_spawn_reign_drop_sequence(player, gum, codes))
+    if (!maps\gobblegum\gb_helpers::gg_spawn_reign_drop_sequence(player, gum, codes))
     {
         return;
     }
 
-    gg_show_powerup_hint(player, "Reign Drops");
+    maps\gobblegum\gb_helpers::gg_show_powerup_hint(player, "Reign Drops");
+}
+
+register_reign_drops()
+{
+    gum = spawnstruct();
+    gum.id = "reign_drops";
+    gum.name = "Reign Drops";
+    gum.shader = "bo6_reign_drops";
+    gum.desc = "Spawns all core Power-Ups at once";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
+    gum.activate_func = ::gg_fx_reign_drops;
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    maps\gobblegum\gumballs::gg_register_gum(gum.id, gum);
 }

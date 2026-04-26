@@ -14,10 +14,10 @@ gg_logic_hidden_power_start(player, gum)
     if (!isdefined(player))
         return;
 
-    gg_mark_activation_skip(player);
+    maps\gobblegum\gb_helpers::gg_mark_activation_skip(player);
 
     if (!isdefined(player.gg))
-        build_player_state(player);
+        maps\gobblegum\gumballs::build_player_state(player);
 
     weapon = player GetCurrentWeapon();
 
@@ -33,7 +33,7 @@ gg_logic_hidden_power_start(player, gum)
         return;
     }
 
-    if (!gg_weapon_has_upgrade(weapon))
+    if (!maps\gobblegum\gb_helpers::gg_weapon_has_upgrade(weapon))
     {
         gg_hidden_power_fail(player, gum, "skip: no upgrade", weapon, "Hidden Power: no upgrade available");
         return;
@@ -51,7 +51,7 @@ gg_logic_hidden_power_start(player, gum)
         return;
     }
 
-    if (!gg_apply_upgrade_for_weapon(player, weapon))
+    if (!maps\gobblegum\gb_helpers::gg_apply_upgrade_for_weapon(player, weapon))
     {
         gg_hidden_power_fail(player, gum, "skip: upgrade helper failed", weapon, "Hidden Power: upgrade failed");
         return;
@@ -65,10 +65,10 @@ gg_hidden_power_on_success(player, gum, weapon)
     if (!isdefined(player))
         return;
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
         [[ level.gb_helpers.gg_log ]]("hidden power upgraded " + weapon);
 
-    gg_show_hint_if_enabled(player, "Applied: Hidden Power");
+    maps\gobblegum\gb_helpers::gg_show_hint_if_enabled(player, "Applied: Hidden Power");
 
     wait(0.05);
 
@@ -82,8 +82,8 @@ gg_hidden_power_on_success(player, gum, weapon)
     if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_consume_use))
         [[ level.gb_hud.br_consume_use ]](player);
 
-    gg_on_gum_used();
-    gg_end_current_gum(player, "hidden_power_applied");
+    maps\gobblegum\gb_helpers::gg_on_gum_used();
+    maps\gobblegum\gb_helpers::gg_end_current_gum(player, "hidden_power_applied");
 }
 
 gg_hidden_power_fail(player, gum, reason, weapon, hint)
@@ -91,7 +91,7 @@ gg_hidden_power_fail(player, gum, reason, weapon, hint)
     gg_hidden_power_debug(player, reason, weapon);
 
     if (isdefined(hint) && hint != "")
-        gg_show_hint_if_enabled(player, hint);
+        maps\gobblegum\gb_helpers::gg_show_hint_if_enabled(player, hint);
 
     gg_hidden_power_refresh_hud(player, gum);
 }
@@ -114,13 +114,13 @@ gg_hidden_power_refresh_hud(player, gum)
 
 gg_hidden_power_debug(player, reason, weapon)
 {
-    if (!gg_debug_enabled())
+    if (!maps\gobblegum\gumballs::gg_debug_enabled())
         return;
     if (!isdefined(player))
         return;
 
     if (!isdefined(player.gg))
-        build_player_state(player);
+        maps\gobblegum\gumballs::build_player_state(player);
 
     key = reason;
     if (isdefined(weapon) && weapon != "")
@@ -146,4 +146,26 @@ gg_hidden_power_packapunch_ready()
         return false;
 
     return true;
+}
+
+register_hidden_power()
+{
+    gum = spawnstruct();
+    gum.id = "hidden_power";
+    gum.name = "Hidden Power";
+    gum.shader = "bo6_hidden_power";
+    gum.desc = "Pack-a-Punch your current weapon instantly.";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
+    gum.activate_func = ::gg_fx_hidden_power;
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.tags[0] = "weapon";
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    maps\gobblegum\gumballs::gg_register_gum(gum.id, gum);
 }

@@ -11,7 +11,7 @@ gg_fx_round_robbin(player, gum)
 
     gg_round_robbin_kill_remaining();
     gg_round_robbin_award_points();
-    gg_show_hint_if_enabled(player, "Applied: Round Robbin");
+    maps\gobblegum\gb_helpers::gg_show_hint_if_enabled(player, "Applied: Round Robbin");
 }
 
 gg_round_robbin_kill_remaining()
@@ -50,7 +50,7 @@ gg_round_robbin_kill_remaining()
             level.zombie_total = 0;
     }
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
         [[ level.gb_helpers.gg_log ]]("round robbin cleared zombies=" + killed);
 }
 
@@ -76,7 +76,7 @@ gg_round_robbin_award_points()
         awarded += 1;
     }
 
-    if (gg_debug_enabled())
+    if (maps\gobblegum\gumballs::gg_debug_enabled())
         [[ level.gb_helpers.gg_log ]]("round robbin bonus +" + bonus + " to " + awarded + " players");
 
     return awarded;
@@ -94,4 +94,27 @@ gg_round_robbin_force_transition_enabled()
     if (isdefined(level.gg_config) && isdefined(level.gg_config.round_robbin_force_transition))
         return level.gg_config.round_robbin_force_transition;
     return true;
+}
+
+register_round_robbin()
+{
+    gum = spawnstruct();
+    gum.id = "round_robbin";
+    gum.name = "Round Robbin";
+    gum.shader = "t7_hud_zm_bgb_round_robbin";
+    gum.desc = "Ends the current round. All players gain 1600 points";
+    gum.uses_description = "Press D-Pad Right to activate. (1 use)";
+    gum.activation = 2; // USER
+    gum.consumption = 3; // USES
+    gum.base_uses = 1;
+    gum.activate_func = ::gg_fx_round_robbin;
+    gum.activate_key = gum.activate_func;
+    gum.tags = [];
+    gum.tags[0] = "economy";
+    gum.tags[1] = "round";
+    gum.whitelist = [];
+    gum.blacklist = [];
+    gum.exclusion_groups = [];
+    gum.rarity_weight = 1;
+    maps\gobblegum\gumballs::gg_register_gum(gum.id, gum);
 }
