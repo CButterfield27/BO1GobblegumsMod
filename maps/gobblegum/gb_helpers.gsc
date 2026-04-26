@@ -1,5 +1,6 @@
 #include maps\_utility;
 #include common_scripts\utility;
+#include maps\gobblegum\gumballs;
 
 gg_debug_on()
 {
@@ -641,5 +642,538 @@ helpers_init()
         level.gg_debug_watch_started = true;
         gg_debug_apply_state(gg_debug_on());
         level thread gg_debug_watch_thread();
+    }
+}
+
+
+gg_powerup_single_drop(player, gum)
+{
+    gum_id = "<unknown>";
+    if (isdefined(gum) && isdefined(gum.id))
+        gum_id = gum.id;
+
+    code = gg_powerup_code_for_gum(gum);
+    if (!isdefined(code) || code == "")
+    {
+        if (gg_should_log_dispatch())
+            [[ level.gb_helpers.gg_log ]]("dispatch: power-up alias missing for " + gum_id);
+
+        gg_mark_activation_skip(player);
+        return false;
+    }
+
+    if (!gg_spawn_powerup_for_gum(player, gum, code))
+    {
+        if (gg_should_log_dispatch())
+            [[ level.gb_helpers.gg_log ]]("dispatch: power-up spawn failed for " + gum_id);
+
+        gg_mark_activation_skip(player);
+        return false;
+    }
+
+    return true;
+}
+
+gg_powerup_code_for_gum(gum)
+{
+    id = undefined;
+    if (isdefined(gum))
+    {
+        if (isstring(gum))
+        {
+            id = gum;
+        }
+        else if (isdefined(gum.id))
+        {
+            id = gum.id;
+        }
+    }
+    return gg_powerup_code_for_id(id);
+}
+
+gg_spawn_powerup_for_gum(player, gum, code)
+{
+    if (!isdefined(code) || code == "")
+        return false;
+
+    if (code == "bonus_points_player")
+    {
+        ensured = gg_require_powerup("bonus_points_player");
+        if (!ensured)
+        {
+            attempts = 0;
+            while (attempts < 3)
+            {
+                wait(0.05);
+                if (gg_require_powerup_now("bonus_points_player"))
+                {
+                    ensured = true;
+                    break;
+                }
+                attempts++;
+            }
+
+            if (!ensured)
+            {
+                if (gg_should_log_dispatch())
+                    [[ level.gb_helpers.gg_log ]]("dispatch: power-up registration pending for bonus_points_player");
+                return false;
+            }
+        }
+    }
+
+    gum_id = "<unknown>";
+    if (isdefined(gum) && isdefined(gum.id))
+        gum_id = gum.id;
+
+    return gg_spawn_and_track_powerup(player, gum_id, code, 0, true);
+}
+
+gg_mark_activation_skip(player)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg))
+        build_player_state(player);
+
+    player.gg.skip_activation_consume_once = true;
+}
+
+gg_spawn_and_track_powerup(player, gum_id, code, fan_offset, show_hint, pos_override)
+{
+    success = undefined;
+    if (isdefined(pos_override))
+        success = gg_spawn_powerup_drop_at(player, code, pos_override);
+    else
+        success = gg_spawn_powerup_drop(player, code, fan_offset);
+
+    if (!success)
+        return false;
+
+    gg_log_powerup_spawn(gum_id, code);
+
+    if (isdefined(show_hint) && show_hint)
+        gg_show_powerup_hint(player, gg_powerup_label_for_code(code));
+
+    return true;
+}
+
+gg_can_spawn_death_machine()
+{
+    if (!isdefined(level.gb_helpers))
+        return true;
+    if (isdefined(level.gb_helpers.map_allows_death_machine))
+        return [[ level.gb_helpers.map_allows_death_machine ]]();
+    if (isdefined(level.gb_helpers.map_allows))
+        return [[ level.gb_helpers.map_allows ]]("death_machine");
+    return true;
+}
+
+gg_collect_reign_drop_codes()
+{
+    codes = [];
+    ids = [];
+
+    ids[ids.size] = "whos_keeping_score";     // Double Points
+    ids[ids.size] = "kill_joy";               // Insta-Kill
+    if (gg_reigndrops_include_firesale())
+        ids[ids.size] = "immolation";        // Fire Sale (optional)
+    ids[ids.size] = "dead_of_nuclear_winter"; // Nuke
+    ids[ids.size] = "licensed_contractor";    // Carpenter
+    ids[ids.size] = "cache_back";             // Max Ammo
+    ids[ids.size] = "on_the_house";           // Free Perk
+    ids[ids.size] = "extra_credit";           // Bonus Points
+    if (gg_can_spawn_death_machine())
+        ids[ids.size] = "fatal_contraption"; // Death Machine (map-gated)
+
+    for (i = 0; i < ids.size; i++)
+    {
+        alias_id = ids[i];
+        if (!isdefined(alias_id) || alias_id == "")
+            continue;
+
+        code = gg_powerup_code_for_id(alias_id);
+        if (!isdefined(code) || code == "")
+        {
+            if (gg_should_log_dispatch())
+                [[ level.gb_helpers.gg_log ]]("dispatch: reign drops alias missing for " + alias_id);
+            continue;
+        }
+
+        if (!gg_array_contains(codes, code))
+            codes[codes.size] = code;
+    }
+
+    return codes;
+}
+
+gg_reigndrops_include_firesale()
+{
+    if (isdefined(level.gg_config) && isdefined(level.gg_config.reigndrops_include_firesale))
+        return level.gg_config.reigndrops_include_firesale;
+    return true;
+}
+
+gg_powerup_code_for_id(id)
+{
+    gg_init_powerup_tables();
+    if (!isdefined(id) || id == "")
+        return undefined;
+
+    // Try alias table first
+    if (isdefined(level.gg_powerup_alias) && isdefined(level.gg_powerup_alias[id]))
+        return level.gg_powerup_alias[id];
+
+    // Fallback: known id -> code mapping, and populate alias for future calls
+    code = undefined;
+    switch (id)
+    {
+    case "dead_of_nuclear_winter": code = "nuke"; break;
+    case "kill_joy": code = "insta_kill"; break;
+    case "whos_keeping_score": code = "double_points"; break;
+    case "licensed_contractor": code = "carpenter"; break;
+    case "cache_back": code = "full_ammo"; break;
+    case "immolation": code = "fire_sale"; break;
+    case "on_the_house": code = "free_perk"; break;
+    case "fatal_contraption": code = "minigun"; break;
+    case "extra_credit": code = "bonus_points_player"; break;
+    }
+
+    if (isdefined(code) && code != "")
+    {
+        if (!isdefined(level.gg_powerup_alias))
+            level.gg_powerup_alias = spawnstruct();
+        level.gg_powerup_alias[id] = code;
+        return code;
+    }
+
+    return undefined;
+}
+
+gg_spawn_reign_drop_sequence(player, gum, codes)
+{
+    if (!isdefined(player) || !isdefined(codes) || codes.size <= 0)
+        return false;
+
+    if (!isdefined(player.gg))
+        build_player_state(player);
+
+    gum_id = "<unknown>";
+    if (isdefined(gum) && isdefined(gum.id))
+        gum_id = gum.id;
+
+    spacing = gg_get_reigndrops_spacing_secs();
+    if (spacing < 0)
+        spacing = 0;
+
+    if (!isdefined(player.gg.reign_drops_token))
+        player.gg.reign_drops_token = 0;
+    player.gg.reign_drops_token += 1;
+    token = player.gg.reign_drops_token;
+
+    player thread gg_reign_drop_sequence_thread(gum_id, codes, spacing, token);
+    return true;
+}
+
+gg_wonderbar_suppress_label(player, duration)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.gg))
+        build_player_state(player);
+
+    suppress_secs = duration;
+    if (!isdefined(suppress_secs) || suppress_secs <= 0)
+        suppress_secs = gg_get_wonder_label_suppress_ms() / 1000.0;
+
+    if (!isdefined(player.gg.wonderbar_suppress_until))
+        player.gg.wonderbar_suppress_until = 0;
+
+    suppress_ms = int(suppress_secs * 1000);
+    if (suppress_ms < 0)
+        suppress_ms = 0;
+
+    player.gg.wonderbar_suppress_until = gettime() + suppress_ms;
+
+    if (suppress_ms > 0 && isdefined(level.gb_hud) && isdefined(level.gb_hud.suppress_hint))
+        [[ level.gb_hud.suppress_hint ]](player, suppress_ms);
+
+    if (gg_debug_enabled())
+        [[ level.gb_helpers.gg_log ]]("wonderbar label suppressed for " + suppress_secs + "s");
+}
+
+gg_apply_upgrade_for_weapon(player, weapon)
+{
+    if (!isdefined(level.gb_helpers) || !isdefined(level.gb_helpers.upgrade_weapon))
+        return false;
+    return [[ level.gb_helpers.upgrade_weapon ]](player, weapon);
+}
+
+gg_weapon_has_upgrade(weapon)
+{
+    if (!isdefined(weapon) || weapon == "" || !isdefined(level.zombie_weapons))
+        return false;
+
+    if (!isdefined(level.zombie_weapons[weapon]))
+        return false;
+
+    if (!isdefined(level.zombie_weapons[weapon].upgrade_name))
+        return false;
+
+    upgrade = level.zombie_weapons[weapon].upgrade_name;
+    return (isdefined(upgrade) && upgrade != "");
+}
+
+gg_weapon_is_spawn_pistol(weapon)
+{
+    return (weapon == "m1911_zm");
+}
+
+gg_weapon_is_wall_buy(weapon)
+{
+    if (!isdefined(weapon) || weapon == "" || !isdefined(level.zombie_weapons))
+        return false;
+
+    if (!isdefined(level.zombie_weapons[weapon]))
+        return false;
+
+    info = level.zombie_weapons[weapon];
+
+    is_box_weapon = false;
+    if (isdefined(info.is_in_box))
+        is_box_weapon = info.is_in_box;
+    else if (isdefined(maps\_zombiemode_weapons::get_is_in_box))
+        is_box_weapon = maps\_zombiemode_weapons::get_is_in_box(weapon);
+
+    if (is_box_weapon)
+        return false;
+
+    if (isdefined(info.cost) && info.cost > 0)
+        return true;
+
+    if (isdefined(info.ammo_cost) && info.ammo_cost > 0)
+        return true;
+
+    if (isdefined(maps\_zombiemode_weapons::get_weapon_toggle))
+    {
+        toggle = maps\_zombiemode_weapons::get_weapon_toggle(weapon);
+        if (isdefined(toggle))
+            return true;
+    }
+
+    if (isdefined(info.hint) && info.hint != "")
+        return true;
+
+    return false;
+}
+
+gg_weapon_is_box_weapon(weapon)
+{
+    if (!isdefined(weapon) || weapon == "" || !isdefined(level.zombie_weapons))
+        return false;
+
+    if (!isdefined(level.zombie_weapons[weapon]))
+        return false;
+
+    return maps\_zombiemode_weapons::get_is_in_box(weapon);
+}
+
+gg_clone_array(arr)
+{
+    clone = [];
+    if (!isdefined(arr))
+        return clone;
+    for (i = 0; i < arr.size; i++)
+    {
+        clone[i] = arr[i];
+    }
+    return clone;
+}
+
+gg_get_primary_weapons(player)
+{
+    if (!isdefined(player))
+        return [];
+
+    weapons = player GetWeaponsListPrimaries();
+    if (!isdefined(weapons))
+        weapons = [];
+    return weapons;
+}
+
+gg_detect_new_weapon(prev, curr)
+{
+    if (!isdefined(curr))
+        return undefined;
+
+    for (i = 0; i < curr.size; i++)
+    {
+        weapon = curr[i];
+        if (!isdefined(weapon) || weapon == "" || weapon == "none")
+            continue;
+        if (!gg_array_contains(prev, weapon))
+            return weapon;
+    }
+
+    return undefined;
+}
+
+gg_show_powerup_hint(player, text, raw)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!gg_powerup_hints_enabled())
+        return;
+
+    if (!isdefined(text) || text == "")
+        text = "Power-Up";
+
+    msg = text;
+    if (!isdefined(raw) || !raw)
+        msg = "Spawned: " + text;
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.set_hint))
+        [[ level.gb_hud.set_hint ]](player, msg);
+}
+
+gg_show_hint_if_enabled(player, text)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(text) || text == "")
+    {
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+            [[ level.gb_hud.clear_hint ]](player);
+        return;
+    }
+
+    if (!gg_debug_enabled())
+    {
+        if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+            [[ level.gb_hud.clear_hint ]](player);
+        return;
+    }
+
+    if (!gg_powerup_hints_enabled())
+        return;
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.set_hint))
+        [[ level.gb_hud.set_hint ]](player, text);
+}
+
+gg_end_current_gum(player, reason)
+{
+    if (!isdefined(player) || !isdefined(player.gg))
+        return;
+
+    if (gg_consume_logs_enabled() && isdefined(reason))
+        [[ level.gb_helpers.gg_log ]]("consumption: ending gum (" + reason + ")");
+
+    // keep TC autohide window
+    gg_selection_close(player, reason, false, true);
+    gg_set_effect_state(player, undefined, false);
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.br_stop_timer))
+        [[ level.gb_hud.br_stop_timer ]](player);
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.hide_br))
+        [[ level.gb_hud.hide_br ]](player);
+
+    if (isdefined(level.gb_hud) && isdefined(level.gb_hud.clear_hint))
+        [[ level.gb_hud.clear_hint ]](player);
+
+    player.gg.is_active = false;
+    player.gg.uses_remaining = 0;
+    player.gg.rounds_remaining = 0;
+    player.gg.timer_endtime = 0;
+    player.gg.used_this_round = false;
+    player.gg.active_token += 1;
+
+    if (isdefined(player.gg) && isdefined(player.gg.armed_flags))
+    {
+        player.gg.armed_flags.wall = false;
+        player.gg.armed_flags.crate = false;
+        player.gg.armed_flags.crate_power_active = false;
+        player.gg.armed_flags.wonder = false;
+        player.gg.armed_flags.wonderbar_active = false;
+    }
+
+    if (isdefined(player.gg))
+    {
+        player.gg.crate_power_armed_time = 0;
+        player.gg.armed_since = 0;
+        player.gg.wonderbar_armed_time = 0;
+        player.gg.wonderbar_choice = undefined;
+        player.gg.wonderbar_label_text = "";
+        player.gg.wonderbar_suppress_until = 0;
+    }
+
+    player notify("gg_wall_power_cancel");
+    player notify("gg_crate_power_cancel");
+    player notify("gg_wonderbar_cancel");
+
+    player notify("gg_wonderbar_end");
+
+    player.gg.selected_id = undefined;
+    player.gg.selection_active = false;
+
+    player notify("gg_gum_cleared");
+}
+
+gg_on_gum_used() {}
+
+gg_effect_stub_common(player, gum, category)
+{
+    if (!isdefined(player) || !isdefined(gum))
+        return;
+
+    gum_id = "<unknown>";
+    if (isdefined(gum.id))
+        gum_id = gum.id;
+
+    gum_name = gum_id;
+    if (isdefined(gum.name) && gum.name != "")
+        gum_name = gum.name;
+
+    if (gg_log_dispatch_enabled())
+    {
+        [[ level.gb_helpers.gg_log ]]("dispatch: effect stub [" + category + "] -> " + gum_id);
+    }
+
+    if (!gg_simulate_effects_enabled())
+        return;
+
+    gg_show_hint_if_enabled(player, "Activated: " + gum_name);
+}
+
+gg_powerup_fan_offset(index, total)
+{
+    if (!isdefined(index) || !isdefined(total) || total <= 1)
+        return 0;
+
+    spread = 30.0;
+    mid = (total - 1) * 0.5;
+    return (index - mid) * spread;
+}
+
+gg_spawn_firesale_test_drop(player)
+{
+    if (!isdefined(player))
+        return;
+
+    if (!isdefined(player.origin) || !isdefined(player.angles))
+        return;
+
+    if (!gg_test_drop_firesale_enabled())
+        return;
+
+    if (gg_spawn_powerup_drop(player, "fire_sale", 0))
+    {
+        if (gg_debug_enabled())
+            [[ level.gb_helpers.gg_log ]]("test fire sale drop spawned");
     }
 }
