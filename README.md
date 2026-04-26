@@ -306,8 +306,8 @@ set 3hit_enable 1                     // Enables 3-hit down (default 0)
 | On the House           | on_the_house           | 1      | Spawns a free perk Power-Up                   |
 | Reign Drops            | reign_drops            | 1      | Spawns all core Power-Ups at once             |
 | Round Robbin           | round_robbin           | 1      | Ends the current round; all players gain 1600 |
-| Shopping Free          | shopping_free          | 1      | All purchases are free                        |
-| Stock Option           | stock_option           | 1      | Ammo is taken from the player's stockpile     |
+| Shopping Free          | shopping_free          | 0      | All purchases are free                        |
+| Stock Option           | stock_option           | 0      | Ammo is taken from the player's stockpile     |
 | Who’s Keeping Score    | whos_keeping_score     | 1      | Spawns a Double Points Power-Up               |
 | Wonderbar              | wonderbar              | 1      | Next box gun is a Wonder Weapon               |
 

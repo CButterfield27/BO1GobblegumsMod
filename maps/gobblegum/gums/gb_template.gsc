@@ -41,5 +41,5 @@ register()
 	gum.exclusion_groups = [];
 	gum.rarity_weight = 1;
 
-	maps\gobblegum\gumballs::gg_register_gum(gum.id, gum);
+	// maps\gobblegum\gumballs::gg_register_gum(gum.id, gum);
 }
