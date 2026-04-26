@@ -66,21 +66,23 @@ Changes the standard player health interaction so that players can take 3 hits b
 
 ## 1. Module Structure
 
-### `gumballs.gsc` (Core Logic)
+### `gumballs.gsc` (Core Dispatcher)
 
-* Registry and activation dispatcher
-* Player lifecycle hooks (spawn/death/disconnect)
-* Round and selection watchers
-* Activation and consumption models
-* Built-in gums (Wall Power, Crate Power, Wonderbar)
-* Reads dev DVARs (`gg_enable`, `gg_debug`, etc.)
-* Registry helpers: `gg_register_gum`, `gg_find_gum_by_id`
-* Player-state builder and HUD linkage
+* Centralized registry and activation dispatcher.
+* Player lifecycle hooks (spawn/death/disconnect).
+* Round and selection watchers.
+* Activation and consumption models.
 * Bootstrapped via:
 
   ```c
   level thread maps\gobblegum\gumballs::gumballs_init();
   ```
+
+### `maps/gobblegum/gums/` (Gumball Modules)
+
+* Individual standalone scripts for every gumball (e.g., `gb_perkaholic.gsc`, `gb_wall_power.gsc`).
+* Isolated logic for activation, thread monitors, and specific effects.
+* Namespaced for better maintainability and code clarity.
 
 ### `gb_hud.gsc` (HUD & UX)
 
@@ -90,12 +92,12 @@ Changes the standard player health interaction so that players can take 3 hits b
 * Safe-area anchors and token-based fade logic
 * API supports all consumption models (uses, rounds, timers)
 
-### `gb_helpers.gsc` (Utilities)
+### `gb_helpers.gsc` (Global Utilities)
 
-* Map and weapon helpers
-* Enum getters and constants
-* Safe setters and math helpers
-* Compatibility stubs for legacy functions
+* **Centralized shared logic:** Power-up dropping, weapon upgrade handling, and hint management.
+* Map and weapon identification helpers.
+* Enum getters, constants, and logging utilities.
+* Compatibility stubs for legacy functions.
 
 ### `_zombiemode.gsc` Entry Order
 
@@ -254,7 +256,7 @@ No-op compatibility entries for older builds.
 
 ## Debug Logging
 
-* All logs go through `helpers.gg_log("<msg>")`.
+* All logs go through `gb_helpers.gg_log("<msg>")`.
 * `[gg]` prefix standard for filtering.
 * `gg_debug` toggles all debug visibility.
 * When 1, logs show gum dispatch, Perkaholic grants, Wonderbar activity, and HUD events.
@@ -319,5 +321,14 @@ set 3hit_enable 1                     // Enables 3-hit down (default 0)
   * Listed `Shopping Free` and `Stock Option` in the documentation (currently inactive in GSC).
   * Standardized default value documentation for `gg_perkaholic_include_mulekick`.
   * Added documentation and setup instructions for the **3-Hit Down** QoL feature.
-  
+
+### v1.3 – System Refactor & Modularization
+
+* **Decoupled Architecture:** Migrated all gumball-specific logic from the monolithic `gumballs.gsc` into standalone modular files within `maps/gobblegum/gums/`.
+* **Centralized Helpers:** Relocated shared logic (power-up drops, weapon upgrading, HUD hints) into `gb_helpers.gsc` to eliminate code redundancy.
+* **Namespace Dispatcher:** Re-engineered the gumball dispatcher to route activation calls via namespaces (e.g., `maps\gobblegum\gums\gb_perkaholic::gg_fx_perkaholic`).
+* **Dependency Optimization:** Integrated comprehensive `#include` directives across the mod to ensure seamless cross-module access to configuration getters and utilities.
+* **Mod Config Update:** Updated `mod.csv` to include all new rawfile components for the build system.
+
 ---
+
